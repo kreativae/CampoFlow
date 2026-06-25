@@ -45,9 +45,9 @@ enum FarmType {
 }
 
 model Farm {
-  id                 String        @id @default(uuid())
+  id                 String          @id @default(uuid())
   name               String
-  type               FarmType      @default(FAZENDA)
+  type               FarmType        @default(FAZENDA)
   totalAreaHectares  Float?
   usableAreaHectares Float?
   latitude           Float?
@@ -58,8 +58,9 @@ model Farm {
   pastures           Pasture[]
   animals            Animal[]
   transactions       Transaction[]
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
+  weatherRecords     WeatherRecord[]
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
 }
 
 model Membership {
@@ -294,4 +295,29 @@ model Quotation {
   recordedAt  DateTime  @default(now())
   createdById String?
   createdAt   DateTime  @default(now())
+}
+
+enum WeatherAlertType {
+  GEADA
+  TEMPESTADE
+  GRANIZO
+  SECA
+  VENTO_FORTE
+}
+
+// Farm-specific weather conditions. MVP supports manual entry; automatic ingestion
+// from external providers (OpenWeather, Tomorrow.io, Climatempo) is a future integration.
+model WeatherRecord {
+  id              String            @id @default(uuid())
+  farm            Farm              @relation(fields: [farmId], references: [id])
+  farmId          String
+  temperatureC    Float?
+  humidityPercent Float?
+  windSpeedKmh    Float?
+  pressureHpa     Float?
+  rainfallMm      Float?
+  alertType       WeatherAlertType?
+  notes           String?
+  recordedAt      DateTime          @default(now())
+  createdAt       DateTime          @default(now())
 }

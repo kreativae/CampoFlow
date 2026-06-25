@@ -17,6 +17,7 @@ import { FinanceModule } from './finance/finance.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { AuditLogInterceptor } from './audit/audit-log.interceptor';
 import { QuotationsModule } from './quotations/quotations.module';
+import { WeatherModule } from './weather/weather.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { QuotationsModule } from './quotations/quotations.module';
     FinanceModule,
     DashboardModule,
     QuotationsModule,
+    WeatherModule,
   ],
   controllers: [AppController],
   providers: [
