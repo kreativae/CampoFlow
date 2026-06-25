@@ -22,6 +22,13 @@ export interface Farm {
   technicalManager: string | null;
 }
 
+export interface Member {
+  userId: string;
+  email: string;
+  name: string;
+  role: Role;
+}
+
 export type AnimalSex = 'MALE' | 'FEMALE';
 
 export type AnimalCategory =
