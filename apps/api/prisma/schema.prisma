@@ -266,3 +266,32 @@ model AuditLog {
   statusCode Int
   createdAt  DateTime @default(now())
 }
+
+enum Commodity {
+  BOI_GORDO
+  VACA_GORDA
+  NOVILHA
+  BEZERRO
+  REPOSICAO
+  COURO
+  SEBO
+  LEITE
+  MILHO
+  SOJA
+  SORGO
+  FARELO_SOJA
+}
+
+// Market price reference data, shared across all farms (not tenant-scoped).
+// MVP supports manual entry; automatic ingestion from external sources
+// (Scot Consultoria, CEPEA, B3) is a future integration, not implemented yet.
+model Quotation {
+  id          String    @id @default(uuid())
+  commodity   Commodity
+  price       Float
+  unit        String
+  source      String?
+  recordedAt  DateTime  @default(now())
+  createdById String?
+  createdAt   DateTime  @default(now())
+}
