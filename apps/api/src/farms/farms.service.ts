@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateFarmDto } from './dto/create-farm.dto';
+import { UpdateFarmDto } from './dto/update-farm.dto';
 import { AddMemberDto } from './dto/add-member.dto';
 
 @Injectable()
@@ -11,7 +12,7 @@ export class FarmsService {
   async create(ownerId: string, dto: CreateFarmDto) {
     return this.prisma.farm.create({
       data: {
-        name: dto.name,
+        ...dto,
         memberships: {
           create: { userId: ownerId, role: Role.OWNER },
         },
@@ -24,6 +25,25 @@ export class FarmsService {
     return this.prisma.farm.findMany({
       where: { memberships: { some: { userId } } },
     });
+  }
+
+  async findOne(farmId: string) {
+    const farm = await this.prisma.farm.findUnique({ where: { id: farmId } });
+    if (!farm) {
+      throw new NotFoundException('Propriedade não encontrada');
+    }
+    return farm;
+  }
+
+  async update(farmId: string, dto: UpdateFarmDto) {
+    await this.findOne(farmId);
+    return this.prisma.farm.update({ where: { id: farmId }, data: dto });
+  }
+
+  async remove(farmId: string) {
+    await this.findOne(farmId);
+    await this.prisma.farm.delete({ where: { id: farmId } });
+    return { success: true };
   }
 
   async addMember(farmId: string, dto: AddMemberDto) {

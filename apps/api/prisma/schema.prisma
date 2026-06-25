@@ -36,13 +36,28 @@ model User {
   updatedAt        DateTime     @updatedAt
 }
 
-// Minimal placeholder for a farm/property; fully fleshed out as `Property` in a later stage.
+enum FarmType {
+  FAZENDA
+  SITIO
+  CHACARA
+  CONFINAMENTO
+  ARRENDAMENTO
+}
+
 model Farm {
-  id          String       @id @default(uuid())
-  name        String
-  memberships Membership[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id                 String       @id @default(uuid())
+  name               String
+  type               FarmType     @default(FAZENDA)
+  totalAreaHectares  Float?
+  usableAreaHectares Float?
+  latitude           Float?
+  longitude          Float?
+  registryNumber     String?
+  technicalManager   String?
+  memberships        Membership[]
+  pastures           Pasture[]
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
 }
 
 model Membership {
@@ -55,4 +70,28 @@ model Membership {
   createdAt DateTime @default(now())
 
   @@unique([userId, farmId])
+}
+
+model Pasture {
+  id             String              @id @default(uuid())
+  farm           Farm                @relation(fields: [farmId], references: [id])
+  farmId         String
+  name           String
+  areaHectares   Float
+  grassType      String?
+  animalCapacity Int
+  occupations    PastureOccupation[]
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+}
+
+// Tracks a batch of animals occupying a pasture between rotations (history of occupation).
+model PastureOccupation {
+  id        String    @id @default(uuid())
+  pasture   Pasture   @relation(fields: [pastureId], references: [id])
+  pastureId String
+  headCount Int
+  enteredAt DateTime  @default(now())
+  exitedAt  DateTime?
+  notes     String?
 }
