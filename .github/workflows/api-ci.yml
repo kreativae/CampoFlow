@@ -1,0 +1,61 @@
+name: API CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - 'apps/api/**'
+      - '.github/workflows/api-ci.yml'
+
+defaults:
+  run:
+    working-directory: apps/api
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: campoflow
+          POSTGRES_PASSWORD: campoflow
+          POSTGRES_DB: campoflow
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U campoflow"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://campoflow:campoflow@localhost:5432/campoflow?schema=public
+      JWT_ACCESS_SECRET: ci-access-secret
+      JWT_REFRESH_SECRET: ci-refresh-secret
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/api/package-lock.json
+
+      - run: npm ci
+
+      - run: npm run lint:check
+
+      - run: npx prisma migrate deploy
+
+      - run: npm run build
+
+      - run: npm run test
+
+      - run: npm run test:e2e
+
+      - name: Build production Docker image
+        run: docker build -t campoflow-api:ci .
