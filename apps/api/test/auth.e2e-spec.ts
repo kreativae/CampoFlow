@@ -170,5 +170,72 @@ describe('Auth & Farms (e2e)', () => {
         .send({ email: owner.email, role: 'EMPLOYEE' })
         .expect(403);
     });
+
+    it('lists members including the newly added employee', async () => {
+      const res = await request(app.getHttpServer())
+        .get(`/farms/${farmId}/members`)
+        .set('Authorization', `Bearer ${ownerAccessToken}`)
+        .expect(200);
+
+      const members = res.body as { email: string; role: string }[];
+      expect(
+        members.some((m) => m.email === owner.email && m.role === 'OWNER'),
+      ).toBe(true);
+      expect(
+        members.some(
+          (m) => m.email === employee.email && m.role === 'EMPLOYEE',
+        ),
+      ).toBe(true);
+    });
+
+    it('rejects removing the sole owner of the farm', async () => {
+      const ownerMember = (
+        (
+          await request(app.getHttpServer())
+            .get(`/farms/${farmId}/members`)
+            .set('Authorization', `Bearer ${ownerAccessToken}`)
+        ).body as { userId: string; role: string }[]
+      ).find((m) => m.role === 'OWNER')!;
+
+      await request(app.getHttpServer())
+        .delete(`/farms/${farmId}/members/${ownerMember.userId}`)
+        .set('Authorization', `Bearer ${ownerAccessToken}`)
+        .expect(400);
+    });
+
+    it('rejects a non-owner removing a member', async () => {
+      const members = (
+        await request(app.getHttpServer())
+          .get(`/farms/${farmId}/members`)
+          .set('Authorization', `Bearer ${ownerAccessToken}`)
+      ).body as { userId: string; email: string }[];
+      const employeeMember = members.find((m) => m.email === employee.email)!;
+
+      await request(app.getHttpServer())
+        .delete(`/farms/${farmId}/members/${employeeMember.userId}`)
+        .set('Authorization', `Bearer ${employeeAccessToken}`)
+        .expect(403);
+    });
+
+    it('allows the owner to remove a member', async () => {
+      const members = (
+        await request(app.getHttpServer())
+          .get(`/farms/${farmId}/members`)
+          .set('Authorization', `Bearer ${ownerAccessToken}`)
+      ).body as { userId: string; email: string }[];
+      const employeeMember = members.find((m) => m.email === employee.email)!;
+
+      await request(app.getHttpServer())
+        .delete(`/farms/${farmId}/members/${employeeMember.userId}`)
+        .set('Authorization', `Bearer ${ownerAccessToken}`)
+        .expect(200);
+
+      const afterRes = await request(app.getHttpServer())
+        .get(`/farms/${farmId}/members`)
+        .set('Authorization', `Bearer ${ownerAccessToken}`)
+        .expect(200);
+      const afterMembers = afterRes.body as { email: string }[];
+      expect(afterMembers.some((m) => m.email === employee.email)).toBe(false);
+    });
   });
 });

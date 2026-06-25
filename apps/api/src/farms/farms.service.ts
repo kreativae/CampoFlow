@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateFarmDto } from './dto/create-farm.dto';
@@ -59,5 +63,45 @@ export class FarmsService {
       update: { role: dto.role },
       create: { userId: user.id, farmId, role: dto.role },
     });
+  }
+
+  async listMembers(farmId: string) {
+    const memberships = await this.prisma.membership.findMany({
+      where: { farmId },
+      include: { user: { select: { id: true, email: true, name: true } } },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    return memberships.map((m) => ({
+      userId: m.userId,
+      email: m.user.email,
+      name: m.user.name,
+      role: m.role,
+    }));
+  }
+
+  async removeMember(farmId: string, userId: string) {
+    const membership = await this.prisma.membership.findUnique({
+      where: { userId_farmId: { userId, farmId } },
+    });
+    if (!membership) {
+      throw new NotFoundException('Membro não encontrado nesta propriedade');
+    }
+
+    if (membership.role === Role.OWNER) {
+      const ownerCount = await this.prisma.membership.count({
+        where: { farmId, role: Role.OWNER },
+      });
+      if (ownerCount <= 1) {
+        throw new BadRequestException(
+          'Não é possível remover o único proprietário da propriedade',
+        );
+      }
+    }
+
+    await this.prisma.membership.delete({
+      where: { userId_farmId: { userId, farmId } },
+    });
+    return { success: true };
   }
 }

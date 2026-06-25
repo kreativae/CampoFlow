@@ -61,4 +61,21 @@ export class FarmsController {
   addMember(@Param('farmId') farmId: string, @Body() dto: AddMemberDto) {
     return this.farmsService.addMember(farmId, dto);
   }
+
+  @Get(':farmId/members')
+  @UseGuards(RolesGuard)
+  @Roles(Role.OWNER, Role.MANAGER)
+  listMembers(@Param('farmId') farmId: string) {
+    return this.farmsService.listMembers(farmId);
+  }
+
+  @Delete(':farmId/members/:userId')
+  @UseGuards(RolesGuard)
+  @Roles(Role.OWNER)
+  removeMember(
+    @Param('farmId') farmId: string,
+    @Param('userId') userId: string,
+  ) {
+    return this.farmsService.removeMember(farmId, userId);
+  }
 }
