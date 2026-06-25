@@ -56,6 +56,7 @@ model Farm {
   technicalManager   String?
   memberships        Membership[]
   pastures           Pasture[]
+  animals            Animal[]
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
 }
@@ -81,6 +82,7 @@ model Pasture {
   grassType      String?
   animalCapacity Int
   occupations    PastureOccupation[]
+  animals        Animal[]
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
 }
@@ -94,4 +96,66 @@ model PastureOccupation {
   enteredAt DateTime  @default(now())
   exitedAt  DateTime?
   notes     String?
+}
+
+enum AnimalSex {
+  MALE
+  FEMALE
+}
+
+enum AnimalCategory {
+  BEZERRO
+  BEZERRA
+  NOVILHO
+  NOVILHA
+  GARROTE
+  BOI
+  VACA
+  TOURO
+  MATRIZ
+}
+
+model Animal {
+  id              String         @id @default(uuid())
+  farm            Farm           @relation(fields: [farmId], references: [id])
+  farmId          String
+  pasture         Pasture?       @relation(fields: [pastureId], references: [id])
+  pastureId       String?
+  earTag          String
+  rfid            String?
+  name            String?
+  sex             AnimalSex
+  breed           String?
+  category        AnimalCategory
+  birthDate       DateTime?
+  currentWeightKg Float?
+  active          Boolean        @default(true)
+  events          AnimalEvent[]
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@unique([farmId, earTag])
+}
+
+enum AnimalEventType {
+  TRANSFER
+  WEIGHING
+  VACCINATION
+  TREATMENT
+  REPRODUCTIVE
+  SALE
+  DEATH
+}
+
+// Generic event log for an animal's history; specialized records (weighing, vaccination, etc.)
+// reference their own row by id and reuse this table for unified timeline queries.
+model AnimalEvent {
+  id          String          @id @default(uuid())
+  animal      Animal          @relation(fields: [animalId], references: [id])
+  animalId    String
+  type        AnimalEventType
+  occurredAt  DateTime        @default(now())
+  description String?
+  metadata    Json?
+  createdAt   DateTime        @default(now())
 }

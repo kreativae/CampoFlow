@@ -7,6 +7,7 @@ import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
 import { FarmsModule } from './farms/farms.module';
 import { PasturesModule } from './pastures/pastures.module';
+import { AnimalsModule } from './animals/animals.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { PasturesModule } from './pastures/pastures.module';
     AuthModule,
     FarmsModule,
     PasturesModule,
+    AnimalsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
