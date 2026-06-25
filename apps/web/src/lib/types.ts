@@ -78,11 +78,22 @@ export interface VaccinationRecord {
   batchNumber: string | null;
 }
 
+export interface PastureOccupation {
+  id: string;
+  headCount: number;
+  enteredAt: string;
+  exitedAt: string | null;
+  notes: string | null;
+}
+
 export interface Pasture {
   id: string;
+  farmId: string;
   name: string;
   areaHectares: number;
+  grassType: string | null;
   animalCapacity: number;
+  occupations?: PastureOccupation[];
 }
 
 export interface DashboardOverview {
