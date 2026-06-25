@@ -11,6 +11,7 @@ import { AnimalsModule } from './animals/animals.module';
 import { HealthRecordsModule } from './health-records/health-records.module';
 import { WeighingsModule } from './weighings/weighings.module';
 import { ReproductionModule } from './reproduction/reproduction.module';
+import { FinanceModule } from './finance/finance.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { ReproductionModule } from './reproduction/reproduction.module';
     HealthRecordsModule,
     WeighingsModule,
     ReproductionModule,
+    FinanceModule,
   ],
   controllers: [AppController],
   providers: [AppService],
