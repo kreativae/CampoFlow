@@ -5,5 +5,6 @@ import { WeighingsController } from './weighings.controller';
 @Module({
   providers: [WeighingsService],
   controllers: [WeighingsController],
+  exports: [WeighingsService],
 })
 export class WeighingsModule {}

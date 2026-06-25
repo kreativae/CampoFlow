@@ -12,6 +12,7 @@ import { HealthRecordsModule } from './health-records/health-records.module';
 import { WeighingsModule } from './weighings/weighings.module';
 import { ReproductionModule } from './reproduction/reproduction.module';
 import { FinanceModule } from './finance/finance.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { FinanceModule } from './finance/finance.module';
     WeighingsModule,
     ReproductionModule,
     FinanceModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [AppService],

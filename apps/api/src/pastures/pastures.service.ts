@@ -88,4 +88,27 @@ export class PasturesService {
       data: { exitedAt: new Date() },
     });
   }
+
+  // Stocking rate across all pastures of the farm: occupied head count vs. total capacity.
+  async occupancyStats(farmId: string) {
+    const pastures = await this.prisma.pasture.findMany({
+      where: { farmId },
+      include: { occupations: { where: { exitedAt: null } } },
+    });
+
+    const totalCapacity = pastures.reduce(
+      (sum, p) => sum + p.animalCapacity,
+      0,
+    );
+    const occupiedHeadCount = pastures.reduce(
+      (sum, p) => sum + p.occupations.reduce((s, o) => s + o.headCount, 0),
+      0,
+    );
+
+    return {
+      totalCapacity,
+      occupiedHeadCount,
+      occupancyRate: totalCapacity > 0 ? occupiedHeadCount / totalCapacity : 0,
+    };
+  }
 }

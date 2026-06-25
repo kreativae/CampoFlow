@@ -5,5 +5,6 @@ import { PasturesController } from './pastures.controller';
 @Module({
   providers: [PasturesService],
   controllers: [PasturesController],
+  exports: [PasturesService],
 })
 export class PasturesModule {}
