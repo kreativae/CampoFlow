@@ -74,6 +74,12 @@ export default function FarmDashboardPage() {
         </button>
       </header>
 
+      <nav className="mb-8 flex gap-4 border-b border-gray-200 pb-2 text-sm">
+        <Link href={`/farms/${farmId}/animals`} className="font-medium text-green-700 hover:underline">
+          Rebanho
+        </Link>
+      </nav>
+
       {error && (
         <p className="mb-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
           {error}
