@@ -4,8 +4,8 @@ Plataforma de gestão para pecuaristas e produtores rurais.
 
 ## Estrutura
 
-- `apps/api` — Backend NestJS + Prisma + PostgreSQL (em desenvolvimento)
-- `apps/web` — Painel administrativo (futuro, Next.js)
+- `apps/api` — Backend NestJS + Prisma + PostgreSQL
+- `apps/web` — Painel administrativo Next.js (autenticação, propriedades, dashboard)
 - `apps/mobile` — App mobile (futuro, Flutter)
 
 ## Pré-requisitos de desenvolvimento
@@ -66,3 +66,18 @@ docker run -p 3000:3000 --env-file .env campoflow-api
 O container roda `prisma migrate deploy` automaticamente antes de iniciar a API.
 Não foi possível testar a build da imagem neste ambiente (Docker não está instalado);
 validar em um ambiente com Docker antes do primeiro deploy real.
+
+## Rodando o painel web
+
+```bash
+cd apps/web
+cp .env.example .env.local   # ajuste NEXT_PUBLIC_API_URL se necessário
+npm install
+npm run dev
+```
+
+Requer a API rodando (CORS já habilitado via `CORS_ORIGIN` no `.env` da API).
+Fluxo coberto: cadastro/login, listagem e criação de propriedades, e dashboard
+agregado por propriedade (`/farms/[farmId]`). Telas adicionais (rebanho, sanidade,
+financeiro, etc.) ainda não foram construídas — apenas o necessário para validar
+ponta a ponta a autenticação e o dashboard que já existiam na API.

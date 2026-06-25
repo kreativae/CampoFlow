@@ -1,0 +1,94 @@
+'use client';
+
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { apiFetch } from './api';
+import type { AuthResponse, User } from './types';
+
+const STORAGE_KEY = 'campoflow.auth';
+
+interface StoredAuth {
+  user: User;
+  accessToken: string;
+  refreshToken: string;
+}
+
+interface AuthContextValue {
+  user: User | null;
+  accessToken: string | null;
+  loading: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, name: string) => Promise<void>;
+  logout: () => void;
+}
+
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+function persist(auth: StoredAuth | null) {
+  if (auth) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(auth));
+  } else {
+    localStorage.removeItem(STORAGE_KEY);
+  }
+}
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      try {
+        const stored = JSON.parse(raw) as StoredAuth;
+        // Hydrating client-only auth state from localStorage on mount is the intended use case here.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setUser(stored.user);
+        setAccessToken(stored.accessToken);
+      } catch {
+        localStorage.removeItem(STORAGE_KEY);
+      }
+    }
+    setLoading(false);
+  }, []);
+
+  async function login(email: string, password: string) {
+    const res = await apiFetch<AuthResponse>('/auth/login', {
+      method: 'POST',
+      body: { email, password },
+    });
+    setUser(res.user);
+    setAccessToken(res.accessToken);
+    persist({ user: res.user, accessToken: res.accessToken, refreshToken: res.refreshToken });
+  }
+
+  async function register(email: string, password: string, name: string) {
+    const res = await apiFetch<AuthResponse>('/auth/register', {
+      method: 'POST',
+      body: { email, password, name },
+    });
+    setUser(res.user);
+    setAccessToken(res.accessToken);
+    persist({ user: res.user, accessToken: res.accessToken, refreshToken: res.refreshToken });
+  }
+
+  function logout() {
+    setUser(null);
+    setAccessToken(null);
+    persist(null);
+  }
+
+  return (
+    <AuthContext.Provider value={{ user, accessToken, loading, login, register, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const ctx = useContext(AuthContext);
+  if (!ctx) {
+    throw new Error('useAuth deve ser usado dentro de um AuthProvider');
+  }
+  return ctx;
+}
