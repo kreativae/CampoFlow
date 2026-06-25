@@ -10,6 +10,7 @@ import { PasturesModule } from './pastures/pastures.module';
 import { AnimalsModule } from './animals/animals.module';
 import { HealthRecordsModule } from './health-records/health-records.module';
 import { WeighingsModule } from './weighings/weighings.module';
+import { ReproductionModule } from './reproduction/reproduction.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { WeighingsModule } from './weighings/weighings.module';
     AnimalsModule,
     HealthRecordsModule,
     WeighingsModule,
+    ReproductionModule,
   ],
   controllers: [AppController],
   providers: [AppService],

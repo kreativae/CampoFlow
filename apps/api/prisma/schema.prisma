@@ -116,26 +116,27 @@ enum AnimalCategory {
 }
 
 model Animal {
-  id              String              @id @default(uuid())
-  farm            Farm                @relation(fields: [farmId], references: [id])
-  farmId          String
-  pasture         Pasture?            @relation(fields: [pastureId], references: [id])
-  pastureId       String?
-  earTag          String
-  rfid            String?
-  name            String?
-  sex             AnimalSex
-  breed           String?
-  category        AnimalCategory
-  birthDate       DateTime?
-  currentWeightKg Float?
-  active          Boolean             @default(true)
-  events          AnimalEvent[]
-  vaccinations    VaccinationRecord[]
-  treatments      TreatmentRecord[]
-  weighings       WeighingRecord[]
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
+  id                 String              @id @default(uuid())
+  farm               Farm                @relation(fields: [farmId], references: [id])
+  farmId             String
+  pasture            Pasture?            @relation(fields: [pastureId], references: [id])
+  pastureId          String?
+  earTag             String
+  rfid               String?
+  name               String?
+  sex                AnimalSex
+  breed              String?
+  category           AnimalCategory
+  birthDate          DateTime?
+  currentWeightKg    Float?
+  active             Boolean             @default(true)
+  events             AnimalEvent[]
+  vaccinations       VaccinationRecord[]
+  treatments         TreatmentRecord[]
+  weighings          WeighingRecord[]
+  reproductiveEvents ReproductiveEvent[]
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
 
   @@unique([farmId, earTag])
 }
@@ -197,4 +198,29 @@ model WeighingRecord {
   weighedAt DateTime @default(now())
   notes     String?
   createdAt DateTime @default(now())
+}
+
+enum ReproductiveEventType {
+  IATF
+  MONTA_NATURAL
+  INSEMINACAO
+  DIAGNOSTICO_PRENHEZ
+  PARTO
+  ABORTO
+}
+
+enum PregnancyDiagnosisResult {
+  PRENHE
+  VAZIA
+}
+
+model ReproductiveEvent {
+  id        String                    @id @default(uuid())
+  animal    Animal                    @relation(fields: [animalId], references: [id])
+  animalId  String
+  type      ReproductiveEventType
+  eventDate DateTime                  @default(now())
+  result    PregnancyDiagnosisResult?
+  notes     String?
+  createdAt DateTime                  @default(now())
 }
