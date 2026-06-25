@@ -74,12 +74,17 @@ export default function FarmsPage() {
           <h1 className="text-2xl font-semibold text-green-800">CampoFlow</h1>
           <p className="text-sm text-gray-500">Olá, {user.name}</p>
         </div>
-        <button
-          onClick={logout}
-          className="text-sm font-medium text-gray-600 hover:text-gray-900"
-        >
-          Sair
-        </button>
+        <div className="flex items-center gap-4">
+          <Link href="/quotations" className="text-sm font-medium text-green-700 hover:underline">
+            Cotações
+          </Link>
+          <button
+            onClick={logout}
+            className="text-sm font-medium text-gray-600 hover:text-gray-900"
+          >
+            Sair
+          </button>
+        </div>
       </header>
 
       {error && (

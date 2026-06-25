@@ -12,6 +12,38 @@ export interface AuthResponse {
   refreshToken: string;
 }
 
+export type Commodity =
+  | 'BOI_GORDO'
+  | 'VACA_GORDA'
+  | 'NOVILHA'
+  | 'BEZERRO'
+  | 'REPOSICAO'
+  | 'COURO'
+  | 'SEBO'
+  | 'LEITE'
+  | 'MILHO'
+  | 'SOJA'
+  | 'SORGO'
+  | 'FARELO_SOJA';
+
+export interface Quotation {
+  id: string;
+  commodity: Commodity;
+  price: number;
+  unit: string;
+  source: string | null;
+  recordedAt: string;
+}
+
+export interface LatestQuotation {
+  commodity: Commodity;
+  price: number;
+  unit: string;
+  source: string | null;
+  recordedAt: string;
+  changePercent: number;
+}
+
 export interface Farm {
   id: string;
   name: string;
