@@ -96,6 +96,35 @@ export interface Pasture {
   occupations?: PastureOccupation[];
 }
 
+export type TransactionType = 'RECEITA' | 'DESPESA';
+
+export type TransactionCategory =
+  | 'NUTRICAO'
+  | 'MEDICAMENTOS'
+  | 'FUNCIONARIOS'
+  | 'COMBUSTIVEL'
+  | 'MAQUINARIO'
+  | 'ENERGIA'
+  | 'VENDA_ANIMAL'
+  | 'OUTROS';
+
+export interface Transaction {
+  id: string;
+  type: TransactionType;
+  category: TransactionCategory;
+  description: string | null;
+  amount: number;
+  dueDate: string;
+  paidAt: string | null;
+}
+
+export interface CashFlowBucket {
+  period: string;
+  receita: number;
+  despesa: number;
+  saldo: number;
+}
+
 export interface DashboardOverview {
   totalAnimals: number;
   averageWeightKg: number;
