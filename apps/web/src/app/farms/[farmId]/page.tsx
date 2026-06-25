@@ -84,6 +84,9 @@ export default function FarmDashboardPage() {
         <Link href={`/farms/${farmId}/reproduction`} className="font-medium text-green-700 hover:underline">
           Reprodução
         </Link>
+        <Link href={`/farms/${farmId}/weather`} className="font-medium text-green-700 hover:underline">
+          Clima
+        </Link>
         <Link href={`/farms/${farmId}/finance`} className="font-medium text-green-700 hover:underline">
           Financeiro
         </Link>

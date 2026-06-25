@@ -214,3 +214,17 @@ export interface DashboardOverview {
     overdue: boolean;
   }[];
 }
+
+export type WeatherAlertType = 'GEADA' | 'TEMPESTADE' | 'GRANIZO' | 'SECA' | 'VENTO_FORTE';
+
+export interface WeatherRecord {
+  id: string;
+  temperatureC: number | null;
+  humidityPercent: number | null;
+  windSpeedKmh: number | null;
+  pressureHpa: number | null;
+  rainfallMm: number | null;
+  alertType: WeatherAlertType | null;
+  notes: string | null;
+  recordedAt: string;
+}
