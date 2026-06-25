@@ -8,6 +8,8 @@ import { AuthModule } from './auth/auth.module';
 import { FarmsModule } from './farms/farms.module';
 import { PasturesModule } from './pastures/pastures.module';
 import { AnimalsModule } from './animals/animals.module';
+import { HealthRecordsModule } from './health-records/health-records.module';
+import { WeighingsModule } from './weighings/weighings.module';
 
 @Module({
   imports: [
@@ -18,6 +20,8 @@ import { AnimalsModule } from './animals/animals.module';
     FarmsModule,
     PasturesModule,
     AnimalsModule,
+    HealthRecordsModule,
+    WeighingsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

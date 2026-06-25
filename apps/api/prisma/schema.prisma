@@ -116,10 +116,10 @@ enum AnimalCategory {
 }
 
 model Animal {
-  id              String         @id @default(uuid())
-  farm            Farm           @relation(fields: [farmId], references: [id])
+  id              String              @id @default(uuid())
+  farm            Farm                @relation(fields: [farmId], references: [id])
   farmId          String
-  pasture         Pasture?       @relation(fields: [pastureId], references: [id])
+  pasture         Pasture?            @relation(fields: [pastureId], references: [id])
   pastureId       String?
   earTag          String
   rfid            String?
@@ -129,10 +129,13 @@ model Animal {
   category        AnimalCategory
   birthDate       DateTime?
   currentWeightKg Float?
-  active          Boolean        @default(true)
+  active          Boolean             @default(true)
   events          AnimalEvent[]
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  vaccinations    VaccinationRecord[]
+  treatments      TreatmentRecord[]
+  weighings       WeighingRecord[]
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
 
   @@unique([farmId, earTag])
 }
@@ -158,4 +161,40 @@ model AnimalEvent {
   description String?
   metadata    Json?
   createdAt   DateTime        @default(now())
+}
+
+model VaccinationRecord {
+  id             String    @id @default(uuid())
+  animal         Animal    @relation(fields: [animalId], references: [id])
+  animalId       String
+  vaccineName    String
+  scheduledDate  DateTime
+  administeredAt DateTime?
+  batchNumber    String?
+  administeredBy String?
+  notes          String?
+  createdAt      DateTime  @default(now())
+}
+
+model TreatmentRecord {
+  id             String   @id @default(uuid())
+  animal         Animal   @relation(fields: [animalId], references: [id])
+  animalId       String
+  diagnosis      String?
+  medication     String
+  dosage         String?
+  treatmentDate  DateTime @default(now())
+  administeredBy String?
+  notes          String?
+  createdAt      DateTime @default(now())
+}
+
+model WeighingRecord {
+  id        String   @id @default(uuid())
+  animal    Animal   @relation(fields: [animalId], references: [id])
+  animalId  String
+  weightKg  Float
+  weighedAt DateTime @default(now())
+  notes     String?
+  createdAt DateTime @default(now())
 }
