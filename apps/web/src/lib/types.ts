@@ -103,6 +103,34 @@ export interface Pasture {
   occupations?: PastureOccupation[];
 }
 
+export type ReproductiveEventType =
+  | 'IATF'
+  | 'MONTA_NATURAL'
+  | 'INSEMINACAO'
+  | 'DIAGNOSTICO_PRENHEZ'
+  | 'PARTO'
+  | 'ABORTO';
+
+export type PregnancyDiagnosisResult = 'PRENHE' | 'VAZIA';
+
+export interface ReproductiveEvent {
+  id: string;
+  type: ReproductiveEventType;
+  eventDate: string;
+  result: PregnancyDiagnosisResult | null;
+  notes: string | null;
+}
+
+export interface ReproductionStats {
+  breedingEvents: number;
+  pregnancyDiagnoses: number;
+  confirmedPregnant: number;
+  conceptionRate: number;
+  pregnancyRate: number;
+  births: number;
+  abortions: number;
+}
+
 export type TransactionType = 'RECEITA' | 'DESPESA';
 
 export type TransactionCategory =

@@ -9,9 +9,21 @@ import type {
   Animal,
   AnimalEvent,
   GainSummary,
+  PregnancyDiagnosisResult,
+  ReproductiveEvent,
+  ReproductiveEventType,
   VaccinationRecord,
   WeighingRecord,
 } from '@/lib/types';
+
+const REPRODUCTIVE_EVENT_OPTIONS: { value: ReproductiveEventType; label: string }[] = [
+  { value: 'IATF', label: 'IATF' },
+  { value: 'MONTA_NATURAL', label: 'Monta natural' },
+  { value: 'INSEMINACAO', label: 'Inseminação' },
+  { value: 'DIAGNOSTICO_PRENHEZ', label: 'Diagnóstico de prenhez' },
+  { value: 'PARTO', label: 'Parto' },
+  { value: 'ABORTO', label: 'Aborto' },
+];
 
 export default function AnimalDetailPage() {
   const { farmId, animalId } = useParams<{ farmId: string; animalId: string }>();
@@ -22,6 +34,7 @@ export default function AnimalDetailPage() {
   const [weighings, setWeighings] = useState<WeighingRecord[]>([]);
   const [gainSummary, setGainSummary] = useState<GainSummary | null>(null);
   const [vaccinations, setVaccinations] = useState<VaccinationRecord[]>([]);
+  const [reproductiveEvents, setReproductiveEvents] = useState<ReproductiveEvent[]>([]);
   const [history, setHistory] = useState<AnimalEvent[]>([]);
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,23 +46,35 @@ export default function AnimalDetailPage() {
   const [scheduledDate, setScheduledDate] = useState('');
   const [savingVaccination, setSavingVaccination] = useState(false);
 
+  const [reproEventType, setReproEventType] = useState<ReproductiveEventType>('IATF');
+  const [reproResult, setReproResult] = useState<PregnancyDiagnosisResult | ''>('');
+  const [savingReproEvent, setSavingReproEvent] = useState(false);
+
   const loadData = useCallback(async () => {
     setFetching(true);
     setError(null);
     try {
       const base = `/farms/${farmId}/animals/${animalId}`;
-      const [animalData, weighingsData, gainData, vaccinationsData, historyData] =
-        await Promise.all([
-          apiFetch<Animal>(base, { token: accessToken }),
-          apiFetch<WeighingRecord[]>(`${base}/weighings`, { token: accessToken }),
-          apiFetch<GainSummary>(`${base}/weighings/gain-summary`, { token: accessToken }),
-          apiFetch<VaccinationRecord[]>(`${base}/vaccinations`, { token: accessToken }),
-          apiFetch<AnimalEvent[]>(`${base}/history`, { token: accessToken }),
-        ]);
+      const [
+        animalData,
+        weighingsData,
+        gainData,
+        vaccinationsData,
+        reproductiveEventsData,
+        historyData,
+      ] = await Promise.all([
+        apiFetch<Animal>(base, { token: accessToken }),
+        apiFetch<WeighingRecord[]>(`${base}/weighings`, { token: accessToken }),
+        apiFetch<GainSummary>(`${base}/weighings/gain-summary`, { token: accessToken }),
+        apiFetch<VaccinationRecord[]>(`${base}/vaccinations`, { token: accessToken }),
+        apiFetch<ReproductiveEvent[]>(`${base}/reproductive-events`, { token: accessToken }),
+        apiFetch<AnimalEvent[]>(`${base}/history`, { token: accessToken }),
+      ]);
       setAnimal(animalData);
       setWeighings(weighingsData);
       setGainSummary(gainData);
       setVaccinations(vaccinationsData);
+      setReproductiveEvents(reproductiveEventsData);
       setHistory(historyData);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao carregar dados do animal');
@@ -105,6 +130,28 @@ export default function AnimalDetailPage() {
       setError(err instanceof ApiError ? err.message : 'Erro ao agendar vacina');
     } finally {
       setSavingVaccination(false);
+    }
+  }
+
+  async function handleAddReproductiveEvent(event: FormEvent) {
+    event.preventDefault();
+    setSavingReproEvent(true);
+    setError(null);
+    try {
+      await apiFetch(`/farms/${farmId}/animals/${animalId}/reproductive-events`, {
+        method: 'POST',
+        token: accessToken,
+        body: {
+          type: reproEventType,
+          result: reproEventType === 'DIAGNOSTICO_PRENHEZ' && reproResult ? reproResult : undefined,
+        },
+      });
+      setReproResult('');
+      await loadData();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao registrar evento reprodutivo');
+    } finally {
+      setSavingReproEvent(false);
     }
   }
 
@@ -240,6 +287,55 @@ export default function AnimalDetailPage() {
                     Marcar como aplicada
                   </button>
                 )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="mb-8 rounded border border-gray-200 bg-white p-4">
+        <h2 className="mb-3 font-semibold text-gray-800">Reprodução</h2>
+        <form onSubmit={handleAddReproductiveEvent} className="mb-4 flex flex-wrap gap-2">
+          <select
+            value={reproEventType}
+            onChange={(e) => setReproEventType(e.target.value as ReproductiveEventType)}
+            className="rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+          >
+            {REPRODUCTIVE_EVENT_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+          {reproEventType === 'DIAGNOSTICO_PRENHEZ' && (
+            <select
+              value={reproResult}
+              onChange={(e) => setReproResult(e.target.value as PregnancyDiagnosisResult | '')}
+              required
+              className="rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            >
+              <option value="">Resultado...</option>
+              <option value="PRENHE">Prenhe</option>
+              <option value="VAZIA">Vazia</option>
+            </select>
+          )}
+          <button
+            type="submit"
+            disabled={savingReproEvent}
+            className="rounded bg-green-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+          >
+            {savingReproEvent ? 'Salvando...' : 'Registrar evento'}
+          </button>
+        </form>
+        {reproductiveEvents.length === 0 ? (
+          <p className="text-sm text-gray-500">Nenhum evento reprodutivo registrado.</p>
+        ) : (
+          <ul className="space-y-1 text-sm text-gray-700">
+            {reproductiveEvents.map((e) => (
+              <li key={e.id}>
+                {new Date(e.eventDate).toLocaleDateString('pt-BR')} —{' '}
+                {REPRODUCTIVE_EVENT_OPTIONS.find((opt) => opt.value === e.type)?.label ?? e.type}
+                {e.result ? ` (${e.result === 'PRENHE' ? 'Prenhe' : 'Vazia'})` : ''}
               </li>
             ))}
           </ul>
