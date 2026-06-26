@@ -24,6 +24,7 @@ import { TeamsModule } from './teams/teams.module';
 import { AgendaModule } from './agenda/agenda.module';
 import { MapFeaturesModule } from './map-features/map-features.module';
 import { DocumentsModule } from './documents/documents.module';
+import { ReportsModule } from './reports/reports.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { DocumentsModule } from './documents/documents.module';
     AgendaModule,
     MapFeaturesModule,
     DocumentsModule,
+    ReportsModule,
   ],
   controllers: [AppController],
   providers: [
