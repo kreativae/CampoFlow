@@ -6,3 +6,6 @@ node_modules
 
 # Locally stored uploaded documents (see Documents module)
 /uploads
+
+# Local database dumps (see scripts/backup-db.sh)
+/backups
