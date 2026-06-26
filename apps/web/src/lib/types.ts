@@ -313,3 +313,35 @@ export interface MachineCostSummary {
   totalCost: number;
   totalLiters: number;
 }
+
+export type TaskStatus = 'PENDENTE' | 'EM_ANDAMENTO' | 'CONCLUIDA' | 'CANCELADA';
+
+export interface Task {
+  id: string;
+  title: string;
+  description: string | null;
+  assignedToId: string | null;
+  assignedTo: { id: string; name: string; email: string } | null;
+  status: TaskStatus;
+  dueDate: string | null;
+  completedAt: string | null;
+}
+
+export interface WorkLog {
+  id: string;
+  description: string;
+  hoursWorked: number;
+  taskId: string | null;
+  workDate: string;
+  notes: string | null;
+  user: { id: string; name: string; email: string };
+}
+
+export interface Shift {
+  id: string;
+  userId: string;
+  startDate: string;
+  endDate: string;
+  notes: string | null;
+  user: { id: string; name: string; email: string };
+}

@@ -108,7 +108,7 @@ export default function MembersPage() {
         <Link href={`/farms/${farmId}`} className="text-sm text-green-700 hover:underline">
           ← Dashboard
         </Link>
-        <h1 className="text-2xl font-semibold text-green-800">Equipe</h1>
+        <h1 className="text-2xl font-semibold text-green-800">Membros</h1>
       </header>
 
       {error && (
