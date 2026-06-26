@@ -26,6 +26,7 @@ import { MapFeaturesModule } from './map-features/map-features.module';
 import { DocumentsModule } from './documents/documents.module';
 import { ReportsModule } from './reports/reports.module';
 import { BiModule } from './bi/bi.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { BiModule } from './bi/bi.module';
     DocumentsModule,
     ReportsModule,
     BiModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [
