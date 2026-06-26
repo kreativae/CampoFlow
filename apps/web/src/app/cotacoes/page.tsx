@@ -36,6 +36,7 @@ export default function QuotationsPage() {
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const [formCommodity, setFormCommodity] = useState<Commodity>('BOI_GORDO');
   const [price, setPrice] = useState('');
@@ -89,6 +90,19 @@ export default function QuotationsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCommodity]);
 
+  async function handleRefresh() {
+    setRefreshing(true);
+    setError(null);
+    try {
+      await apiFetch('/cotacoes/atualizar', { method: 'POST', token: accessToken });
+      await loadData();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao atualizar cotações automáticas');
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
   async function handleCreate(event: FormEvent) {
     event.preventDefault();
     setCreating(true);
@@ -119,15 +133,25 @@ export default function QuotationsPage() {
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
-      <header className="mb-8">
-        <Link href="/fazendas" className="text-sm text-green-700 hover:underline">
-          ← Propriedades
-        </Link>
-        <h1 className="text-2xl font-semibold text-green-800">Cotações</h1>
-        <p className="text-sm text-gray-500">
-          Preços de mercado, lançados manualmente. Integração automática com fontes externas
-          (Scot Consultoria, CEPEA, B3) é uma evolução futura.
-        </p>
+      <header className="mb-8 flex items-start justify-between gap-4">
+        <div>
+          <Link href="/fazendas" className="text-sm text-green-700 hover:underline">
+            ← Propriedades
+          </Link>
+          <h1 className="text-2xl font-semibold text-green-800">Cotações</h1>
+          <p className="text-sm text-gray-500">
+            Soja, milho e boi gordo são atualizados automaticamente a cada poucas horas (fonte:
+            Redação Agro, referência CEPEA/ESALQ — gratuita e não-oficial, sem garantia de
+            disponibilidade). Os demais produtos e qualquer correção ficam por lançamento manual.
+          </p>
+        </div>
+        <button
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="shrink-0 rounded bg-gray-200 px-3 py-2 text-sm font-medium text-gray-800 hover:bg-gray-300 disabled:opacity-50"
+        >
+          {refreshing ? 'Atualizando...' : 'Atualizar agora'}
+        </button>
       </header>
 
       {error && (
@@ -218,6 +242,9 @@ export default function QuotationsPage() {
                     {q.changePercent > 0 ? '↑' : '↓'} {Math.abs(q.changePercent)}%
                   </p>
                 )}
+                <p className="mt-1 text-xs text-gray-400">
+                  {q.source ? q.source : 'Lançamento manual'}
+                </p>
               </li>
             ))}
           </ul>
