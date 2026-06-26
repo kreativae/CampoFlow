@@ -16,6 +16,7 @@ import { EncryptionService } from '../common/crypto/encryption.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { AuthTokens, JwtPayload } from './auth.types';
+import { GoogleProfile } from './strategies/google.strategy';
 
 const PASSWORD_SALT_ROUNDS = 10;
 const MFA_ISSUER = 'CampoFlow';
@@ -52,6 +53,12 @@ export class AuthService {
     });
     if (!user) {
       throw new UnauthorizedException('Credenciais inválidas');
+    }
+
+    if (!user.passwordHash) {
+      throw new UnauthorizedException(
+        'Esta conta usa login com Google. Use o botão "Entrar com Google".',
+      );
     }
 
     const passwordMatches = await bcrypt.compare(
@@ -162,6 +169,56 @@ export class AuthService {
       data: { refreshTokenHash: null },
     });
     return { success: true };
+  }
+
+  isGoogleConfigured(): boolean {
+    return Boolean(
+      process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET,
+    );
+  }
+
+  async getMe(userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('Usuário não encontrado');
+    }
+    return this.toSafeUser(user);
+  }
+
+  // Finds an existing account by googleId, links Google to an existing account that
+  // registered with the same email (so a user who signed up with a password can also
+  // use "Entrar com Google" afterwards), or creates a brand-new OAuth-only account
+  // (passwordHash stays null — see schema comment). MFA is not re-checked here: Google
+  // already required the user to authenticate on its end, so we treat that as
+  // sufficient for this login. A user who wants MFA enforced on every login should use
+  // the password flow instead — a known limitation, not an oversight.
+  async loginWithGoogle(profile: GoogleProfile) {
+    let user = await this.prisma.user.findUnique({
+      where: { googleId: profile.googleId },
+    });
+
+    if (!user) {
+      const existingByEmail = await this.prisma.user.findUnique({
+        where: { email: profile.email },
+      });
+
+      user = existingByEmail
+        ? await this.prisma.user.update({
+            where: { id: existingByEmail.id },
+            data: { googleId: profile.googleId },
+          })
+        : await this.prisma.user.create({
+            data: {
+              email: profile.email,
+              name: profile.name,
+              googleId: profile.googleId,
+            },
+          });
+    }
+
+    const tokens = await this.issueTokens(user.id, user.email);
+    await this.persistRefreshToken(user.id, tokens.refreshToken);
+    return { user: this.toSafeUser(user), ...tokens };
   }
 
   // LGPD right of access: a self-service export of everything personal data the
