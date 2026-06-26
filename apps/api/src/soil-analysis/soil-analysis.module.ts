@@ -5,5 +5,6 @@ import { SoilAnalysisController } from './soil-analysis.controller';
 @Module({
   providers: [SoilAnalysisService],
   controllers: [SoilAnalysisController],
+  exports: [SoilAnalysisService],
 })
 export class SoilAnalysisModule {}

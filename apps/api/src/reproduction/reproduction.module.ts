@@ -5,5 +5,6 @@ import { ReproductionController } from './reproduction.controller';
 @Module({
   providers: [ReproductionService],
   controllers: [ReproductionController],
+  exports: [ReproductionService],
 })
 export class ReproductionModule {}

@@ -5,5 +5,6 @@ import { MapFeaturesController } from './map-features.controller';
 @Module({
   providers: [MapFeaturesService],
   controllers: [MapFeaturesController],
+  exports: [MapFeaturesService],
 })
 export class MapFeaturesModule {}

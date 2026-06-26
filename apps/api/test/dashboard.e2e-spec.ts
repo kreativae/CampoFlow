@@ -34,6 +34,19 @@ interface DashboardResponseBody {
   pendingAlerts: { id: string }[];
 }
 
+interface FullOverviewResponseBody {
+  herd: DashboardResponseBody;
+  members: { total: number };
+  supplies: { total: number; alertsCount: number };
+  machines: { total: number };
+  tasks: { total: number; openCount: number };
+  agenda: { upcomingCount: number };
+  map: { featuresCount: number; soilAnalysesCount: number };
+  documents: { total: number };
+  notifications: { unreadCount: number };
+  quotations: unknown[];
+}
+
 describe('Dashboard (e2e)', () => {
   let app: INestApplication<App>;
   let prisma: PrismaService;
@@ -156,6 +169,56 @@ describe('Dashboard (e2e)', () => {
         dueDate: today,
         paidAt: today,
       });
+
+    await request(app.getHttpServer())
+      .post(`/fazendas/${farmId}/insumos`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({
+        name: 'Sal Mineral Dashboard',
+        category: 'SAL_MINERAL',
+        unit: 'kg',
+        initialQuantity: 2,
+        minimumQuantity: 20,
+      });
+
+    await request(app.getHttpServer())
+      .post(`/fazendas/${farmId}/maquinas`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ name: 'Trator Dashboard', type: 'TRATOR' });
+
+    await request(app.getHttpServer())
+      .post(`/fazendas/${farmId}/tarefas`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ title: 'Tarefa Dashboard' });
+
+    await request(app.getHttpServer())
+      .post(`/fazendas/${farmId}/agenda`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({
+        title: 'Evento Dashboard',
+        type: 'MANEJO',
+        scheduledDate: today,
+      });
+
+    await request(app.getHttpServer())
+      .post(`/fazendas/${farmId}/elementos-mapa`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({
+        name: 'Elemento Dashboard',
+        type: 'OUTRO',
+        geometryType: 'PONTO',
+        coordinates: [[-21.78, -48.18]],
+      });
+
+    await request(app.getHttpServer())
+      .post(`/fazendas/${farmId}/documentos`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .field('category', 'OUTRO')
+      .attach('file', Buffer.from('documento dashboard'), 'doc.txt');
+
+    await request(app.getHttpServer())
+      .post(`/fazendas/${farmId}/notificacoes/gerar`)
+      .set('Authorization', `Bearer ${ownerToken}`);
   });
 
   afterAll(async () => {
@@ -170,6 +233,14 @@ describe('Dashboard (e2e)', () => {
       where: { pasture: { farmId } },
     });
     await prisma.pasture.deleteMany({ where: { farmId } });
+    await prisma.notification.deleteMany({ where: { farmId } });
+    await prisma.document.deleteMany({ where: { farmId } });
+    await prisma.mapFeature.deleteMany({ where: { farmId } });
+    await prisma.agendaEvent.deleteMany({ where: { farmId } });
+    await prisma.task.deleteMany({ where: { farmId } });
+    await prisma.machine.deleteMany({ where: { farmId } });
+    await prisma.supplyMovement.deleteMany({ where: { supply: { farmId } } });
+    await prisma.supply.deleteMany({ where: { farmId } });
     await prisma.membership.deleteMany({ where: { farmId } });
     await prisma.farm.delete({ where: { id: farmId } });
     await prisma.user.deleteMany({
@@ -202,5 +273,34 @@ describe('Dashboard (e2e)', () => {
     expect(dashboard.currentMonthFinance.despesa).toBe(800);
     expect(dashboard.currentMonthFinance.saldo).toBe(2200);
     expect(dashboard.pendingAlerts.length).toBe(1);
+  });
+
+  it('rejects a non-privileged role (employee) from accessing the full summary', async () => {
+    await request(app.getHttpServer())
+      .get(`/fazendas/${farmId}/painel/resumo`)
+      .set('Authorization', `Bearer ${employeeToken}`)
+      .expect(403);
+  });
+
+  it('aggregates a summary block for every module, reusing each module own service', async () => {
+    const res = await request(app.getHttpServer())
+      .get(`/fazendas/${farmId}/painel/resumo`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+
+    const body = res.body as FullOverviewResponseBody;
+    expect(body.herd.totalAnimals).toBe(2);
+    expect(body.members.total).toBe(2); // owner + employee
+    expect(body.supplies.total).toBe(1);
+    expect(body.supplies.alertsCount).toBe(1); // low stock
+    expect(body.machines.total).toBe(1);
+    expect(body.tasks.total).toBe(1);
+    expect(body.tasks.openCount).toBe(1); // PENDENTE by default
+    expect(body.agenda.upcomingCount).toBeGreaterThanOrEqual(1);
+    expect(body.map.featuresCount).toBe(1);
+    expect(body.map.soilAnalysesCount).toBe(0);
+    expect(body.documents.total).toBe(1);
+    expect(body.notifications.unreadCount).toBeGreaterThanOrEqual(1);
+    expect(Array.isArray(body.quotations)).toBe(true);
   });
 });
