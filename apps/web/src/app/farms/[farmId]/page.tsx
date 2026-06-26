@@ -105,6 +105,9 @@ export default function FarmDashboardPage() {
         <Link href={`/farms/${farmId}/documents`} className="font-medium text-green-700 hover:underline">
           Documentos
         </Link>
+        <Link href={`/farms/${farmId}/reports`} className="font-medium text-green-700 hover:underline">
+          Relatórios
+        </Link>
         <Link href={`/farms/${farmId}/finance`} className="font-medium text-green-700 hover:underline">
           Financeiro
         </Link>
