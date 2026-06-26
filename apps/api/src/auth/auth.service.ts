@@ -1,16 +1,20 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService, JwtSignOptions } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { authenticator } from 'otplib';
+import * as QRCode from 'qrcode';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { AuthTokens, JwtPayload } from './auth.types';
 
 const PASSWORD_SALT_ROUNDS = 10;
+const MFA_ISSUER = 'CampoFlow';
 
 @Injectable()
 export class AuthService {
@@ -53,9 +57,63 @@ export class AuthService {
       throw new UnauthorizedException('Credenciais inválidas');
     }
 
+    if (user.mfaEnabled) {
+      if (!dto.mfaCode) {
+        return { mfaRequired: true };
+      }
+      if (
+        !user.mfaSecret ||
+        !authenticator.check(dto.mfaCode, user.mfaSecret)
+      ) {
+        throw new UnauthorizedException('Código de autenticação inválido');
+      }
+    }
+
     const tokens = await this.issueTokens(user.id, user.email);
     await this.persistRefreshToken(user.id, tokens.refreshToken);
     return { user: this.toSafeUser(user), ...tokens };
+  }
+
+  // Generates a new TOTP secret and a QR code (data URL) for the user to scan with
+  // an authenticator app (Google Authenticator, Authy, etc.). MFA is not enabled yet
+  // at this point — enableMfa() requires a valid code to confirm the setup first, so a
+  // user can't get locked out by scanning the QR code incorrectly.
+  async setupMfa(userId: string, email: string) {
+    const secret = authenticator.generateSecret();
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { mfaSecret: secret, mfaEnabled: false },
+    });
+
+    const otpUrl = authenticator.keyuri(email, MFA_ISSUER, secret);
+    const qrCodeDataUrl = await QRCode.toDataURL(otpUrl);
+    return { secret, qrCodeDataUrl };
+  }
+
+  async enableMfa(userId: string, code: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user?.mfaSecret) {
+      throw new BadRequestException(
+        'MFA não foi configurado. Chame /auth/mfa/setup primeiro.',
+      );
+    }
+    if (!authenticator.check(code, user.mfaSecret)) {
+      throw new UnauthorizedException('Código de autenticação inválido');
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { mfaEnabled: true },
+    });
+    return { mfaEnabled: true };
+  }
+
+  async disableMfa(userId: string) {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { mfaEnabled: false, mfaSecret: null },
+    });
+    return { mfaEnabled: false };
   }
 
   async refresh(refreshToken: string) {

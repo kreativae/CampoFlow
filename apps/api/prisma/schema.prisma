@@ -31,6 +31,8 @@ model User {
   passwordHash     String
   name             String
   refreshTokenHash String?
+  mfaSecret        String?
+  mfaEnabled       Boolean      @default(false)
   memberships      Membership[]
   assignedTasks    Task[]       @relation("TaskAssignee")
   workLogs         WorkLog[]
