@@ -6,6 +6,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { EncryptionModule } from './common/crypto/encryption.module';
+import { StorageModule } from './common/storage/storage.module';
 import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
 import { FarmsModule } from './farms/farms.module';
@@ -35,6 +36,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
     PrismaModule,
     EncryptionModule,
+    StorageModule,
     HealthModule,
     AuthModule,
     FarmsModule,

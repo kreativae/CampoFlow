@@ -1,18 +1,28 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { promises as fs } from 'fs';
+import { randomUUID } from 'crypto';
+import { extname } from 'path';
 import { PrismaService } from '../prisma/prisma.service';
+import { StorageService } from '../common/storage/storage.service';
 import { UploadDocumentDto } from './dto/upload-document.dto';
 
 @Injectable()
 export class DocumentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storageService: StorageService,
+  ) {}
 
-  create(
+  async create(
     farmId: string,
     uploadedById: string,
     file: Express.Multer.File,
     dto: UploadDocumentDto,
   ) {
+    // storagePath is an opaque key, not a filesystem path: it's resolved by whichever
+    // StorageProvider is active (local disk in dev, Cloudflare R2 in production).
+    const storagePath = `${farmId}/${randomUUID()}${extname(file.originalname)}`;
+    await this.storageService.upload(storagePath, file.buffer, file.mimetype);
+
     return this.prisma.document.create({
       data: {
         farmId,
@@ -20,7 +30,7 @@ export class DocumentsService {
         fileName: file.originalname,
         mimeType: file.mimetype,
         fileSize: file.size,
-        storagePath: file.path,
+        storagePath,
         uploadedById,
         notes: dto.notes,
       },
@@ -47,7 +57,7 @@ export class DocumentsService {
   async remove(farmId: string, documentId: string) {
     const document = await this.findOne(farmId, documentId);
     await this.prisma.document.delete({ where: { id: documentId } });
-    await fs.unlink(document.storagePath).catch(() => undefined);
+    await this.storageService.delete(document.storagePath);
     return { success: true };
   }
 }
