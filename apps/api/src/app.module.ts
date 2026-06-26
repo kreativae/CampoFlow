@@ -7,6 +7,7 @@ import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { EncryptionModule } from './common/crypto/encryption.module';
 import { StorageModule } from './common/storage/storage.module';
+import { EmailModule } from './common/email/email.module';
 import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
 import { FarmsModule } from './farms/farms.module';
@@ -37,6 +38,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     PrismaModule,
     EncryptionModule,
     StorageModule,
+    EmailModule,
     HealthModule,
     AuthModule,
     FarmsModule,

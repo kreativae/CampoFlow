@@ -5,6 +5,7 @@ import {
   NotificationStatus,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { EmailService } from '../common/email/email.service';
 import { HealthRecordsService } from '../health-records/health-records.service';
 import { AgendaService } from '../agenda/agenda.service';
 import { SuppliesService } from '../supplies/supplies.service';
@@ -20,6 +21,7 @@ interface AlertCandidate {
 export class NotificationsService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly emailService: EmailService,
     private readonly healthRecordsService: HealthRecordsService,
     private readonly agendaService: AgendaService,
     private readonly suppliesService: SuppliesService,
@@ -86,10 +88,15 @@ export class NotificationsService {
   // notification with the same title+message already exists for that user, so
   // calling this repeatedly (e.g. on every dashboard load) does not spam duplicates.
   //
-  // Only the IN_APP channel is genuinely delivered here (persisted + shown in the
-  // notification center). EMAIL/SMS/PUSH have no real provider configured in this
-  // environment (no SendGrid/Twilio/FCM credentials), so a record is still created
-  // documenting what would have been sent, with status SIMULATED instead of SENT.
+  // The IN_APP channel is always genuinely delivered (persisted + shown in the
+  // notification center). When RESEND_API_KEY is configured, each user with at
+  // least one new alert also gets a real digest e-mail (one e-mail per call, not
+  // one per alert) via EmailService; that send is recorded as its own EMAIL-channel
+  // Notification row, with status SENT/FAILED reflecting whether Resend actually
+  // accepted it. Without RESEND_API_KEY (this environment's default, no real
+  // provider account exists), the row is still created so it's clear what would
+  // have been sent, with status SIMULATED instead of claiming a delivery that
+  // didn't happen.
   async generateFromAlerts(farmId: string) {
     const candidates = await this.collectAlerts(farmId);
     if (candidates.length === 0) {
@@ -98,11 +105,11 @@ export class NotificationsService {
 
     const memberships = await this.prisma.membership.findMany({
       where: { farmId },
-      select: { userId: true },
+      select: { userId: true, user: { select: { email: true, name: true } } },
     });
 
     let created = 0;
-    for (const { userId } of memberships) {
+    for (const { userId, user } of memberships) {
       const existing = await this.prisma.notification.findMany({
         where: { farmId, userId, read: false },
         select: { title: true, message: true },
@@ -111,30 +118,30 @@ export class NotificationsService {
         existing.map((e) => `${e.title}::${e.message}`),
       );
 
+      const newCandidates: AlertCandidate[] = [];
       for (const candidate of candidates) {
         const key = `${candidate.title}::${candidate.message}`;
         if (existingKeys.has(key)) continue;
 
-        await this.dispatch(farmId, userId, candidate);
+        await this.dispatchInApp(farmId, userId, candidate);
         existingKeys.add(key);
+        newCandidates.push(candidate);
         created += 1;
+      }
+
+      if (newCandidates.length > 0) {
+        await this.dispatchEmailDigest(farmId, userId, user, newCandidates);
       }
     }
 
     return { created };
   }
 
-  private dispatch(
+  private dispatchInApp(
     farmId: string,
     userId: string,
     candidate: AlertCandidate,
-    channel: NotificationChannel = NotificationChannel.IN_APP,
   ) {
-    const status =
-      channel === NotificationChannel.IN_APP
-        ? NotificationStatus.SENT
-        : NotificationStatus.SIMULATED;
-
     return this.prisma.notification.create({
       data: {
         farmId,
@@ -142,7 +149,42 @@ export class NotificationsService {
         title: candidate.title,
         message: candidate.message,
         source: candidate.source,
-        channel,
+        channel: NotificationChannel.IN_APP,
+        status: NotificationStatus.SENT,
+      },
+    });
+  }
+
+  private async dispatchEmailDigest(
+    farmId: string,
+    userId: string,
+    user: { email: string; name: string },
+    candidates: AlertCandidate[],
+  ) {
+    const subject = `CampoFlow: ${candidates.length} novo(s) alerta(s)`;
+    const itemsHtml = candidates
+      .map((c) => `<li><strong>${c.title}</strong>: ${c.message}</li>`)
+      .join('');
+    const html = `<p>Olá, ${user.name}.</p><p>Você tem ${candidates.length} novo(s) alerta(s) no CampoFlow:</p><ul>${itemsHtml}</ul>`;
+
+    const configured = this.emailService.isConfigured();
+    const sent = configured
+      ? await this.emailService.send(user.email, subject, html)
+      : false;
+    const status = !configured
+      ? NotificationStatus.SIMULATED
+      : sent
+        ? NotificationStatus.SENT
+        : NotificationStatus.FAILED;
+
+    await this.prisma.notification.create({
+      data: {
+        farmId,
+        userId,
+        title: 'Resumo de alertas enviado por e-mail',
+        message: `${candidates.length} alerta(s) resumidos em e-mail para ${user.email}`,
+        source: NotificationSource.OUTRO,
+        channel: NotificationChannel.EMAIL,
         status,
       },
     });

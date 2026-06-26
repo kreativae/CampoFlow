@@ -151,8 +151,16 @@ describe('Notifications (e2e)', () => {
         n.message.includes('Sal Mineral Notif'),
       ),
     ).toBe(true);
-    expect(ownerNotifications.every((n) => n.channel === 'IN_APP')).toBe(true);
-    expect(ownerNotifications.every((n) => n.status === 'SENT')).toBe(true);
+    const inAppNotifications = ownerNotifications.filter(
+      (n) => n.channel === 'IN_APP',
+    );
+    expect(inAppNotifications.length).toBeGreaterThan(0);
+    expect(inAppNotifications.every((n) => n.status === 'SENT')).toBe(true);
+
+    // RESEND_API_KEY isn't configured in this environment, so the per-user digest
+    // e-mail is recorded as SIMULATED rather than actually sent.
+    const emailDigest = ownerNotifications.find((n) => n.channel === 'EMAIL');
+    expect(emailDigest?.status).toBe('SIMULATED');
   });
 
   it('does not duplicate notifications on a second generate call', async () => {
