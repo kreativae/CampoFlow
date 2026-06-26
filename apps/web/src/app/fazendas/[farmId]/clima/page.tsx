@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, ApiError } from '@/lib/api';
-import type { WeatherAlertType, WeatherRecord } from '@/lib/types';
+import type { Farm, WeatherAlertType, WeatherRecord } from '@/lib/types';
 
 const ALERT_OPTIONS: { value: WeatherAlertType; label: string }[] = [
   { value: 'GEADA', label: 'Geada' },
@@ -27,9 +27,11 @@ export default function WeatherPage() {
   const [latest, setLatest] = useState<WeatherRecord | null>(null);
   const [alerts, setAlerts] = useState<WeatherRecord[]>([]);
   const [history, setHistory] = useState<WeatherRecord[]>([]);
+  const [farm, setFarm] = useState<Farm | null>(null);
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const [temperatureC, setTemperatureC] = useState('');
   const [humidityPercent, setHumidityPercent] = useState('');
@@ -43,11 +45,13 @@ export default function WeatherPage() {
     setError(null);
     try {
       const base = `/fazendas/${farmId}/clima`;
-      const [latestData, alertsData, historyData] = await Promise.all([
+      const [farmData, latestData, alertsData, historyData] = await Promise.all([
+        apiFetch<Farm>(`/fazendas/${farmId}`, { token: accessToken }),
         apiFetch<WeatherRecord | null>(`${base}/recente`, { token: accessToken }),
         apiFetch<WeatherRecord[]>(`${base}/alertas`, { token: accessToken }),
         apiFetch<WeatherRecord[]>(base, { token: accessToken }),
       ]);
+      setFarm(farmData);
       setLatest(latestData);
       setAlerts(alertsData);
       setHistory(historyData);
@@ -68,6 +72,22 @@ export default function WeatherPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadData();
   }, [loading, user, loadData, router]);
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    setError(null);
+    try {
+      await apiFetch(`/fazendas/${farmId}/clima/atualizar`, {
+        method: 'POST',
+        token: accessToken,
+      });
+      await loadData();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao atualizar clima automaticamente');
+    } finally {
+      setRefreshing(false);
+    }
+  }
 
   async function handleCreate(event: FormEvent) {
     event.preventDefault();
@@ -110,15 +130,37 @@ export default function WeatherPage() {
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
-      <header className="mb-8">
-        <Link href={`/fazendas/${farmId}`} className="text-sm text-green-700 hover:underline">
-          ← Dashboard
-        </Link>
-        <h1 className="text-2xl font-semibold text-green-800">Clima</h1>
-        <p className="text-sm text-gray-500">
-          Condições registradas manualmente. Integração automática com provedores externos
-          (OpenWeather, Tomorrow.io, Climatempo) é uma evolução futura.
-        </p>
+      <header className="mb-8 flex items-start justify-between gap-4">
+        <div>
+          <Link href={`/fazendas/${farmId}`} className="text-sm text-green-700 hover:underline">
+            ← Dashboard
+          </Link>
+          <h1 className="text-2xl font-semibold text-green-800">Clima</h1>
+          {farm?.latitude != null && farm?.longitude != null ? (
+            <p className="text-sm text-gray-500">
+              Atualizado automaticamente a cada poucas horas via Open-Meteo (gratuita, dados
+              abertos). Você também pode registrar condições manualmente.
+            </p>
+          ) : (
+            <p className="text-sm text-gray-500">
+              Cadastre a localização da fazenda no{' '}
+              <Link href={`/fazendas/${farmId}/mapa`} className="text-green-700 hover:underline">
+                Mapa
+              </Link>{' '}
+              para habilitar a atualização automática. Por enquanto, registre as condições
+              manualmente.
+            </p>
+          )}
+        </div>
+        {farm?.latitude != null && farm?.longitude != null && (
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="shrink-0 rounded bg-gray-200 px-3 py-2 text-sm font-medium text-gray-800 hover:bg-gray-300 disabled:opacity-50"
+          >
+            {refreshing ? 'Atualizando...' : 'Atualizar agora'}
+          </button>
+        )}
       </header>
 
       {error && (
@@ -147,6 +189,13 @@ export default function WeatherPage() {
         <SummaryCard label="Vento" value={latest?.windSpeedKmh != null ? `${latest.windSpeedKmh} km/h` : '—'} />
         <SummaryCard label="Chuva" value={latest?.rainfallMm != null ? `${latest.rainfallMm} mm` : '—'} />
       </section>
+
+      {latest && (
+        <p className="-mt-6 mb-8 text-xs text-gray-400">
+          Última leitura: {new Date(latest.recordedAt).toLocaleString('pt-BR')} ·{' '}
+          {latest.source ?? 'Lançamento manual'}
+        </p>
+      )}
 
       <form
         onSubmit={handleCreate}
@@ -239,6 +288,7 @@ export default function WeatherPage() {
                 {h.temperatureC != null ? `${h.temperatureC}°C` : ''}
                 {h.rainfallMm != null ? ` · ${h.rainfallMm}mm` : ''}
                 {h.alertType ? ` · ⚠ ${alertLabel(h.alertType)}` : ''}
+                {h.source ? ` · ${h.source}` : ''}
               </li>
             ))}
           </ul>

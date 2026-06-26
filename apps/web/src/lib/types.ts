@@ -235,6 +235,7 @@ export interface WeatherRecord {
   rainfallMm: number | null;
   alertType: WeatherAlertType | null;
   notes: string | null;
+  source: string | null;
   recordedAt: string;
 }
 
