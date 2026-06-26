@@ -5,18 +5,30 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { FarmAccessGuard } from '../auth/guards/farm-access.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { WeatherService } from './weather.service';
+import { ExternalWeatherService } from './external-weather.service';
 import { CreateWeatherRecordDto } from './dto/create-weather-record.dto';
 
 @Controller('fazendas/:farmId/clima')
 @UseGuards(JwtAuthGuard)
 export class WeatherController {
-  constructor(private readonly weatherService: WeatherService) {}
+  constructor(
+    private readonly weatherService: WeatherService,
+    private readonly externalWeatherService: ExternalWeatherService,
+  ) {}
 
   @Post()
   @UseGuards(RolesGuard)
   @Roles(Role.OWNER, Role.MANAGER, Role.EMPLOYEE)
   create(@Param('farmId') farmId: string, @Body() dto: CreateWeatherRecordDto) {
     return this.weatherService.create(farmId, dto);
+  }
+
+  // Manual trigger for the same Open-Meteo fetch the cron job runs every 3h.
+  @Post('atualizar')
+  @UseGuards(RolesGuard)
+  @Roles(Role.OWNER, Role.MANAGER, Role.EMPLOYEE)
+  refresh(@Param('farmId') farmId: string) {
+    return this.externalWeatherService.refreshForFarm(farmId);
   }
 
   @Get()

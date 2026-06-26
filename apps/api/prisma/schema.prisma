@@ -323,8 +323,9 @@ enum WeatherAlertType {
   VENTO_FORTE
 }
 
-// Farm-specific weather conditions. MVP supports manual entry; automatic ingestion
-// from external providers (OpenWeather, Tomorrow.io, Climatempo) is a future integration.
+// Farm-specific weather conditions. Auto-populated from Open-Meteo (free, no API key,
+// CC BY 4.0) for farms with latitude/longitude set, on top of manual entry — see
+// ExternalWeatherService. source is null for manually entered records.
 model WeatherRecord {
   id              String            @id @default(uuid())
   farm            Farm              @relation(fields: [farmId], references: [id])
@@ -336,6 +337,7 @@ model WeatherRecord {
   rainfallMm      Float?
   alertType       WeatherAlertType?
   notes           String?
+  source          String?
   recordedAt      DateTime          @default(now())
   createdAt       DateTime          @default(now())
 }
