@@ -69,6 +69,7 @@ model Farm {
   shifts             Shift[]
   agendaEvents       AgendaEvent[]
   mapFeatures        MapFeature[]
+  documents          Document[]
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
 }
@@ -529,4 +530,30 @@ model MapFeature {
   notes        String?
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
+}
+
+enum DocumentCategory {
+  GTA
+  NFE
+  CONTRATO
+  EXAME
+  CERTIFICADO
+  OUTRO
+}
+
+// File metadata; the binary itself is stored on local disk under apps/api/uploads
+// (storagePath). A future iteration can swap this for AWS S3 / Cloudflare R2 without
+// changing this model, since storagePath is just an opaque reference to the file.
+model Document {
+  id           String           @id @default(uuid())
+  farm         Farm             @relation(fields: [farmId], references: [id])
+  farmId       String
+  category     DocumentCategory
+  fileName     String
+  mimeType     String
+  fileSize     Int
+  storagePath  String
+  uploadedById String?
+  notes        String?
+  createdAt    DateTime         @default(now())
 }

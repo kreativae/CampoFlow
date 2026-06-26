@@ -3,3 +3,6 @@ node_modules
 .env
 
 /generated/prisma
+
+# Locally stored uploaded documents (see Documents module)
+/uploads
