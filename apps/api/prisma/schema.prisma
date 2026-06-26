@@ -26,23 +26,23 @@ enum Role {
 }
 
 model User {
-  id               String       @id @default(uuid())
-  email            String       @unique
+  id               String         @id @default(uuid())
+  email            String         @unique
   // Nullable because OAuth-only accounts (Google) never set a local password.
   passwordHash     String?
   name             String
   // Set when the account was created/linked via "Entrar com Google".
-  googleId         String?      @unique
+  googleId         String?        @unique
   refreshTokenHash String?
   mfaSecret        String?
-  mfaEnabled       Boolean      @default(false)
+  mfaEnabled       Boolean        @default(false)
   memberships      Membership[]
-  assignedTasks    Task[]       @relation("TaskAssignee")
+  assignedTasks    Task[]         @relation("TaskAssignee")
   workLogs         WorkLog[]
   shifts           Shift[]
   notifications    Notification[]
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
 }
 
 enum FarmType {
@@ -77,6 +77,7 @@ model Farm {
   notifications      Notification[]
   mapFeatures        MapFeature[]
   documents          Document[]
+  soilAnalyses       SoilAnalysis[]
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
 }
@@ -537,6 +538,7 @@ model MapFeature {
   geometryType GeometryType
   coordinates  Json
   notes        String?
+  soilAnalyses SoilAnalysis[]
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 }
@@ -596,17 +598,46 @@ enum NotificationSource {
 // claiming a delivery that didn't happen. Swapping in a real provider later only requires
 // changing NotificationsService.dispatch(), not this model.
 model Notification {
-  id          String              @id @default(uuid())
-  farm        Farm                @relation(fields: [farmId], references: [id])
-  farmId      String
-  user        User                @relation(fields: [userId], references: [id])
-  userId      String
-  title       String
-  message     String
-  channel     NotificationChannel @default(IN_APP)
-  status      NotificationStatus  @default(PENDING)
-  source      NotificationSource  @default(OUTRO)
-  read        Boolean             @default(false)
-  readAt      DateTime?
-  createdAt   DateTime            @default(now())
+  id        String              @id @default(uuid())
+  farm      Farm                @relation(fields: [farmId], references: [id])
+  farmId    String
+  user      User                @relation(fields: [userId], references: [id])
+  userId    String
+  title     String
+  message   String
+  channel   NotificationChannel @default(IN_APP)
+  status    NotificationStatus  @default(PENDING)
+  source    NotificationSource  @default(OUTRO)
+  read      Boolean             @default(false)
+  readAt    DateTime?
+  createdAt DateTime            @default(now())
+}
+
+// Soil lab analysis (analise de solo), optionally tied to an existing MapFeature
+// (a drawn pasture/fence/spring/reserve area) so results are anchored to a place on
+// the farm map instead of free text. Several analyses over time for the same
+// mapFeatureId form the history/comparison series. documentPath is an opaque storage
+// key (same StorageService used by the Documents module) for the uploaded lab PDF.
+model SoilAnalysis {
+  id                    String      @id @default(uuid())
+  farm                  Farm        @relation(fields: [farmId], references: [id])
+  farmId                String
+  mapFeature            MapFeature? @relation(fields: [mapFeatureId], references: [id])
+  mapFeatureId          String?
+  areaLabel             String?
+  collectedAt           DateTime
+  ph                    Float?
+  phosphorusMgDm3       Float?
+  potassiumCmolcDm3     Float?
+  calciumCmolcDm3       Float?
+  magnesiumCmolcDm3     Float?
+  aluminumCmolcDm3      Float?
+  organicMatterPercent  Float?
+  baseSaturationPercent Float?
+  ctcCmolcDm3           Float?
+  documentPath          String?
+  documentFileName      String?
+  notes                 String?
+  createdById           String?
+  createdAt             DateTime    @default(now())
 }

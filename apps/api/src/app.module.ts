@@ -27,6 +27,7 @@ import { MachinesModule } from './machines/machines.module';
 import { TeamsModule } from './teams/teams.module';
 import { AgendaModule } from './agenda/agenda.module';
 import { MapFeaturesModule } from './map-features/map-features.module';
+import { SoilAnalysisModule } from './soil-analysis/soil-analysis.module';
 import { DocumentsModule } from './documents/documents.module';
 import { ReportsModule } from './reports/reports.module';
 import { BiModule } from './bi/bi.module';
@@ -58,6 +59,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     TeamsModule,
     AgendaModule,
     MapFeaturesModule,
+    SoilAnalysisModule,
     DocumentsModule,
     ReportsModule,
     BiModule,
