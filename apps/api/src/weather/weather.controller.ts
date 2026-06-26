@@ -7,7 +7,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { WeatherService } from './weather.service';
 import { CreateWeatherRecordDto } from './dto/create-weather-record.dto';
 
-@Controller('farms/:farmId/weather')
+@Controller('fazendas/:farmId/clima')
 @UseGuards(JwtAuthGuard)
 export class WeatherController {
   constructor(private readonly weatherService: WeatherService) {}
@@ -25,13 +25,13 @@ export class WeatherController {
     return this.weatherService.history(farmId);
   }
 
-  @Get('latest')
+  @Get('recente')
   @UseGuards(FarmAccessGuard)
   latest(@Param('farmId') farmId: string) {
     return this.weatherService.latest(farmId);
   }
 
-  @Get('alerts')
+  @Get('alertas')
   @UseGuards(FarmAccessGuard)
   activeAlerts(@Param('farmId') farmId: string) {
     return this.weatherService.activeAlerts(farmId);

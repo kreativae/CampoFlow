@@ -82,53 +82,53 @@ describe('Dashboard (e2e)', () => {
     employeeToken = (employeeRes.body as AuthResponseBody).accessToken;
 
     const farmRes = await request(app.getHttpServer())
-      .post('/farms')
+      .post('/fazendas')
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ name: 'Fazenda Dashboard' });
     farmId = (farmRes.body as FarmResponseBody).id;
 
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/members`)
+      .post(`/fazendas/${farmId}/membros`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ email: employee.email, role: 'EMPLOYEE' });
 
     const pastureRes = await request(app.getHttpServer())
-      .post(`/farms/${farmId}/pastures`)
+      .post(`/fazendas/${farmId}/pastagens`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ name: 'Pasto Dashboard', areaHectares: 10, animalCapacity: 10 });
     pastureId = (pastureRes.body as PastureResponseBody).id;
 
     const animalARes = await request(app.getHttpServer())
-      .post(`/farms/${farmId}/animals`)
+      .post(`/fazendas/${farmId}/animais`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ earTag: 'DASH-A', sex: 'MALE', category: 'BOI', pastureId });
     animalAId = (animalARes.body as AnimalResponseBody).id;
 
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/animals`)
+      .post(`/fazendas/${farmId}/animais`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ earTag: 'DASH-B', sex: 'FEMALE', category: 'VACA', pastureId });
 
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/pastures/${pastureId}/occupations`)
+      .post(`/fazendas/${farmId}/pastagens/${pastureId}/ocupacoes`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ headCount: 2 });
 
     const day0 = new Date();
     day0.setDate(day0.getDate() - 10);
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/animals/${animalAId}/weighings`)
+      .post(`/fazendas/${farmId}/animais/${animalAId}/pesagens`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ weightKg: 300, weighedAt: day0.toISOString() });
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/animals/${animalAId}/weighings`)
+      .post(`/fazendas/${farmId}/animais/${animalAId}/pesagens`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ weightKg: 320 });
 
     const overdue = new Date();
     overdue.setDate(overdue.getDate() - 1);
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/animals/${animalAId}/vaccinations`)
+      .post(`/fazendas/${farmId}/animais/${animalAId}/vacinacoes`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({
         vaccineName: 'Febre Aftosa',
@@ -137,7 +137,7 @@ describe('Dashboard (e2e)', () => {
 
     const today = new Date().toISOString().slice(0, 10);
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/transactions`)
+      .post(`/fazendas/${farmId}/lancamentos`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({
         type: 'RECEITA',
@@ -147,7 +147,7 @@ describe('Dashboard (e2e)', () => {
         paidAt: today,
       });
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/transactions`)
+      .post(`/fazendas/${farmId}/lancamentos`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({
         type: 'DESPESA',
@@ -180,14 +180,14 @@ describe('Dashboard (e2e)', () => {
 
   it('rejects a non-privileged role (employee) from accessing the dashboard', async () => {
     await request(app.getHttpServer())
-      .get(`/farms/${farmId}/dashboard`)
+      .get(`/fazendas/${farmId}/painel`)
       .set('Authorization', `Bearer ${employeeToken}`)
       .expect(403);
   });
 
   it('aggregates herd, stocking, finance, and alert data for the owner', async () => {
     const res = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/dashboard`)
+      .get(`/fazendas/${farmId}/painel`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
 

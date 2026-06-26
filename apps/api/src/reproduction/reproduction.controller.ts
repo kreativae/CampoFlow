@@ -7,18 +7,18 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { ReproductionService } from './reproduction.service';
 import { CreateReproductiveEventDto } from './dto/create-reproductive-event.dto';
 
-@Controller('farms/:farmId')
+@Controller('fazendas/:farmId')
 @UseGuards(JwtAuthGuard)
 export class ReproductionController {
   constructor(private readonly reproductionService: ReproductionService) {}
 
-  @Get('reproduction/stats')
+  @Get('reproducao/estatisticas')
   @UseGuards(FarmAccessGuard)
   stats(@Param('farmId') farmId: string) {
     return this.reproductionService.stats(farmId);
   }
 
-  @Post('animals/:animalId/reproductive-events')
+  @Post('animais/:animalId/eventos-reprodutivos')
   @UseGuards(RolesGuard)
   @Roles(Role.OWNER, Role.MANAGER, Role.VETERINARIAN, Role.EMPLOYEE)
   create(
@@ -29,7 +29,7 @@ export class ReproductionController {
     return this.reproductionService.create(farmId, animalId, dto);
   }
 
-  @Get('animals/:animalId/reproductive-events')
+  @Get('animais/:animalId/eventos-reprodutivos')
   @UseGuards(FarmAccessGuard)
   listForAnimal(
     @Param('farmId') farmId: string,

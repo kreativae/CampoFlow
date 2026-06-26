@@ -18,7 +18,7 @@ import { CreatePastureDto } from './dto/create-pasture.dto';
 import { UpdatePastureDto } from './dto/update-pasture.dto';
 import { CreateOccupationDto } from './dto/create-occupation.dto';
 
-@Controller('farms/:farmId/pastures')
+@Controller('fazendas/:farmId/pastagens')
 @UseGuards(JwtAuthGuard)
 export class PasturesController {
   constructor(private readonly pasturesService: PasturesService) {}
@@ -66,7 +66,7 @@ export class PasturesController {
     return this.pasturesService.remove(farmId, pastureId);
   }
 
-  @Post(':pastureId/occupations')
+  @Post(':pastureId/ocupacoes')
   @UseGuards(RolesGuard)
   @Roles(Role.OWNER, Role.MANAGER, Role.EMPLOYEE)
   enterOccupation(
@@ -77,7 +77,7 @@ export class PasturesController {
     return this.pasturesService.enterOccupation(farmId, pastureId, dto);
   }
 
-  @Patch(':pastureId/occupations/:occupationId/exit')
+  @Patch(':pastureId/ocupacoes/:occupationId/saida')
   @UseGuards(RolesGuard)
   @Roles(Role.OWNER, Role.MANAGER, Role.EMPLOYEE)
   exitOccupation(

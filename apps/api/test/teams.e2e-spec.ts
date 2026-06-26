@@ -81,13 +81,13 @@ describe('Teams (e2e)', () => {
     employeeId = (employeeRes.body as UserResponseBody).user.id;
 
     const farmRes = await request(app.getHttpServer())
-      .post('/farms')
+      .post('/fazendas')
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ name: 'Fazenda Equipes Teste' });
     farmId = (farmRes.body as FarmResponseBody).id;
 
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/members`)
+      .post(`/fazendas/${farmId}/membros`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ email: employee.email, role: 'EMPLOYEE' });
   });
@@ -106,7 +106,7 @@ describe('Teams (e2e)', () => {
 
   it('creates a task assigned to a farm member', async () => {
     const res = await request(app.getHttpServer())
-      .post(`/farms/${farmId}/tasks`)
+      .post(`/fazendas/${farmId}/tarefas`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ title: 'Reparar cerca do pasto 3', assignedToId: employeeId })
       .expect(201);
@@ -119,7 +119,7 @@ describe('Teams (e2e)', () => {
 
   it('rejects assigning a task to a non-member user', async () => {
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/tasks`)
+      .post(`/fazendas/${farmId}/tarefas`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ title: 'Outra tarefa', assignedToId: 'non-existent-user-id' })
       .expect(400);
@@ -127,7 +127,7 @@ describe('Teams (e2e)', () => {
 
   it('rejects a non-privileged role from creating a task', async () => {
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/tasks`)
+      .post(`/fazendas/${farmId}/tarefas`)
       .set('Authorization', `Bearer ${employeeToken}`)
       .send({ title: 'Tarefa indevida' })
       .expect(403);
@@ -135,7 +135,7 @@ describe('Teams (e2e)', () => {
 
   it('allows the assigned employee to update the task status', async () => {
     const res = await request(app.getHttpServer())
-      .patch(`/farms/${farmId}/tasks/${taskId}`)
+      .patch(`/fazendas/${farmId}/tarefas/${taskId}`)
       .set('Authorization', `Bearer ${employeeToken}`)
       .send({ status: 'CONCLUIDA' })
       .expect(200);
@@ -145,7 +145,7 @@ describe('Teams (e2e)', () => {
 
   it('lists tasks for the farm', async () => {
     const res = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/tasks`)
+      .get(`/fazendas/${farmId}/tarefas`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
 
@@ -156,7 +156,7 @@ describe('Teams (e2e)', () => {
 
   it('lets the employee log hours worked against the task', async () => {
     const res = await request(app.getHttpServer())
-      .post(`/farms/${farmId}/work-logs`)
+      .post(`/fazendas/${farmId}/registros-trabalho`)
       .set('Authorization', `Bearer ${employeeToken}`)
       .send({ description: 'Conserto da cerca', hoursWorked: 3.5, taskId })
       .expect(201);
@@ -166,7 +166,7 @@ describe('Teams (e2e)', () => {
 
   it('lists work logs for the farm', async () => {
     const res = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/work-logs`)
+      .get(`/fazendas/${farmId}/registros-trabalho`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
 
@@ -179,7 +179,7 @@ describe('Teams (e2e)', () => {
     end.setDate(end.getDate() + 7);
 
     const res = await request(app.getHttpServer())
-      .post(`/farms/${farmId}/shifts`)
+      .post(`/fazendas/${farmId}/escalas`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({
         userId: employeeId,
@@ -197,7 +197,7 @@ describe('Teams (e2e)', () => {
     end.setDate(end.getDate() + 1);
 
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/shifts`)
+      .post(`/fazendas/${farmId}/escalas`)
       .set('Authorization', `Bearer ${employeeToken}`)
       .send({
         userId: employeeId,
@@ -209,7 +209,7 @@ describe('Teams (e2e)', () => {
 
   it('lists shifts for the farm', async () => {
     const res = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/shifts`)
+      .get(`/fazendas/${farmId}/escalas`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
 

@@ -7,7 +7,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { WeighingsService } from './weighings.service';
 import { CreateWeighingDto } from './dto/create-weighing.dto';
 
-@Controller('farms/:farmId/animals/:animalId/weighings')
+@Controller('fazendas/:farmId/animais/:animalId/pesagens')
 @UseGuards(JwtAuthGuard)
 export class WeighingsController {
   constructor(private readonly weighingsService: WeighingsService) {}
@@ -29,7 +29,7 @@ export class WeighingsController {
     return this.weighingsService.list(farmId, animalId);
   }
 
-  @Get('gain-summary')
+  @Get('resumo-ganho')
   @UseGuards(FarmAccessGuard)
   gainSummary(
     @Param('farmId') farmId: string,

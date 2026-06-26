@@ -71,13 +71,13 @@ describe('Supplies (e2e)', () => {
     consultantToken = (consultantRes.body as AuthResponseBody).accessToken;
 
     const farmRes = await request(app.getHttpServer())
-      .post('/farms')
+      .post('/fazendas')
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ name: 'Fazenda Insumos Teste' });
     farmId = (farmRes.body as FarmResponseBody).id;
 
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/members`)
+      .post(`/fazendas/${farmId}/membros`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ email: consultant.email, role: 'CONSULTANT' });
   });
@@ -95,7 +95,7 @@ describe('Supplies (e2e)', () => {
 
   it('creates a supply with an initial quantity', async () => {
     const res = await request(app.getHttpServer())
-      .post(`/farms/${farmId}/supplies`)
+      .post(`/fazendas/${farmId}/insumos`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({
         name: 'Sal Mineral',
@@ -113,7 +113,7 @@ describe('Supplies (e2e)', () => {
 
   it('rejects a consultant (read-only role) from creating a supply', async () => {
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/supplies`)
+      .post(`/fazendas/${farmId}/insumos`)
       .set('Authorization', `Bearer ${consultantToken}`)
       .send({
         name: 'Ração',
@@ -126,7 +126,7 @@ describe('Supplies (e2e)', () => {
 
   it('registers a stock exit, decreasing the current quantity', async () => {
     const res = await request(app.getHttpServer())
-      .post(`/farms/${farmId}/supplies/${supplyId}/movements`)
+      .post(`/fazendas/${farmId}/insumos/${supplyId}/movimentacoes`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ type: 'SAIDA', quantity: 70 })
       .expect(201);
@@ -134,7 +134,7 @@ describe('Supplies (e2e)', () => {
     expect(res.body).toBeDefined();
 
     const supplyRes = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/supplies/${supplyId}`)
+      .get(`/fazendas/${farmId}/insumos/${supplyId}`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
     expect((supplyRes.body as SupplyResponseBody).currentQuantity).toBe(30);
@@ -142,7 +142,7 @@ describe('Supplies (e2e)', () => {
 
   it('rejects an exit larger than the current stock', async () => {
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/supplies/${supplyId}/movements`)
+      .post(`/fazendas/${farmId}/insumos/${supplyId}/movimentacoes`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ type: 'SAIDA', quantity: 999 })
       .expect(400);
@@ -151,13 +151,13 @@ describe('Supplies (e2e)', () => {
   it('flags the supply as a low-stock alert once below the minimum', async () => {
     // current quantity is 30, minimum is 20: not yet low. Exit 15 more -> 15, below minimum.
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/supplies/${supplyId}/movements`)
+      .post(`/fazendas/${farmId}/insumos/${supplyId}/movimentacoes`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ type: 'SAIDA', quantity: 15 })
       .expect(201);
 
     const res = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/supplies/alerts`)
+      .get(`/fazendas/${farmId}/insumos/alertas`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
 
@@ -172,7 +172,7 @@ describe('Supplies (e2e)', () => {
     soon.setDate(soon.getDate() + 5);
 
     const res = await request(app.getHttpServer())
-      .post(`/farms/${farmId}/supplies`)
+      .post(`/fazendas/${farmId}/insumos`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({
         name: 'Defensivo X',
@@ -186,7 +186,7 @@ describe('Supplies (e2e)', () => {
     const expiringSupplyId = (res.body as SupplyResponseBody).id;
 
     const alertsRes = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/supplies/alerts`)
+      .get(`/fazendas/${farmId}/insumos/alertas`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
 

@@ -15,12 +15,12 @@ import {
 } from '../auth/decorators/current-user.decorator';
 import { NotificationsService } from './notifications.service';
 
-@Controller('farms/:farmId/notifications')
+@Controller('fazendas/:farmId/notificacoes')
 @UseGuards(JwtAuthGuard, FarmAccessGuard)
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 
-  @Post('generate')
+  @Post('gerar')
   generate(@Param('farmId') farmId: string) {
     return this.notificationsService.generateFromAlerts(farmId);
   }
@@ -38,7 +38,7 @@ export class NotificationsController {
     );
   }
 
-  @Get('unread-count')
+  @Get('nao-lidas')
   unreadCount(
     @Param('farmId') farmId: string,
     @CurrentUser() user: AuthenticatedUser,
@@ -46,7 +46,7 @@ export class NotificationsController {
     return this.notificationsService.unreadCount(farmId, user.id);
   }
 
-  @Patch(':notificationId/read')
+  @Patch(':notificationId/ler')
   markRead(
     @Param('farmId') farmId: string,
     @Param('notificationId') notificationId: string,
@@ -55,7 +55,7 @@ export class NotificationsController {
     return this.notificationsService.markRead(farmId, user.id, notificationId);
   }
 
-  @Patch('read-all')
+  @Patch('ler-todas')
   markAllRead(
     @Param('farmId') farmId: string,
     @CurrentUser() user: AuthenticatedUser,

@@ -132,7 +132,7 @@ describe('Auth & Farms (e2e)', () => {
         .accessToken;
 
       const farmRes = await request(app.getHttpServer())
-        .post('/farms')
+        .post('/fazendas')
         .set('Authorization', `Bearer ${ownerAccessToken}`)
         .send({ name: 'Fazenda Teste' })
         .expect(201);
@@ -140,12 +140,12 @@ describe('Auth & Farms (e2e)', () => {
     });
 
     it('rejects unauthenticated access', async () => {
-      await request(app.getHttpServer()).get('/farms').expect(401);
+      await request(app.getHttpServer()).get('/fazendas').expect(401);
     });
 
     it('owner can list their farms', async () => {
       const res = await request(app.getHttpServer())
-        .get('/farms')
+        .get('/fazendas')
         .set('Authorization', `Bearer ${ownerAccessToken}`)
         .expect(200);
 
@@ -155,7 +155,7 @@ describe('Auth & Farms (e2e)', () => {
 
     it('owner can add a member with a role', async () => {
       await request(app.getHttpServer())
-        .post(`/farms/${farmId}/members`)
+        .post(`/fazendas/${farmId}/membros`)
         .set('Authorization', `Bearer ${ownerAccessToken}`)
         .send({ email: employee.email, role: 'EMPLOYEE' })
         .expect(201);
@@ -165,7 +165,7 @@ describe('Auth & Farms (e2e)', () => {
       // employee's token does not yet carry the new membership (issued before being added),
       // so this exercises the RolesGuard rejecting users without a qualifying role on the farm.
       await request(app.getHttpServer())
-        .post(`/farms/${farmId}/members`)
+        .post(`/fazendas/${farmId}/membros`)
         .set('Authorization', `Bearer ${employeeAccessToken}`)
         .send({ email: owner.email, role: 'EMPLOYEE' })
         .expect(403);
@@ -173,7 +173,7 @@ describe('Auth & Farms (e2e)', () => {
 
     it('lists members including the newly added employee', async () => {
       const res = await request(app.getHttpServer())
-        .get(`/farms/${farmId}/members`)
+        .get(`/fazendas/${farmId}/membros`)
         .set('Authorization', `Bearer ${ownerAccessToken}`)
         .expect(200);
 
@@ -192,13 +192,13 @@ describe('Auth & Farms (e2e)', () => {
       const ownerMember = (
         (
           await request(app.getHttpServer())
-            .get(`/farms/${farmId}/members`)
+            .get(`/fazendas/${farmId}/membros`)
             .set('Authorization', `Bearer ${ownerAccessToken}`)
         ).body as { userId: string; role: string }[]
       ).find((m) => m.role === 'OWNER')!;
 
       await request(app.getHttpServer())
-        .delete(`/farms/${farmId}/members/${ownerMember.userId}`)
+        .delete(`/fazendas/${farmId}/membros/${ownerMember.userId}`)
         .set('Authorization', `Bearer ${ownerAccessToken}`)
         .expect(400);
     });
@@ -206,13 +206,13 @@ describe('Auth & Farms (e2e)', () => {
     it('rejects a non-owner removing a member', async () => {
       const members = (
         await request(app.getHttpServer())
-          .get(`/farms/${farmId}/members`)
+          .get(`/fazendas/${farmId}/membros`)
           .set('Authorization', `Bearer ${ownerAccessToken}`)
       ).body as { userId: string; email: string }[];
       const employeeMember = members.find((m) => m.email === employee.email)!;
 
       await request(app.getHttpServer())
-        .delete(`/farms/${farmId}/members/${employeeMember.userId}`)
+        .delete(`/fazendas/${farmId}/membros/${employeeMember.userId}`)
         .set('Authorization', `Bearer ${employeeAccessToken}`)
         .expect(403);
     });
@@ -220,18 +220,18 @@ describe('Auth & Farms (e2e)', () => {
     it('allows the owner to remove a member', async () => {
       const members = (
         await request(app.getHttpServer())
-          .get(`/farms/${farmId}/members`)
+          .get(`/fazendas/${farmId}/membros`)
           .set('Authorization', `Bearer ${ownerAccessToken}`)
       ).body as { userId: string; email: string }[];
       const employeeMember = members.find((m) => m.email === employee.email)!;
 
       await request(app.getHttpServer())
-        .delete(`/farms/${farmId}/members/${employeeMember.userId}`)
+        .delete(`/fazendas/${farmId}/membros/${employeeMember.userId}`)
         .set('Authorization', `Bearer ${ownerAccessToken}`)
         .expect(200);
 
       const afterRes = await request(app.getHttpServer())
-        .get(`/farms/${farmId}/members`)
+        .get(`/fazendas/${farmId}/membros`)
         .set('Authorization', `Bearer ${ownerAccessToken}`)
         .expect(200);
       const afterMembers = afterRes.body as { email: string }[];

@@ -7,7 +7,7 @@ import { BiService } from './bi.service';
 
 // Restricted to OWNER/MANAGER since this surfaces financial KPIs, consistent with
 // FinanceController, DashboardController, and ReportsController.
-@Controller('farms/:farmId/bi')
+@Controller('fazendas/:farmId/inteligencia')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.OWNER, Role.MANAGER)
 export class BiController {

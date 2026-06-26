@@ -70,13 +70,13 @@ describe('Agenda (e2e)', () => {
     consultantToken = (consultantRes.body as AuthResponseBody).accessToken;
 
     const farmRes = await request(app.getHttpServer())
-      .post('/farms')
+      .post('/fazendas')
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ name: 'Fazenda Agenda Teste' });
     farmId = (farmRes.body as FarmResponseBody).id;
 
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/members`)
+      .post(`/fazendas/${farmId}/membros`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ email: consultant.email, role: 'CONSULTANT' });
   });
@@ -96,7 +96,7 @@ describe('Agenda (e2e)', () => {
     past.setDate(past.getDate() - 2);
 
     const res = await request(app.getHttpServer())
-      .post(`/farms/${farmId}/agenda`)
+      .post(`/fazendas/${farmId}/agenda`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({
         title: 'Repasse de pasto 2',
@@ -113,7 +113,7 @@ describe('Agenda (e2e)', () => {
     future.setDate(future.getDate() + 60);
 
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/agenda`)
+      .post(`/fazendas/${farmId}/agenda`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({
         title: 'Comprar ração',
@@ -125,7 +125,7 @@ describe('Agenda (e2e)', () => {
 
   it('rejects a consultant (read-only role) from creating an event', async () => {
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/agenda`)
+      .post(`/fazendas/${farmId}/agenda`)
       .set('Authorization', `Bearer ${consultantToken}`)
       .send({
         title: 'Evento indevido',
@@ -137,7 +137,7 @@ describe('Agenda (e2e)', () => {
 
   it('lists the overdue event as an alert, but not the far-future one', async () => {
     const res = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/agenda/alerts`)
+      .get(`/fazendas/${farmId}/agenda/alertas`)
       .set('Authorization', `Bearer ${consultantToken}`)
       .expect(200);
 
@@ -150,12 +150,12 @@ describe('Agenda (e2e)', () => {
 
   it('marks the overdue event as completed, removing it from alerts', async () => {
     await request(app.getHttpServer())
-      .patch(`/farms/${farmId}/agenda/${overdueEventId}/complete`)
+      .patch(`/fazendas/${farmId}/agenda/${overdueEventId}/concluir`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
 
     const res = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/agenda/alerts`)
+      .get(`/fazendas/${farmId}/agenda/alertas`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
 
@@ -164,7 +164,7 @@ describe('Agenda (e2e)', () => {
 
   it('lists all events for the farm', async () => {
     const res = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/agenda`)
+      .get(`/fazendas/${farmId}/agenda`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
 

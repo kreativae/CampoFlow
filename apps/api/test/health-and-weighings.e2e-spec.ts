@@ -71,13 +71,13 @@ describe('Health records & Weighings (e2e)', () => {
     ownerToken = (ownerRes.body as AuthResponseBody).accessToken;
 
     const farmRes = await request(app.getHttpServer())
-      .post('/farms')
+      .post('/fazendas')
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ name: 'Fazenda Saúde' });
     farmId = (farmRes.body as FarmResponseBody).id;
 
     const animalRes = await request(app.getHttpServer())
-      .post(`/farms/${farmId}/animals`)
+      .post(`/fazendas/${farmId}/animais`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ earTag: 'SAUDE-001', sex: 'MALE', category: 'BOI' });
     animalId = (animalRes.body as AnimalResponseBody).id;
@@ -105,7 +105,7 @@ describe('Health records & Weighings (e2e)', () => {
       past.setDate(past.getDate() - 2);
 
       const res = await request(app.getHttpServer())
-        .post(`/farms/${farmId}/animals/${animalId}/vaccinations`)
+        .post(`/fazendas/${farmId}/animais/${animalId}/vacinacoes`)
         .set('Authorization', `Bearer ${ownerToken}`)
         .send({
           vaccineName: 'Febre Aftosa',
@@ -121,7 +121,7 @@ describe('Health records & Weighings (e2e)', () => {
       future.setDate(future.getDate() + 60);
 
       await request(app.getHttpServer())
-        .post(`/farms/${farmId}/animals/${animalId}/vaccinations`)
+        .post(`/fazendas/${farmId}/animais/${animalId}/vacinacoes`)
         .set('Authorization', `Bearer ${ownerToken}`)
         .send({ vaccineName: 'Brucelose', scheduledDate: future.toISOString() })
         .expect(201);
@@ -129,7 +129,7 @@ describe('Health records & Weighings (e2e)', () => {
 
     it('lists the overdue vaccination as a pending alert, but not the future one', async () => {
       const res = await request(app.getHttpServer())
-        .get(`/farms/${farmId}/health/alerts`)
+        .get(`/fazendas/${farmId}/sanidade/alertas`)
         .set('Authorization', `Bearer ${ownerToken}`)
         .expect(200);
 
@@ -143,14 +143,14 @@ describe('Health records & Weighings (e2e)', () => {
     it('marks the vaccination as applied, removing it from pending alerts', async () => {
       await request(app.getHttpServer())
         .patch(
-          `/farms/${farmId}/animals/${animalId}/vaccinations/${overdueVaccinationId}/apply`,
+          `/fazendas/${farmId}/animais/${animalId}/vacinacoes/${overdueVaccinationId}/aplicar`,
         )
         .set('Authorization', `Bearer ${ownerToken}`)
         .send({})
         .expect(200);
 
       const res = await request(app.getHttpServer())
-        .get(`/farms/${farmId}/health/alerts`)
+        .get(`/fazendas/${farmId}/sanidade/alertas`)
         .set('Authorization', `Bearer ${ownerToken}`)
         .expect(200);
 
@@ -161,7 +161,7 @@ describe('Health records & Weighings (e2e)', () => {
   describe('treatments', () => {
     it('creates and lists a treatment record', async () => {
       await request(app.getHttpServer())
-        .post(`/farms/${farmId}/animals/${animalId}/treatments`)
+        .post(`/fazendas/${farmId}/animais/${animalId}/tratamentos`)
         .set('Authorization', `Bearer ${ownerToken}`)
         .send({
           medication: 'Antibiótico X',
@@ -170,7 +170,7 @@ describe('Health records & Weighings (e2e)', () => {
         .expect(201);
 
       const res = await request(app.getHttpServer())
-        .get(`/farms/${farmId}/animals/${animalId}/treatments`)
+        .get(`/fazendas/${farmId}/animais/${animalId}/tratamentos`)
         .set('Authorization', `Bearer ${ownerToken}`)
         .expect(200);
 
@@ -185,13 +185,13 @@ describe('Health records & Weighings (e2e)', () => {
       const day30 = new Date();
 
       await request(app.getHttpServer())
-        .post(`/farms/${farmId}/animals/${animalId}/weighings`)
+        .post(`/fazendas/${farmId}/animais/${animalId}/pesagens`)
         .set('Authorization', `Bearer ${ownerToken}`)
         .send({ weightKg: 300, weighedAt: day0.toISOString() })
         .expect(201);
 
       const secondRes = await request(app.getHttpServer())
-        .post(`/farms/${farmId}/animals/${animalId}/weighings`)
+        .post(`/fazendas/${farmId}/animais/${animalId}/pesagens`)
         .set('Authorization', `Bearer ${ownerToken}`)
         .send({ weightKg: 330, weighedAt: day30.toISOString() })
         .expect(201);
@@ -199,7 +199,7 @@ describe('Health records & Weighings (e2e)', () => {
       expect((secondRes.body as { weightKg: number }).weightKg).toBe(330);
 
       const animalRes = await request(app.getHttpServer())
-        .get(`/farms/${farmId}/animals/${animalId}`)
+        .get(`/fazendas/${farmId}/animais/${animalId}`)
         .set('Authorization', `Bearer ${ownerToken}`)
         .expect(200);
 
@@ -208,7 +208,7 @@ describe('Health records & Weighings (e2e)', () => {
 
     it('computes average daily and monthly gain from weighing history', async () => {
       const res = await request(app.getHttpServer())
-        .get(`/farms/${farmId}/animals/${animalId}/weighings/gain-summary`)
+        .get(`/fazendas/${farmId}/animais/${animalId}/pesagens/resumo-ganho`)
         .set('Authorization', `Bearer ${ownerToken}`)
         .expect(200);
 

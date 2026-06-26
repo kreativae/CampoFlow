@@ -62,7 +62,7 @@ describe('Machines (e2e)', () => {
     ownerToken = (ownerRes.body as AuthResponseBody).accessToken;
 
     const farmRes = await request(app.getHttpServer())
-      .post('/farms')
+      .post('/fazendas')
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ name: 'Fazenda Maquinas Teste' });
     farmId = (farmRes.body as FarmResponseBody).id;
@@ -84,7 +84,7 @@ describe('Machines (e2e)', () => {
 
   it('creates a machine', async () => {
     const res = await request(app.getHttpServer())
-      .post(`/farms/${farmId}/machines`)
+      .post(`/fazendas/${farmId}/maquinas`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({
         name: 'Trator Massey',
@@ -101,7 +101,7 @@ describe('Machines (e2e)', () => {
 
   it('records a fuel entry and advances the hour meter', async () => {
     const res = await request(app.getHttpServer())
-      .post(`/farms/${farmId}/machines/${machineId}/fuel-records`)
+      .post(`/fazendas/${farmId}/maquinas/${machineId}/registros-combustivel`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ liters: 50, cost: 350, hourMeterAt: 120 })
       .expect(201);
@@ -109,7 +109,7 @@ describe('Machines (e2e)', () => {
     expect(res.body).toBeDefined();
 
     const machineRes = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/machines/${machineId}`)
+      .get(`/fazendas/${farmId}/maquinas/${machineId}`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
     expect((machineRes.body as MachineResponseBody).currentHourMeter).toBe(120);
@@ -117,13 +117,13 @@ describe('Machines (e2e)', () => {
 
   it('records a maintenance and does not regress the hour meter with a lower reading', async () => {
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/machines/${machineId}/maintenances`)
+      .post(`/fazendas/${farmId}/maquinas/${machineId}/manutencoes`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ description: 'Troca de óleo', cost: 200, hourMeterAt: 100 })
       .expect(201);
 
     const machineRes = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/machines/${machineId}`)
+      .get(`/fazendas/${farmId}/maquinas/${machineId}`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
     // hour meter stays at 120 (the higher reading), not regressed to 100
@@ -132,7 +132,7 @@ describe('Machines (e2e)', () => {
 
   it('aggregates maintenance and fuel costs for the machine', async () => {
     const res = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/machines/costs`)
+      .get(`/fazendas/${farmId}/maquinas/custos`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
 

@@ -71,13 +71,13 @@ describe('Finance (e2e)', () => {
     consultantToken = (consultantRes.body as AuthResponseBody).accessToken;
 
     const farmRes = await request(app.getHttpServer())
-      .post('/farms')
+      .post('/fazendas')
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ name: 'Fazenda Financeiro' });
     farmId = (farmRes.body as FarmResponseBody).id;
 
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/members`)
+      .post(`/fazendas/${farmId}/membros`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ email: consultant.email, role: 'CONSULTANT' });
   });
@@ -94,7 +94,7 @@ describe('Finance (e2e)', () => {
 
   it('creates a payable (despesa) transaction', async () => {
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/transactions`)
+      .post(`/fazendas/${farmId}/lancamentos`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({
         type: 'DESPESA',
@@ -108,7 +108,7 @@ describe('Finance (e2e)', () => {
 
   it('creates a receivable (receita) transaction in the same month', async () => {
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/transactions`)
+      .post(`/fazendas/${farmId}/lancamentos`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({
         type: 'RECEITA',
@@ -122,7 +122,7 @@ describe('Finance (e2e)', () => {
 
   it('creates a pending (unpaid) transaction in a different month', async () => {
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/transactions`)
+      .post(`/fazendas/${farmId}/lancamentos`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({
         type: 'DESPESA',
@@ -135,14 +135,14 @@ describe('Finance (e2e)', () => {
 
   it('rejects a non-privileged role (consultant) from accessing finance', async () => {
     await request(app.getHttpServer())
-      .get(`/farms/${farmId}/transactions`)
+      .get(`/fazendas/${farmId}/lancamentos`)
       .set('Authorization', `Bearer ${consultantToken}`)
       .expect(403);
   });
 
   it('lists all transactions for the farm', async () => {
     const res = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/transactions`)
+      .get(`/fazendas/${farmId}/lancamentos`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
 
@@ -151,7 +151,7 @@ describe('Finance (e2e)', () => {
 
   it('computes monthly cash flow with revenue, expense and balance', async () => {
     const res = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/finance/cash-flow?granularity=monthly`)
+      .get(`/fazendas/${farmId}/financeiro/fluxo-caixa?granularity=monthly`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
 
@@ -171,7 +171,7 @@ describe('Finance (e2e)', () => {
 
   it('marks a transaction as paid', async () => {
     const listRes = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/transactions`)
+      .get(`/fazendas/${farmId}/lancamentos`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
 
@@ -180,7 +180,7 @@ describe('Finance (e2e)', () => {
     )!;
 
     const res = await request(app.getHttpServer())
-      .patch(`/farms/${farmId}/transactions/${unpaid.id}/pay`)
+      .patch(`/fazendas/${farmId}/lancamentos/${unpaid.id}/pagar`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
 

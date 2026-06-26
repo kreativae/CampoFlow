@@ -68,25 +68,25 @@ describe('Animals (e2e)', () => {
     ownerToken = (ownerRes.body as AuthResponseBody).accessToken;
 
     const farmRes = await request(app.getHttpServer())
-      .post('/farms')
+      .post('/fazendas')
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ name: 'Fazenda do Rebanho' });
     farmId = (farmRes.body as FarmResponseBody).id;
 
     const secondFarmRes = await request(app.getHttpServer())
-      .post('/farms')
+      .post('/fazendas')
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ name: 'Fazenda Vizinha' });
     secondFarmId = (secondFarmRes.body as FarmResponseBody).id;
 
     const pastureARes = await request(app.getHttpServer())
-      .post(`/farms/${farmId}/pastures`)
+      .post(`/fazendas/${farmId}/pastagens`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ name: 'Pasto A', areaHectares: 10, animalCapacity: 5 });
     pastureAId = (pastureARes.body as PastureResponseBody).id;
 
     const pastureBRes = await request(app.getHttpServer())
-      .post(`/farms/${farmId}/pastures`)
+      .post(`/fazendas/${farmId}/pastagens`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ name: 'Pasto B', areaHectares: 10, animalCapacity: 5 });
     pastureBId = (pastureBRes.body as PastureResponseBody).id;
@@ -114,7 +114,7 @@ describe('Animals (e2e)', () => {
 
   it('creates an animal in a pasture', async () => {
     const res = await request(app.getHttpServer())
-      .post(`/farms/${farmId}/animals`)
+      .post(`/fazendas/${farmId}/animais`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({
         earTag: 'BR-0001',
@@ -134,7 +134,7 @@ describe('Animals (e2e)', () => {
 
   it('rejects duplicate ear tag within the same farm', async () => {
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/animals`)
+      .post(`/fazendas/${farmId}/animais`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ earTag: 'BR-0001', sex: 'MALE', category: 'BOI' })
       .expect(409);
@@ -142,7 +142,7 @@ describe('Animals (e2e)', () => {
 
   it('rejects a pasture from a different farm', async () => {
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/animals`)
+      .post(`/fazendas/${farmId}/animais`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({
         earTag: 'BR-9999',
@@ -155,7 +155,7 @@ describe('Animals (e2e)', () => {
 
   it('lists animals for the farm', async () => {
     const res = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/animals`)
+      .get(`/fazendas/${farmId}/animais`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
 
@@ -166,7 +166,7 @@ describe('Animals (e2e)', () => {
 
   it('transfers the animal to a different pasture and logs history', async () => {
     const res = await request(app.getHttpServer())
-      .post(`/farms/${farmId}/animals/${animalId}/transfer`)
+      .post(`/fazendas/${farmId}/animais/${animalId}/transferir`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ pastureId: pastureBId })
       .expect(201);
@@ -174,7 +174,7 @@ describe('Animals (e2e)', () => {
     expect((res.body as AnimalResponseBody).pastureId).toBe(pastureBId);
 
     const historyRes = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/animals/${animalId}/history`)
+      .get(`/fazendas/${farmId}/animais/${animalId}/historico`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
 
@@ -184,7 +184,7 @@ describe('Animals (e2e)', () => {
 
   it('transfers the animal to a different property', async () => {
     const res = await request(app.getHttpServer())
-      .post(`/farms/${farmId}/animals/${animalId}/transfer`)
+      .post(`/fazendas/${farmId}/animais/${animalId}/transferir`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ targetFarmId: secondFarmId })
       .expect(201);
@@ -196,12 +196,12 @@ describe('Animals (e2e)', () => {
 
   it('soft-deletes (sells/removes) an animal', async () => {
     await request(app.getHttpServer())
-      .delete(`/farms/${secondFarmId}/animals/${animalId}`)
+      .delete(`/fazendas/${secondFarmId}/animais/${animalId}`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
 
     const res = await request(app.getHttpServer())
-      .get(`/farms/${secondFarmId}/animals`)
+      .get(`/fazendas/${secondFarmId}/animais`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
 

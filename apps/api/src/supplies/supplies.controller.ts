@@ -18,7 +18,7 @@ import { CreateSupplyDto } from './dto/create-supply.dto';
 import { UpdateSupplyDto } from './dto/update-supply.dto';
 import { CreateMovementDto } from './dto/create-movement.dto';
 
-@Controller('farms/:farmId/supplies')
+@Controller('fazendas/:farmId/insumos')
 @UseGuards(JwtAuthGuard)
 export class SuppliesController {
   constructor(private readonly suppliesService: SuppliesService) {}
@@ -36,7 +36,7 @@ export class SuppliesController {
     return this.suppliesService.findAll(farmId);
   }
 
-  @Get('alerts')
+  @Get('alertas')
   @UseGuards(FarmAccessGuard)
   alerts(@Param('farmId') farmId: string) {
     return this.suppliesService.alerts(farmId);
@@ -69,7 +69,7 @@ export class SuppliesController {
     return this.suppliesService.remove(farmId, supplyId);
   }
 
-  @Post(':supplyId/movements')
+  @Post(':supplyId/movimentacoes')
   @UseGuards(RolesGuard)
   @Roles(Role.OWNER, Role.MANAGER, Role.EMPLOYEE)
   addMovement(

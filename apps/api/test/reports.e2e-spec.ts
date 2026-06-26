@@ -59,23 +59,23 @@ describe('Reports (e2e)', () => {
     consultantToken = (consultantRes.body as AuthResponseBody).accessToken;
 
     const farmRes = await request(app.getHttpServer())
-      .post('/farms')
+      .post('/fazendas')
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ name: 'Fazenda Relatorios Teste' });
     farmId = (farmRes.body as FarmResponseBody).id;
 
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/members`)
+      .post(`/fazendas/${farmId}/membros`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ email: consultant.email, role: 'CONSULTANT' });
 
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/animals`)
+      .post(`/fazendas/${farmId}/animais`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ earTag: 'REL-0001', sex: 'FEMALE', category: 'VACA' });
 
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/transactions`)
+      .post(`/fazendas/${farmId}/lancamentos`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({
         type: 'DESPESA',
@@ -98,28 +98,28 @@ describe('Reports (e2e)', () => {
 
   it('rejects a consultant (read-only role) from accessing reports', async () => {
     await request(app.getHttpServer())
-      .get(`/farms/${farmId}/reports/rebanho`)
+      .get(`/fazendas/${farmId}/relatorios/rebanho`)
       .set('Authorization', `Bearer ${consultantToken}`)
       .expect(403);
   });
 
   it('rejects an invalid report type', async () => {
     await request(app.getHttpServer())
-      .get(`/farms/${farmId}/reports/invalido`)
+      .get(`/fazendas/${farmId}/relatorios/invalido`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(400);
   });
 
   it('rejects an invalid format', async () => {
     await request(app.getHttpServer())
-      .get(`/farms/${farmId}/reports/rebanho?format=docx`)
+      .get(`/fazendas/${farmId}/relatorios/rebanho?format=docx`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(400);
   });
 
   it('downloads the herd report as CSV with the animal listed', async () => {
     const res = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/reports/rebanho?format=csv`)
+      .get(`/fazendas/${farmId}/relatorios/rebanho?format=csv`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
 
@@ -129,7 +129,7 @@ describe('Reports (e2e)', () => {
 
   it('downloads the finance report as XLSX with the correct content type', async () => {
     const res = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/reports/financeiro?format=xlsx`)
+      .get(`/fazendas/${farmId}/relatorios/financeiro?format=xlsx`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
 
@@ -139,7 +139,7 @@ describe('Reports (e2e)', () => {
 
   it('downloads the costs report as PDF with the correct content type', async () => {
     const res = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/reports/custos?format=pdf`)
+      .get(`/fazendas/${farmId}/relatorios/custos?format=pdf`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
 
@@ -149,7 +149,7 @@ describe('Reports (e2e)', () => {
 
   it('defaults to CSV when no format is given', async () => {
     const res = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/reports/sanidade`)
+      .get(`/fazendas/${farmId}/relatorios/sanidade`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
 
@@ -158,7 +158,7 @@ describe('Reports (e2e)', () => {
 
   it('downloads the reproduction report as CSV', async () => {
     const res = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/reports/reproducao?format=csv`)
+      .get(`/fazendas/${farmId}/relatorios/reproducao?format=csv`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
 

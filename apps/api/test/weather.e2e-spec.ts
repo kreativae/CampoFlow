@@ -65,13 +65,13 @@ describe('Weather (e2e)', () => {
     consultantToken = (consultantRes.body as AuthResponseBody).accessToken;
 
     const farmRes = await request(app.getHttpServer())
-      .post('/farms')
+      .post('/fazendas')
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ name: 'Fazenda Clima Teste' });
     farmId = (farmRes.body as FarmResponseBody).id;
 
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/members`)
+      .post(`/fazendas/${farmId}/membros`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ email: consultant.email, role: 'CONSULTANT' });
   });
@@ -88,7 +88,7 @@ describe('Weather (e2e)', () => {
 
   it('records a normal weather reading', async () => {
     const res = await request(app.getHttpServer())
-      .post(`/farms/${farmId}/weather`)
+      .post(`/fazendas/${farmId}/clima`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ temperatureC: 28, humidityPercent: 60, windSpeedKmh: 10 })
       .expect(201);
@@ -98,7 +98,7 @@ describe('Weather (e2e)', () => {
 
   it('rejects a consultant (read-only role) from recording weather', async () => {
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/weather`)
+      .post(`/fazendas/${farmId}/clima`)
       .set('Authorization', `Bearer ${consultantToken}`)
       .send({ temperatureC: 20 })
       .expect(403);
@@ -106,7 +106,7 @@ describe('Weather (e2e)', () => {
 
   it('records a frost alert', async () => {
     const res = await request(app.getHttpServer())
-      .post(`/farms/${farmId}/weather`)
+      .post(`/fazendas/${farmId}/clima`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({
         temperatureC: 1,
@@ -120,7 +120,7 @@ describe('Weather (e2e)', () => {
 
   it('returns the most recent record as latest', async () => {
     const res = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/weather/latest`)
+      .get(`/fazendas/${farmId}/clima/recente`)
       .set('Authorization', `Bearer ${consultantToken}`)
       .expect(200);
 
@@ -129,7 +129,7 @@ describe('Weather (e2e)', () => {
 
   it('lists the frost alert as an active alert', async () => {
     const res = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/weather/alerts`)
+      .get(`/fazendas/${farmId}/clima/alertas`)
       .set('Authorization', `Bearer ${consultantToken}`)
       .expect(200);
 
@@ -140,7 +140,7 @@ describe('Weather (e2e)', () => {
 
   it('lists full history with both records, most recent first', async () => {
     const res = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/weather`)
+      .get(`/fazendas/${farmId}/clima`)
       .set('Authorization', `Bearer ${consultantToken}`)
       .expect(200);
 

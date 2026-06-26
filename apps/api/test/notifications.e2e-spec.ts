@@ -80,18 +80,18 @@ describe('Notifications (e2e)', () => {
     outsiderToken = (outsiderRes.body as AuthResponseBody).accessToken;
 
     const farmRes = await request(app.getHttpServer())
-      .post('/farms')
+      .post('/fazendas')
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ name: 'Fazenda Notificações Teste' });
     farmId = (farmRes.body as FarmResponseBody).id;
 
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/members`)
+      .post(`/fazendas/${farmId}/membros`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ email: employee.email, role: 'EMPLOYEE' });
 
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/supplies`)
+      .post(`/fazendas/${farmId}/insumos`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({
         name: 'Sal Mineral Notif',
@@ -118,25 +118,25 @@ describe('Notifications (e2e)', () => {
 
   it('rejects a user without access to the farm', async () => {
     await request(app.getHttpServer())
-      .get(`/farms/${farmId}/notifications`)
+      .get(`/fazendas/${farmId}/notificacoes`)
       .set('Authorization', `Bearer ${outsiderToken}`)
       .expect(403);
   });
 
   it('generates notifications for every farm member from pending alerts', async () => {
     const res = await request(app.getHttpServer())
-      .post(`/farms/${farmId}/notifications/generate`)
+      .post(`/fazendas/${farmId}/notificacoes/gerar`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(201);
 
     expect((res.body as { created: number }).created).toBeGreaterThan(0);
 
     const ownerList = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/notifications`)
+      .get(`/fazendas/${farmId}/notificacoes`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
     const employeeList = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/notifications`)
+      .get(`/fazendas/${farmId}/notificacoes`)
       .set('Authorization', `Bearer ${employeeToken}`)
       .expect(200);
 
@@ -165,18 +165,18 @@ describe('Notifications (e2e)', () => {
 
   it('does not duplicate notifications on a second generate call', async () => {
     const before = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/notifications`)
+      .get(`/fazendas/${farmId}/notificacoes`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
     const countBefore = (before.body as NotificationBody[]).length;
 
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/notifications/generate`)
+      .post(`/fazendas/${farmId}/notificacoes/gerar`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(201);
 
     const after = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/notifications`)
+      .get(`/fazendas/${farmId}/notificacoes`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
     const countAfter = (after.body as NotificationBody[]).length;
@@ -186,7 +186,7 @@ describe('Notifications (e2e)', () => {
 
   it('reports an accurate unread count and marks a single notification as read', async () => {
     const list = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/notifications`)
+      .get(`/fazendas/${farmId}/notificacoes`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
     const notifications = list.body as NotificationBody[];
@@ -194,24 +194,24 @@ describe('Notifications (e2e)', () => {
     const target = notifications[0];
 
     const countRes = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/notifications/unread-count`)
+      .get(`/fazendas/${farmId}/notificacoes/nao-lidas`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
     expect(Number(countRes.text)).toBe(notifications.length);
 
     await request(app.getHttpServer())
-      .patch(`/farms/${farmId}/notifications/${target.id}/read`)
+      .patch(`/fazendas/${farmId}/notificacoes/${target.id}/ler`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
 
     const countAfterRead = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/notifications/unread-count`)
+      .get(`/fazendas/${farmId}/notificacoes/nao-lidas`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
     expect(Number(countAfterRead.text)).toBe(notifications.length - 1);
 
     const unreadOnly = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/notifications?unreadOnly=true`)
+      .get(`/fazendas/${farmId}/notificacoes?unreadOnly=true`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
     expect(
@@ -221,12 +221,12 @@ describe('Notifications (e2e)', () => {
 
   it('marks all remaining notifications as read', async () => {
     await request(app.getHttpServer())
-      .patch(`/farms/${farmId}/notifications/read-all`)
+      .patch(`/fazendas/${farmId}/notificacoes/ler-todas`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
 
     const countRes = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/notifications/unread-count`)
+      .get(`/fazendas/${farmId}/notificacoes/nao-lidas`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
     expect(Number(countRes.text)).toBe(0);
@@ -234,12 +234,12 @@ describe('Notifications (e2e)', () => {
 
   it('keeps notifications isolated per user', async () => {
     const employeeList = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/notifications`)
+      .get(`/fazendas/${farmId}/notificacoes`)
       .set('Authorization', `Bearer ${employeeToken}`)
       .expect(200);
 
     const employeeUnreadCount = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/notifications/unread-count`)
+      .get(`/fazendas/${farmId}/notificacoes/nao-lidas`)
       .set('Authorization', `Bearer ${employeeToken}`)
       .expect(200);
 

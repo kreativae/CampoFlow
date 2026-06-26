@@ -66,13 +66,13 @@ describe('Documents (e2e)', () => {
     consultantToken = (consultantRes.body as AuthResponseBody).accessToken;
 
     const farmRes = await request(app.getHttpServer())
-      .post('/farms')
+      .post('/fazendas')
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ name: 'Fazenda Documentos Teste' });
     farmId = (farmRes.body as FarmResponseBody).id;
 
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/members`)
+      .post(`/fazendas/${farmId}/membros`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ email: consultant.email, role: 'CONSULTANT' });
   });
@@ -89,7 +89,7 @@ describe('Documents (e2e)', () => {
 
   it('uploads a document', async () => {
     const res = await request(app.getHttpServer())
-      .post(`/farms/${farmId}/documents`)
+      .post(`/fazendas/${farmId}/documentos`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .field('category', 'GTA')
       .attach('file', Buffer.from('conteudo de teste da GTA'), 'gta-001.txt')
@@ -103,7 +103,7 @@ describe('Documents (e2e)', () => {
 
   it('rejects a consultant (read-only role) from uploading a document', async () => {
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/documents`)
+      .post(`/fazendas/${farmId}/documentos`)
       .set('Authorization', `Bearer ${consultantToken}`)
       .field('category', 'NFE')
       .attach('file', Buffer.from('nota fiscal'), 'nfe.txt')
@@ -112,7 +112,7 @@ describe('Documents (e2e)', () => {
 
   it('lists documents for the farm', async () => {
     const res = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/documents`)
+      .get(`/fazendas/${farmId}/documentos`)
       .set('Authorization', `Bearer ${consultantToken}`)
       .expect(200);
 
@@ -123,7 +123,7 @@ describe('Documents (e2e)', () => {
 
   it('downloads the uploaded document with the original content', async () => {
     const res = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/documents/${documentId}/download`)
+      .get(`/fazendas/${farmId}/documentos/${documentId}/baixar`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
 
@@ -132,19 +132,19 @@ describe('Documents (e2e)', () => {
 
   it('rejects a consultant from deleting a document', async () => {
     await request(app.getHttpServer())
-      .delete(`/farms/${farmId}/documents/${documentId}`)
+      .delete(`/fazendas/${farmId}/documentos/${documentId}`)
       .set('Authorization', `Bearer ${consultantToken}`)
       .expect(403);
   });
 
   it('allows the owner to delete a document', async () => {
     await request(app.getHttpServer())
-      .delete(`/farms/${farmId}/documents/${documentId}`)
+      .delete(`/fazendas/${farmId}/documentos/${documentId}`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
 
     const res = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/documents`)
+      .get(`/fazendas/${farmId}/documentos`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
 

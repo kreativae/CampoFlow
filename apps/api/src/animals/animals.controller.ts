@@ -18,7 +18,7 @@ import { CreateAnimalDto } from './dto/create-animal.dto';
 import { UpdateAnimalDto } from './dto/update-animal.dto';
 import { TransferAnimalDto } from './dto/transfer-animal.dto';
 
-@Controller('farms/:farmId/animals')
+@Controller('fazendas/:farmId/animais')
 @UseGuards(JwtAuthGuard)
 export class AnimalsController {
   constructor(private readonly animalsService: AnimalsService) {}
@@ -63,7 +63,7 @@ export class AnimalsController {
     return this.animalsService.remove(farmId, animalId);
   }
 
-  @Post(':animalId/transfer')
+  @Post(':animalId/transferir')
   @UseGuards(RolesGuard)
   @Roles(Role.OWNER, Role.MANAGER, Role.EMPLOYEE)
   transfer(
@@ -74,7 +74,7 @@ export class AnimalsController {
     return this.animalsService.transfer(farmId, animalId, dto);
   }
 
-  @Get(':animalId/history')
+  @Get(':animalId/historico')
   @UseGuards(FarmAccessGuard)
   history(
     @Param('farmId') farmId: string,

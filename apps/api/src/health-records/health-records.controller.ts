@@ -17,18 +17,18 @@ import { CreateVaccinationDto } from './dto/create-vaccination.dto';
 import { ApplyVaccinationDto } from './dto/apply-vaccination.dto';
 import { CreateTreatmentDto } from './dto/create-treatment.dto';
 
-@Controller('farms/:farmId')
+@Controller('fazendas/:farmId')
 @UseGuards(JwtAuthGuard)
 export class HealthRecordsController {
   constructor(private readonly healthRecordsService: HealthRecordsService) {}
 
-  @Get('health/alerts')
+  @Get('sanidade/alertas')
   @UseGuards(FarmAccessGuard)
   pendingAlerts(@Param('farmId') farmId: string) {
     return this.healthRecordsService.pendingAlerts(farmId);
   }
 
-  @Post('animals/:animalId/vaccinations')
+  @Post('animais/:animalId/vacinacoes')
   @UseGuards(RolesGuard)
   @Roles(Role.OWNER, Role.MANAGER, Role.VETERINARIAN, Role.EMPLOYEE)
   scheduleVaccination(
@@ -39,7 +39,7 @@ export class HealthRecordsController {
     return this.healthRecordsService.scheduleVaccination(farmId, animalId, dto);
   }
 
-  @Get('animals/:animalId/vaccinations')
+  @Get('animais/:animalId/vacinacoes')
   @UseGuards(FarmAccessGuard)
   listVaccinations(
     @Param('farmId') farmId: string,
@@ -48,7 +48,7 @@ export class HealthRecordsController {
     return this.healthRecordsService.listVaccinations(farmId, animalId);
   }
 
-  @Patch('animals/:animalId/vaccinations/:vaccinationId/apply')
+  @Patch('animais/:animalId/vacinacoes/:vaccinationId/aplicar')
   @UseGuards(RolesGuard)
   @Roles(Role.OWNER, Role.MANAGER, Role.VETERINARIAN, Role.EMPLOYEE)
   applyVaccination(
@@ -65,7 +65,7 @@ export class HealthRecordsController {
     );
   }
 
-  @Post('animals/:animalId/treatments')
+  @Post('animais/:animalId/tratamentos')
   @UseGuards(RolesGuard)
   @Roles(Role.OWNER, Role.MANAGER, Role.VETERINARIAN)
   createTreatment(
@@ -76,7 +76,7 @@ export class HealthRecordsController {
     return this.healthRecordsService.createTreatment(farmId, animalId, dto);
   }
 
-  @Get('animals/:animalId/treatments')
+  @Get('animais/:animalId/tratamentos')
   @UseGuards(FarmAccessGuard)
   listTreatments(
     @Param('farmId') farmId: string,

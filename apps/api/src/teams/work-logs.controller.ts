@@ -9,7 +9,7 @@ import type { AuthenticatedUser } from '../auth/decorators/current-user.decorato
 import { WorkLogsService } from './work-logs.service';
 import { CreateWorkLogDto } from './dto/create-work-log.dto';
 
-@Controller('farms/:farmId/work-logs')
+@Controller('fazendas/:farmId/registros-trabalho')
 @UseGuards(JwtAuthGuard)
 export class WorkLogsController {
   constructor(private readonly workLogsService: WorkLogsService) {}

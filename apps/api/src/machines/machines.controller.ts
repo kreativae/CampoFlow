@@ -19,7 +19,7 @@ import { UpdateMachineDto } from './dto/update-machine.dto';
 import { CreateMaintenanceDto } from './dto/create-maintenance.dto';
 import { CreateFuelRecordDto } from './dto/create-fuel-record.dto';
 
-@Controller('farms/:farmId/machines')
+@Controller('fazendas/:farmId/maquinas')
 @UseGuards(JwtAuthGuard)
 export class MachinesController {
   constructor(private readonly machinesService: MachinesService) {}
@@ -37,7 +37,7 @@ export class MachinesController {
     return this.machinesService.findAll(farmId);
   }
 
-  @Get('costs')
+  @Get('custos')
   @UseGuards(FarmAccessGuard)
   costsSummary(@Param('farmId') farmId: string) {
     return this.machinesService.costsSummary(farmId);
@@ -73,7 +73,7 @@ export class MachinesController {
     return this.machinesService.remove(farmId, machineId);
   }
 
-  @Post(':machineId/maintenances')
+  @Post(':machineId/manutencoes')
   @UseGuards(RolesGuard)
   @Roles(Role.OWNER, Role.MANAGER, Role.EMPLOYEE)
   addMaintenance(
@@ -84,7 +84,7 @@ export class MachinesController {
     return this.machinesService.addMaintenance(farmId, machineId, dto);
   }
 
-  @Post(':machineId/fuel-records')
+  @Post(':machineId/registros-combustivel')
   @UseGuards(RolesGuard)
   @Roles(Role.OWNER, Role.MANAGER, Role.EMPLOYEE)
   addFuelRecord(

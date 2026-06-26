@@ -64,13 +64,13 @@ describe('Map Features (e2e)', () => {
     consultantToken = (consultantRes.body as AuthResponseBody).accessToken;
 
     const farmRes = await request(app.getHttpServer())
-      .post('/farms')
+      .post('/fazendas')
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ name: 'Fazenda Mapa Teste' });
     farmId = (farmRes.body as FarmResponseBody).id;
 
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/members`)
+      .post(`/fazendas/${farmId}/membros`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ email: consultant.email, role: 'CONSULTANT' });
   });
@@ -87,7 +87,7 @@ describe('Map Features (e2e)', () => {
 
   it('creates a point feature (nascente)', async () => {
     const res = await request(app.getHttpServer())
-      .post(`/farms/${farmId}/map-features`)
+      .post(`/fazendas/${farmId}/elementos-mapa`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({
         name: 'Nascente do Córrego',
@@ -104,7 +104,7 @@ describe('Map Features (e2e)', () => {
 
   it('rejects a point with more than one coordinate', async () => {
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/map-features`)
+      .post(`/fazendas/${farmId}/elementos-mapa`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({
         name: 'Ponto inválido',
@@ -120,7 +120,7 @@ describe('Map Features (e2e)', () => {
 
   it('creates a polygon feature (cerca)', async () => {
     const res = await request(app.getHttpServer())
-      .post(`/farms/${farmId}/map-features`)
+      .post(`/fazendas/${farmId}/elementos-mapa`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({
         name: 'Cerca do pasto 1',
@@ -139,7 +139,7 @@ describe('Map Features (e2e)', () => {
 
   it('rejects a polygon with fewer than 3 coordinates', async () => {
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/map-features`)
+      .post(`/fazendas/${farmId}/elementos-mapa`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({
         name: 'Polígono inválido',
@@ -155,7 +155,7 @@ describe('Map Features (e2e)', () => {
 
   it('rejects a consultant (read-only role) from creating a feature', async () => {
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/map-features`)
+      .post(`/fazendas/${farmId}/elementos-mapa`)
       .set('Authorization', `Bearer ${consultantToken}`)
       .send({
         name: 'Reserva indevida',
@@ -168,7 +168,7 @@ describe('Map Features (e2e)', () => {
 
   it('lists all features for the farm', async () => {
     const res = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/map-features`)
+      .get(`/fazendas/${farmId}/elementos-mapa`)
       .set('Authorization', `Bearer ${consultantToken}`)
       .expect(200);
 

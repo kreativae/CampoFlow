@@ -62,7 +62,7 @@ describe('Quotations (e2e)', () => {
   });
 
   it('rejects unauthenticated access', async () => {
-    await request(app.getHttpServer()).get('/quotations/latest').expect(401);
+    await request(app.getHttpServer()).get('/cotacoes/recente').expect(401);
   });
 
   it('creates an initial quotation', async () => {
@@ -70,7 +70,7 @@ describe('Quotations (e2e)', () => {
     past.setDate(past.getDate() - 1);
 
     const res = await request(app.getHttpServer())
-      .post('/quotations')
+      .post('/cotacoes')
       .set('Authorization', `Bearer ${accessToken}`)
       .send({
         commodity: 'BOI_GORDO',
@@ -86,7 +86,7 @@ describe('Quotations (e2e)', () => {
 
   it('creates a more recent quotation for the same commodity', async () => {
     await request(app.getHttpServer())
-      .post('/quotations')
+      .post('/cotacoes')
       .set('Authorization', `Bearer ${accessToken}`)
       .send({
         commodity: 'BOI_GORDO',
@@ -99,7 +99,7 @@ describe('Quotations (e2e)', () => {
 
   it('lists price history for the commodity, most recent first', async () => {
     const res = await request(app.getHttpServer())
-      .get('/quotations?commodity=BOI_GORDO')
+      .get('/cotacoes?commodity=BOI_GORDO')
       .set('Authorization', `Bearer ${accessToken}`)
       .expect(200);
 
@@ -111,7 +111,7 @@ describe('Quotations (e2e)', () => {
 
   it('computes the latest price with percentage change vs. the previous record', async () => {
     const res = await request(app.getHttpServer())
-      .get('/quotations/latest')
+      .get('/cotacoes/recente')
       .set('Authorization', `Bearer ${accessToken}`)
       .expect(200);
 

@@ -6,7 +6,7 @@ import { QuotationsService } from './quotations.service';
 import { CreateQuotationDto } from './dto/create-quotation.dto';
 import { HistoryQueryDto } from './dto/history-query.dto';
 
-@Controller('quotations')
+@Controller('cotacoes')
 @UseGuards(JwtAuthGuard)
 export class QuotationsController {
   constructor(private readonly quotationsService: QuotationsService) {}
@@ -19,7 +19,7 @@ export class QuotationsController {
     return this.quotationsService.create(user.id, dto);
   }
 
-  @Get('latest')
+  @Get('recente')
   latest() {
     return this.quotationsService.latest();
   }

@@ -17,7 +17,7 @@ import { AgendaService } from './agenda.service';
 import { CreateAgendaEventDto } from './dto/create-agenda-event.dto';
 import { UpdateAgendaEventDto } from './dto/update-agenda-event.dto';
 
-@Controller('farms/:farmId/agenda')
+@Controller('fazendas/:farmId/agenda')
 @UseGuards(JwtAuthGuard)
 export class AgendaController {
   constructor(private readonly agendaService: AgendaService) {}
@@ -35,7 +35,7 @@ export class AgendaController {
     return this.agendaService.findAll(farmId);
   }
 
-  @Get('alerts')
+  @Get('alertas')
   @UseGuards(FarmAccessGuard)
   alerts(@Param('farmId') farmId: string) {
     return this.agendaService.alerts(farmId);
@@ -58,7 +58,7 @@ export class AgendaController {
     return this.agendaService.update(farmId, eventId, dto);
   }
 
-  @Patch(':eventId/complete')
+  @Patch(':eventId/concluir')
   @UseGuards(RolesGuard)
   @Roles(Role.OWNER, Role.MANAGER, Role.EMPLOYEE)
   markCompleted(

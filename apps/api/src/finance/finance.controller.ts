@@ -18,23 +18,23 @@ import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { CashFlowQueryDto } from './dto/cash-flow-query.dto';
 
-@Controller('farms/:farmId')
+@Controller('fazendas/:farmId')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.OWNER, Role.MANAGER)
 export class FinanceController {
   constructor(private readonly financeService: FinanceService) {}
 
-  @Post('transactions')
+  @Post('lancamentos')
   create(@Param('farmId') farmId: string, @Body() dto: CreateTransactionDto) {
     return this.financeService.create(farmId, dto);
   }
 
-  @Get('transactions')
+  @Get('lancamentos')
   findAll(@Param('farmId') farmId: string) {
     return this.financeService.findAll(farmId);
   }
 
-  @Get('transactions/:transactionId')
+  @Get('lancamentos/:transactionId')
   findOne(
     @Param('farmId') farmId: string,
     @Param('transactionId') transactionId: string,
@@ -42,7 +42,7 @@ export class FinanceController {
     return this.financeService.findOne(farmId, transactionId);
   }
 
-  @Patch('transactions/:transactionId')
+  @Patch('lancamentos/:transactionId')
   update(
     @Param('farmId') farmId: string,
     @Param('transactionId') transactionId: string,
@@ -51,7 +51,7 @@ export class FinanceController {
     return this.financeService.update(farmId, transactionId, dto);
   }
 
-  @Patch('transactions/:transactionId/pay')
+  @Patch('lancamentos/:transactionId/pagar')
   markPaid(
     @Param('farmId') farmId: string,
     @Param('transactionId') transactionId: string,
@@ -59,7 +59,7 @@ export class FinanceController {
     return this.financeService.markPaid(farmId, transactionId);
   }
 
-  @Delete('transactions/:transactionId')
+  @Delete('lancamentos/:transactionId')
   remove(
     @Param('farmId') farmId: string,
     @Param('transactionId') transactionId: string,
@@ -67,7 +67,7 @@ export class FinanceController {
     return this.financeService.remove(farmId, transactionId);
   }
 
-  @Get('finance/cash-flow')
+  @Get('financeiro/fluxo-caixa')
   cashFlow(@Param('farmId') farmId: string, @Query() query: CashFlowQueryDto) {
     return this.financeService.cashFlow(farmId, query.granularity);
   }

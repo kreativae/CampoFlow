@@ -33,7 +33,7 @@ const CONTENT_TYPES: Record<ReportFormat, string> = {
   pdf: 'application/pdf',
 };
 
-@Controller('farms/:farmId/reports')
+@Controller('fazendas/:farmId/relatorios')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.OWNER, Role.MANAGER)
 export class ReportsController {

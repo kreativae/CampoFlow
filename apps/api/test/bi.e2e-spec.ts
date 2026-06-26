@@ -87,18 +87,18 @@ describe('BI (e2e)', () => {
     consultantToken = (consultantRes.body as AuthResponseBody).accessToken;
 
     const farmRes = await request(app.getHttpServer())
-      .post('/farms')
+      .post('/fazendas')
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ name: 'Fazenda BI Teste' });
     farmId = (farmRes.body as FarmResponseBody).id;
 
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/members`)
+      .post(`/fazendas/${farmId}/membros`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ email: consultant.email, role: 'CONSULTANT' });
 
     const animalRes = await request(app.getHttpServer())
-      .post(`/farms/${farmId}/animals`)
+      .post(`/fazendas/${farmId}/animais`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ earTag: 'BI-0001', sex: 'MALE', category: 'BOI' });
     animalId = (animalRes.body as AnimalResponseBody).id;
@@ -106,17 +106,17 @@ describe('BI (e2e)', () => {
     const day0 = new Date();
     day0.setDate(day0.getDate() - 30);
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/animals/${animalId}/weighings`)
+      .post(`/fazendas/${farmId}/animais/${animalId}/pesagens`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ weightKg: 300, weighedAt: day0.toISOString() });
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/animals/${animalId}/weighings`)
+      .post(`/fazendas/${farmId}/animais/${animalId}/pesagens`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ weightKg: 330 });
 
     const today = new Date().toISOString().slice(0, 10);
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/transactions`)
+      .post(`/fazendas/${farmId}/lancamentos`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({
         type: 'RECEITA',
@@ -126,7 +126,7 @@ describe('BI (e2e)', () => {
         paidAt: today,
       });
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/transactions`)
+      .post(`/fazendas/${farmId}/lancamentos`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({
         type: 'DESPESA',
@@ -154,14 +154,14 @@ describe('BI (e2e)', () => {
 
   it('rejects a consultant (read-only role) from accessing BI', async () => {
     await request(app.getHttpServer())
-      .get(`/farms/${farmId}/bi`)
+      .get(`/fazendas/${farmId}/inteligencia`)
       .set('Authorization', `Bearer ${consultantToken}`)
       .expect(403);
   });
 
   it('computes herd/financial KPIs from real transaction and weighing data', async () => {
     const res = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/bi`)
+      .get(`/fazendas/${farmId}/inteligencia`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
 
@@ -178,7 +178,7 @@ describe('BI (e2e)', () => {
 
   it('forecasts weight gain from the herd average daily gain', async () => {
     const res = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/bi`)
+      .get(`/fazendas/${farmId}/inteligencia`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
 
@@ -191,7 +191,7 @@ describe('BI (e2e)', () => {
 
   it('forecasts next month revenue from recent cash flow', async () => {
     const res = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/bi`)
+      .get(`/fazendas/${farmId}/inteligencia`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
 
@@ -202,7 +202,7 @@ describe('BI (e2e)', () => {
 
   it('reports no critical suggestions when there are no pending alerts', async () => {
     const res = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/bi`)
+      .get(`/fazendas/${farmId}/inteligencia`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
 
@@ -214,7 +214,7 @@ describe('BI (e2e)', () => {
 
   it('surfaces a low-stock supply suggestion once a supply falls below minimum', async () => {
     const supplyRes = await request(app.getHttpServer())
-      .post(`/farms/${farmId}/supplies`)
+      .post(`/fazendas/${farmId}/insumos`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({
         name: 'Sal Mineral BI',
@@ -227,7 +227,7 @@ describe('BI (e2e)', () => {
     expect(supplyRes.body).toBeDefined();
 
     const res = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/bi`)
+      .get(`/fazendas/${farmId}/inteligencia`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
 

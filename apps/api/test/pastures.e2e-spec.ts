@@ -72,7 +72,7 @@ describe('Properties & Pastures (e2e)', () => {
     consultantToken = (consultantRes.body as AuthResponseBody).accessToken;
 
     const farmRes = await request(app.getHttpServer())
-      .post('/farms')
+      .post('/fazendas')
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({
         name: 'Fazenda Santa Luzia',
@@ -84,7 +84,7 @@ describe('Properties & Pastures (e2e)', () => {
     farmId = (farmRes.body as FarmResponseBody).id;
 
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/members`)
+      .post(`/fazendas/${farmId}/membros`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ email: consultant.email, role: 'CONSULTANT' });
   });
@@ -104,7 +104,7 @@ describe('Properties & Pastures (e2e)', () => {
 
   it('creates a property with extended fields', async () => {
     const res = await request(app.getHttpServer())
-      .get(`/farms/${farmId}`)
+      .get(`/fazendas/${farmId}`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
 
@@ -115,7 +115,7 @@ describe('Properties & Pastures (e2e)', () => {
 
   it('creates a pasture for the property', async () => {
     const res = await request(app.getHttpServer())
-      .post(`/farms/${farmId}/pastures`)
+      .post(`/fazendas/${farmId}/pastagens`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({
         name: 'Pasto 1',
@@ -132,12 +132,12 @@ describe('Properties & Pastures (e2e)', () => {
 
   it('a consultant (read-only role) can list pastures but not create one', async () => {
     await request(app.getHttpServer())
-      .get(`/farms/${farmId}/pastures`)
+      .get(`/fazendas/${farmId}/pastagens`)
       .set('Authorization', `Bearer ${consultantToken}`)
       .expect(200);
 
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/pastures`)
+      .post(`/fazendas/${farmId}/pastagens`)
       .set('Authorization', `Bearer ${consultantToken}`)
       .send({ name: 'Pasto X', areaHectares: 5, animalCapacity: 5 })
       .expect(403);
@@ -145,7 +145,7 @@ describe('Properties & Pastures (e2e)', () => {
 
   it('allows entering a batch within capacity', async () => {
     const res = await request(app.getHttpServer())
-      .post(`/farms/${farmId}/pastures/${pastureId}/occupations`)
+      .post(`/fazendas/${farmId}/pastagens/${pastureId}/ocupacoes`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ headCount: 8, notes: 'Lote A' })
       .expect(201);
@@ -155,7 +155,7 @@ describe('Properties & Pastures (e2e)', () => {
 
   it('rejects exceeding pasture capacity', async () => {
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/pastures/${pastureId}/occupations`)
+      .post(`/fazendas/${farmId}/pastagens/${pastureId}/ocupacoes`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ headCount: 5 })
       .expect(400);
@@ -163,7 +163,7 @@ describe('Properties & Pastures (e2e)', () => {
 
   it('allows a batch to exit, freeing up capacity', async () => {
     const pastureRes = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/pastures/${pastureId}`)
+      .get(`/fazendas/${farmId}/pastagens/${pastureId}`)
       .set('Authorization', `Bearer ${ownerToken}`);
 
     const occupations = (
@@ -173,13 +173,13 @@ describe('Properties & Pastures (e2e)', () => {
 
     await request(app.getHttpServer())
       .patch(
-        `/farms/${farmId}/pastures/${pastureId}/occupations/${active.id}/exit`,
+        `/fazendas/${farmId}/pastagens/${pastureId}/ocupacoes/${active.id}/saida`,
       )
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
 
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/pastures/${pastureId}/occupations`)
+      .post(`/fazendas/${farmId}/pastagens/${pastureId}/ocupacoes`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ headCount: 9 })
       .expect(201);

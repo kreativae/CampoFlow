@@ -77,13 +77,13 @@ describe('LGPD (e2e)', () => {
     memberUserId = (memberRes.body as AuthResponseBody).user!.id;
 
     const farmRes = await request(app.getHttpServer())
-      .post('/farms')
+      .post('/fazendas')
       .set('Authorization', `Bearer ${soleToken}`)
       .send({ name: 'Fazenda LGPD Teste' });
     farmId = (farmRes.body as FarmResponseBody).id;
 
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/members`)
+      .post(`/fazendas/${farmId}/membros`)
       .set('Authorization', `Bearer ${soleToken}`)
       .send({ email: member.email, role: 'EMPLOYEE' });
   });
@@ -155,7 +155,7 @@ describe('LGPD (e2e)', () => {
 
   it('allows deleting the account once another owner takes over the farm', async () => {
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/members`)
+      .post(`/fazendas/${farmId}/membros`)
       .set('Authorization', `Bearer ${soleToken}`)
       .send({ email: coOwner.email, role: 'OWNER' })
       .expect(201);

@@ -64,19 +64,19 @@ describe('Reproduction (e2e)', () => {
     ownerToken = (ownerRes.body as AuthResponseBody).accessToken;
 
     const farmRes = await request(app.getHttpServer())
-      .post('/farms')
+      .post('/fazendas')
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ name: 'Fazenda Reprodução' });
     farmId = (farmRes.body as FarmResponseBody).id;
 
     const cowARes = await request(app.getHttpServer())
-      .post(`/farms/${farmId}/animals`)
+      .post(`/fazendas/${farmId}/animais`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ earTag: 'VACA-A', sex: 'FEMALE', category: 'VACA' });
     cowAId = (cowARes.body as AnimalResponseBody).id;
 
     const cowBRes = await request(app.getHttpServer())
-      .post(`/farms/${farmId}/animals`)
+      .post(`/fazendas/${farmId}/animais`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ earTag: 'VACA-B', sex: 'FEMALE', category: 'VACA' });
     cowBId = (cowBRes.body as AnimalResponseBody).id;
@@ -96,7 +96,7 @@ describe('Reproduction (e2e)', () => {
 
   it('records a breeding event (IATF) for cow A', async () => {
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/animals/${cowAId}/reproductive-events`)
+      .post(`/fazendas/${farmId}/animais/${cowAId}/eventos-reprodutivos`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ type: 'IATF' })
       .expect(201);
@@ -104,7 +104,7 @@ describe('Reproduction (e2e)', () => {
 
   it('records a breeding event (monta natural) for cow B', async () => {
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/animals/${cowBId}/reproductive-events`)
+      .post(`/fazendas/${farmId}/animais/${cowBId}/eventos-reprodutivos`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ type: 'MONTA_NATURAL' })
       .expect(201);
@@ -112,13 +112,13 @@ describe('Reproduction (e2e)', () => {
 
   it('diagnoses cow A as pregnant and cow B as not pregnant', async () => {
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/animals/${cowAId}/reproductive-events`)
+      .post(`/fazendas/${farmId}/animais/${cowAId}/eventos-reprodutivos`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ type: 'DIAGNOSTICO_PRENHEZ', result: 'PRENHE' })
       .expect(201);
 
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/animals/${cowBId}/reproductive-events`)
+      .post(`/fazendas/${farmId}/animais/${cowBId}/eventos-reprodutivos`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ type: 'DIAGNOSTICO_PRENHEZ', result: 'VAZIA' })
       .expect(201);
@@ -126,7 +126,7 @@ describe('Reproduction (e2e)', () => {
 
   it('records a birth for cow A', async () => {
     await request(app.getHttpServer())
-      .post(`/farms/${farmId}/animals/${cowAId}/reproductive-events`)
+      .post(`/fazendas/${farmId}/animais/${cowAId}/eventos-reprodutivos`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ type: 'PARTO' })
       .expect(201);
@@ -134,7 +134,7 @@ describe('Reproduction (e2e)', () => {
 
   it('lists the reproductive history for a single animal', async () => {
     const res = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/animals/${cowAId}/reproductive-events`)
+      .get(`/fazendas/${farmId}/animais/${cowAId}/eventos-reprodutivos`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
 
@@ -143,7 +143,7 @@ describe('Reproduction (e2e)', () => {
 
   it('computes farm-level conception and pregnancy rates', async () => {
     const res = await request(app.getHttpServer())
-      .get(`/farms/${farmId}/reproduction/stats`)
+      .get(`/fazendas/${farmId}/reproducao/estatisticas`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
 

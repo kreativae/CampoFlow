@@ -24,7 +24,7 @@ import { DocumentsService } from './documents.service';
 import { StorageService } from '../common/storage/storage.service';
 import { UploadDocumentDto } from './dto/upload-document.dto';
 
-@Controller('farms/:farmId/documents')
+@Controller('fazendas/:farmId/documentos')
 @UseGuards(JwtAuthGuard)
 export class DocumentsController {
   constructor(
@@ -58,7 +58,7 @@ export class DocumentsController {
     return this.documentsService.findAll(farmId);
   }
 
-  @Get(':documentId/download')
+  @Get(':documentId/baixar')
   @UseGuards(FarmAccessGuard)
   async download(
     @Param('farmId') farmId: string,

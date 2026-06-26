@@ -17,7 +17,7 @@ import { MapFeaturesService } from './map-features.service';
 import { CreateMapFeatureDto } from './dto/create-map-feature.dto';
 import { UpdateMapFeatureDto } from './dto/update-map-feature.dto';
 
-@Controller('farms/:farmId/map-features')
+@Controller('fazendas/:farmId/elementos-mapa')
 @UseGuards(JwtAuthGuard)
 export class MapFeaturesController {
   constructor(private readonly mapFeaturesService: MapFeaturesService) {}

@@ -20,7 +20,7 @@ import { CreateFarmDto } from './dto/create-farm.dto';
 import { UpdateFarmDto } from './dto/update-farm.dto';
 import { AddMemberDto } from './dto/add-member.dto';
 
-@Controller('farms')
+@Controller('fazendas')
 @UseGuards(JwtAuthGuard)
 export class FarmsController {
   constructor(private readonly farmsService: FarmsService) {}
@@ -55,21 +55,21 @@ export class FarmsController {
     return this.farmsService.remove(farmId);
   }
 
-  @Post(':farmId/members')
+  @Post(':farmId/membros')
   @UseGuards(RolesGuard)
   @Roles(Role.OWNER, Role.MANAGER)
   addMember(@Param('farmId') farmId: string, @Body() dto: AddMemberDto) {
     return this.farmsService.addMember(farmId, dto);
   }
 
-  @Get(':farmId/members')
+  @Get(':farmId/membros')
   @UseGuards(RolesGuard)
   @Roles(Role.OWNER, Role.MANAGER)
   listMembers(@Param('farmId') farmId: string) {
     return this.farmsService.listMembers(farmId);
   }
 
-  @Delete(':farmId/members/:userId')
+  @Delete(':farmId/membros/:userId')
   @UseGuards(RolesGuard)
   @Roles(Role.OWNER)
   removeMember(

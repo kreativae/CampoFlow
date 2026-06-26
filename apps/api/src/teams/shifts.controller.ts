@@ -7,7 +7,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { ShiftsService } from './shifts.service';
 import { CreateShiftDto } from './dto/create-shift.dto';
 
-@Controller('farms/:farmId/shifts')
+@Controller('fazendas/:farmId/escalas')
 @UseGuards(JwtAuthGuard)
 export class ShiftsController {
   constructor(private readonly shiftsService: ShiftsService) {}
