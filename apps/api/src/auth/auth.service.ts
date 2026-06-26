@@ -9,6 +9,7 @@ import * as bcrypt from 'bcrypt';
 import { authenticator } from 'otplib';
 import * as QRCode from 'qrcode';
 import { PrismaService } from '../prisma/prisma.service';
+import { EncryptionService } from '../common/crypto/encryption.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { AuthTokens, JwtPayload } from './auth.types';
@@ -21,6 +22,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
+    private readonly encryptionService: EncryptionService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -63,7 +65,10 @@ export class AuthService {
       }
       if (
         !user.mfaSecret ||
-        !authenticator.check(dto.mfaCode, user.mfaSecret)
+        !authenticator.check(
+          dto.mfaCode,
+          this.encryptionService.decrypt(user.mfaSecret),
+        )
       ) {
         throw new UnauthorizedException('Código de autenticação inválido');
       }
@@ -82,7 +87,10 @@ export class AuthService {
     const secret = authenticator.generateSecret();
     await this.prisma.user.update({
       where: { id: userId },
-      data: { mfaSecret: secret, mfaEnabled: false },
+      data: {
+        mfaSecret: this.encryptionService.encrypt(secret),
+        mfaEnabled: false,
+      },
     });
 
     const otpUrl = authenticator.keyuri(email, MFA_ISSUER, secret);
@@ -97,7 +105,9 @@ export class AuthService {
         'MFA não foi configurado. Chame /auth/mfa/setup primeiro.',
       );
     }
-    if (!authenticator.check(code, user.mfaSecret)) {
+    if (
+      !authenticator.check(code, this.encryptionService.decrypt(user.mfaSecret))
+    ) {
       throw new UnauthorizedException('Código de autenticação inválido');
     }
 

@@ -5,6 +5,7 @@ import { App } from 'supertest/types';
 import { authenticator } from 'otplib';
 import { AppModule } from './../src/app.module';
 import { PrismaService } from './../src/prisma/prisma.service';
+import { EncryptionService } from './../src/common/crypto/encryption.service';
 
 interface AuthResponseBody {
   user?: { id: string; email: string; name: string };
@@ -21,6 +22,7 @@ interface SetupMfaBody {
 describe('MFA (e2e)', () => {
   let app: INestApplication<App>;
   let prisma: PrismaService;
+  let encryptionService: EncryptionService;
 
   const user = {
     email: `mfa-user-${Date.now()}@campoflow.test`,
@@ -45,6 +47,7 @@ describe('MFA (e2e)', () => {
     );
     await app.init();
     prisma = app.get(PrismaService);
+    encryptionService = app.get(EncryptionService);
 
     const res = await request(app.getHttpServer())
       .post('/auth/register')
@@ -108,7 +111,8 @@ describe('MFA (e2e)', () => {
       where: { email: user.email },
     });
     expect(dbUser?.mfaEnabled).toBe(true);
-    expect(dbUser?.mfaSecret).toBe(secret);
+    expect(dbUser?.mfaSecret).not.toBe(secret);
+    expect(encryptionService.decrypt(dbUser!.mfaSecret!)).toBe(secret);
   });
 
   it('requires an MFA code on login once enabled', async () => {
@@ -132,7 +136,9 @@ describe('MFA (e2e)', () => {
     const dbUser = await prisma.user.findUnique({
       where: { email: user.email },
     });
-    const code = authenticator.generate(dbUser!.mfaSecret!);
+    const code = authenticator.generate(
+      encryptionService.decrypt(dbUser!.mfaSecret!),
+    );
 
     const res = await request(app.getHttpServer())
       .post('/auth/login')
