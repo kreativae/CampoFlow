@@ -67,6 +67,7 @@ model Farm {
   tasks              Task[]
   workLogs           WorkLog[]
   shifts             Shift[]
+  agendaEvents       AgendaEvent[]
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
 }
@@ -472,4 +473,29 @@ model Shift {
   endDate   DateTime
   notes     String?
   createdAt DateTime @default(now())
+}
+
+enum AgendaEventType {
+  VACINACAO
+  PESAGEM
+  MANEJO
+  COMPRA
+  VENDA
+  OUTRO
+}
+
+// General-purpose farm calendar. Vaccination/weighing already have dedicated flows
+// elsewhere (health-records, weighings); this covers manejo/compra/venda and any
+// ad-hoc reminder that doesn't have its own module.
+model AgendaEvent {
+  id            String          @id @default(uuid())
+  farm          Farm            @relation(fields: [farmId], references: [id])
+  farmId        String
+  title         String
+  type          AgendaEventType
+  scheduledDate DateTime
+  completedAt   DateTime?
+  notes         String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
 }

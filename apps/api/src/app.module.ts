@@ -21,6 +21,7 @@ import { WeatherModule } from './weather/weather.module';
 import { SuppliesModule } from './supplies/supplies.module';
 import { MachinesModule } from './machines/machines.module';
 import { TeamsModule } from './teams/teams.module';
+import { AgendaModule } from './agenda/agenda.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { TeamsModule } from './teams/teams.module';
     SuppliesModule,
     MachinesModule,
     TeamsModule,
+    AgendaModule,
   ],
   controllers: [AppController],
   providers: [
