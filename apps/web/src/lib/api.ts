@@ -46,3 +46,61 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
 
   return data as T;
 }
+
+export async function apiUpload<T>(
+  path: string,
+  formData: FormData,
+  token?: string | null,
+): Promise<T> {
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_URL}${path}`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  });
+
+  const data = (await response.json().catch(() => null)) as
+    | (T & { message?: string | string[] })
+    | null;
+
+  if (!response.ok) {
+    const message = data?.message
+      ? Array.isArray(data.message)
+        ? data.message.join(', ')
+        : data.message
+      : 'Erro ao enviar arquivo';
+    throw new ApiError(message, response.status);
+  }
+
+  return data as T;
+}
+
+export async function apiDownload(
+  path: string,
+  fileName: string,
+  token?: string | null,
+): Promise<void> {
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_URL}${path}`, { headers });
+  if (!response.ok) {
+    throw new ApiError('Erro ao baixar arquivo', response.status);
+  }
+
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}

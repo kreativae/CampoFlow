@@ -374,3 +374,15 @@ export interface MapFeature {
   coordinates: [number, number][];
   notes: string | null;
 }
+
+export type DocumentCategory = 'GTA' | 'NFE' | 'CONTRATO' | 'EXAME' | 'CERTIFICADO' | 'OUTRO';
+
+export interface FarmDocument {
+  id: string;
+  category: DocumentCategory;
+  fileName: string;
+  mimeType: string;
+  fileSize: number;
+  notes: string | null;
+  createdAt: string;
+}
