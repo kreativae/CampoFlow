@@ -345,3 +345,18 @@ export interface Shift {
   notes: string | null;
   user: { id: string; name: string; email: string };
 }
+
+export type AgendaEventType = 'VACINACAO' | 'PESAGEM' | 'MANEJO' | 'COMPRA' | 'VENDA' | 'OUTRO';
+
+export interface AgendaEvent {
+  id: string;
+  title: string;
+  type: AgendaEventType;
+  scheduledDate: string;
+  completedAt: string | null;
+  notes: string | null;
+}
+
+export interface AgendaAlert extends AgendaEvent {
+  overdue: boolean;
+}
