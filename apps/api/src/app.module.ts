@@ -20,6 +20,7 @@ import { QuotationsModule } from './quotations/quotations.module';
 import { WeatherModule } from './weather/weather.module';
 import { SuppliesModule } from './supplies/supplies.module';
 import { MachinesModule } from './machines/machines.module';
+import { TeamsModule } from './teams/teams.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { MachinesModule } from './machines/machines.module';
     WeatherModule,
     SuppliesModule,
     MachinesModule,
+    TeamsModule,
   ],
   controllers: [AppController],
   providers: [
