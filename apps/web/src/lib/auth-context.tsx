@@ -16,7 +16,11 @@ interface AuthContextValue {
   user: User | null;
   accessToken: string | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (
+    email: string,
+    password: string,
+    mfaCode?: string,
+  ) => Promise<{ mfaRequired: boolean }>;
   register: (email: string, password: string, name: string) => Promise<void>;
   logout: () => void;
 }
@@ -52,14 +56,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(false);
   }, []);
 
-  async function login(email: string, password: string) {
+  async function login(email: string, password: string, mfaCode?: string) {
     const res = await apiFetch<AuthResponse>('/auth/login', {
       method: 'POST',
-      body: { email, password },
+      body: { email, password, mfaCode },
     });
-    setUser(res.user);
-    setAccessToken(res.accessToken);
-    persist({ user: res.user, accessToken: res.accessToken, refreshToken: res.refreshToken });
+    if (res.mfaRequired) {
+      return { mfaRequired: true };
+    }
+    setUser(res.user!);
+    setAccessToken(res.accessToken!);
+    persist({ user: res.user!, accessToken: res.accessToken!, refreshToken: res.refreshToken! });
+    return { mfaRequired: false };
   }
 
   async function register(email: string, password: string, name: string) {
@@ -67,9 +75,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       method: 'POST',
       body: { email, password, name },
     });
-    setUser(res.user);
-    setAccessToken(res.accessToken);
-    persist({ user: res.user, accessToken: res.accessToken, refreshToken: res.refreshToken });
+    setUser(res.user!);
+    setAccessToken(res.accessToken!);
+    persist({ user: res.user!, accessToken: res.accessToken!, refreshToken: res.refreshToken! });
   }
 
   function logout() {

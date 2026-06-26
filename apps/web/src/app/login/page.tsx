@@ -11,6 +11,8 @@ export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [mfaCode, setMfaCode] = useState('');
+  const [mfaRequired, setMfaRequired] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -19,7 +21,11 @@ export default function LoginPage() {
     setError(null);
     setSubmitting(true);
     try {
-      await login(email, password);
+      const result = await login(email, password, mfaRequired ? mfaCode : undefined);
+      if (result.mfaRequired) {
+        setMfaRequired(true);
+        return;
+      }
       router.replace('/farms');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao entrar');
@@ -67,18 +73,38 @@ export default function LoginPage() {
             id="password"
             type="password"
             required
+            disabled={mfaRequired}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-green-600 focus:outline-none"
+            className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-green-600 focus:outline-none disabled:bg-gray-100"
           />
         </div>
+
+        {mfaRequired && (
+          <div className="space-y-1">
+            <label htmlFor="mfaCode" className="text-sm font-medium text-gray-700">
+              Código de autenticação (app autenticador)
+            </label>
+            <input
+              id="mfaCode"
+              type="text"
+              inputMode="numeric"
+              maxLength={6}
+              required
+              autoFocus
+              value={mfaCode}
+              onChange={(e) => setMfaCode(e.target.value)}
+              className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-green-600 focus:outline-none"
+            />
+          </div>
+        )}
 
         <button
           type="submit"
           disabled={submitting}
           className="w-full rounded bg-green-700 px-3 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
         >
-          {submitting ? 'Entrando...' : 'Entrar'}
+          {submitting ? 'Entrando...' : mfaRequired ? 'Confirmar código' : 'Entrar'}
         </button>
 
         <p className="text-center text-sm text-gray-500">

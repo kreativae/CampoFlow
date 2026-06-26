@@ -78,6 +78,9 @@ export default function FarmsPage() {
           <Link href="/quotations" className="text-sm font-medium text-green-700 hover:underline">
             Cotações
           </Link>
+          <Link href="/security" className="text-sm font-medium text-green-700 hover:underline">
+            Segurança
+          </Link>
           <button
             onClick={logout}
             className="text-sm font-medium text-gray-600 hover:text-gray-900"

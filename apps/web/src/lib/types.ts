@@ -4,12 +4,19 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  mfaEnabled: boolean;
 }
 
 export interface AuthResponse {
-  user: User;
-  accessToken: string;
-  refreshToken: string;
+  user?: User;
+  accessToken?: string;
+  refreshToken?: string;
+  mfaRequired?: boolean;
+}
+
+export interface MfaSetupResponse {
+  secret: string;
+  qrCodeDataUrl: string;
 }
 
 export type Commodity =
