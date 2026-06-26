@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, ApiError } from '@/lib/api';
-import type { DashboardOverview, Farm } from '@/lib/types';
+import type { DashboardFullOverview, DashboardOverview, Farm } from '@/lib/types';
 
 export default function FarmDashboardPage() {
   const { farmId } = useParams<{ farmId: string }>();
@@ -13,6 +13,7 @@ export default function FarmDashboardPage() {
   const router = useRouter();
   const [farm, setFarm] = useState<Farm | null>(null);
   const [dashboard, setDashboard] = useState<DashboardOverview | null>(null);
+  const [resumo, setResumo] = useState<DashboardFullOverview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fetching, setFetching] = useState(true);
 
@@ -23,13 +24,18 @@ export default function FarmDashboardPage() {
       const farmData = await apiFetch<Farm>(`/fazendas/${farmId}`, { token: accessToken });
       setFarm(farmData);
       try {
-        const dashboardData = await apiFetch<DashboardOverview>(`/fazendas/${farmId}/painel`, {
-          token: accessToken,
-        });
+        const [dashboardData, resumoData] = await Promise.all([
+          apiFetch<DashboardOverview>(`/fazendas/${farmId}/painel`, { token: accessToken }),
+          apiFetch<DashboardFullOverview>(`/fazendas/${farmId}/painel/resumo`, {
+            token: accessToken,
+          }),
+        ]);
         setDashboard(dashboardData);
+        setResumo(resumoData);
       } catch (dashboardErr) {
         if (dashboardErr instanceof ApiError && dashboardErr.status === 403) {
           setDashboard(null);
+          setResumo(null);
         } else {
           throw dashboardErr;
         }
@@ -164,6 +170,106 @@ export default function FarmDashboardPage() {
           )}
         </div>
       )}
+
+      {resumo && (
+        <section className="mt-10">
+          <h2 className="mb-4 text-lg font-semibold text-gray-800">Resumo geral</h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <SummaryCard
+              title="Reprodução"
+              href={`/fazendas/${farmId}/reproducao`}
+              lines={[
+                `Taxa de prenhez: ${(resumo.reproduction.pregnancyRate * 100).toFixed(0)}%`,
+                `Taxa de concepção: ${(resumo.reproduction.conceptionRate * 100).toFixed(0)}%`,
+              ]}
+            />
+            <SummaryCard
+              title="Clima"
+              href={`/fazendas/${farmId}/clima`}
+              lines={[
+                `Alertas ativos: ${resumo.weather.activeAlertsCount}`,
+                resumo.weather.latestAlert
+                  ? `Último: ${resumo.weather.latestAlert.alertType}`
+                  : 'Sem alertas recentes',
+              ]}
+              highlight={resumo.weather.activeAlertsCount > 0}
+            />
+            <SummaryCard
+              title="Insumos"
+              href={`/fazendas/${farmId}/insumos`}
+              lines={[
+                `${resumo.supplies.total} cadastrado(s)`,
+                `${resumo.supplies.alertsCount} em alerta`,
+              ]}
+              highlight={resumo.supplies.alertsCount > 0}
+            />
+            <SummaryCard
+              title="Máquinas"
+              href={`/fazendas/${farmId}/maquinas`}
+              lines={[`${resumo.machines.total} cadastrada(s)`]}
+            />
+            <SummaryCard
+              title="Equipe"
+              href={`/fazendas/${farmId}/equipe`}
+              lines={[
+                `${resumo.tasks.total} tarefa(s)`,
+                `${resumo.tasks.openCount} em aberto`,
+              ]}
+            />
+            <SummaryCard
+              title="Agenda"
+              href={`/fazendas/${farmId}/agenda`}
+              lines={[`${resumo.agenda.upcomingCount} próximo(s)/atrasado(s)`]}
+              highlight={resumo.agenda.upcomingCount > 0}
+            />
+            <SummaryCard
+              title="Mapa"
+              href={`/fazendas/${farmId}/mapa`}
+              lines={[
+                `${resumo.map.featuresCount} elemento(s)`,
+                `${resumo.map.soilAnalysesCount} análise(s) de solo`,
+              ]}
+            />
+            <SummaryCard
+              title="Documentos"
+              href={`/fazendas/${farmId}/documentos`}
+              lines={[`${resumo.documents.total} arquivo(s)`]}
+            />
+            <SummaryCard
+              title="Notificações"
+              href={`/fazendas/${farmId}/notificacoes`}
+              lines={[`${resumo.notifications.unreadCount} não lida(s)`]}
+              highlight={resumo.notifications.unreadCount > 0}
+            />
+            <SummaryCard
+              title="Membros"
+              href={`/fazendas/${farmId}/membros`}
+              lines={[`${resumo.members.total} membro(s)`]}
+            />
+            <SummaryCard
+              title="Relatórios"
+              href={`/fazendas/${farmId}/relatorios`}
+              lines={['Exportação de dados gerenciais']}
+            />
+            <SummaryCard
+              title="BI / Inteligência"
+              href={`/fazendas/${farmId}/inteligencia`}
+              lines={['KPIs, previsões e sugestões']}
+            />
+            <SummaryCard
+              title="Cotações"
+              href="/cotacoes"
+              lines={
+                resumo.quotations.length > 0
+                  ? resumo.quotations.map(
+                      (q) => `${q.commodity}: ${q.price} ${q.unit}`,
+                    )
+                  : ['Nenhuma cotação registrada']
+              }
+            />
+          </div>
+        </section>
+      )}
     </main>
   );
 }
@@ -174,5 +280,33 @@ function Card({ label, value }: { label: string; value: string | number }) {
       <p className="text-xs uppercase tracking-wide text-gray-500">{label}</p>
       <p className="mt-1 text-2xl font-semibold text-gray-900">{value}</p>
     </div>
+  );
+}
+
+function SummaryCard({
+  title,
+  href,
+  lines,
+  highlight,
+}: {
+  title: string;
+  href: string;
+  lines: string[];
+  highlight?: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`block rounded border p-4 transition hover:shadow-sm ${
+        highlight ? 'border-amber-300 bg-amber-50' : 'border-gray-200 bg-white'
+      }`}
+    >
+      <p className="font-semibold text-green-800">{title}</p>
+      <ul className="mt-1 space-y-0.5 text-sm text-gray-600">
+        {lines.map((line, i) => (
+          <li key={i}>{line}</li>
+        ))}
+      </ul>
+    </Link>
   );
 }

@@ -224,6 +224,48 @@ export interface DashboardOverview {
   }[];
 }
 
+export interface DashboardFullOverview {
+  herd: DashboardOverview;
+  members: { total: number };
+  reproduction: {
+    breedingEvents: number;
+    pregnancyDiagnoses: number;
+    confirmedPregnant: number;
+    conceptionRate: number;
+    pregnancyRate: number;
+    births: number;
+    abortions: number;
+  };
+  weather: {
+    activeAlertsCount: number;
+    latestAlert: { alertType: string | null; recordedAt: string } | null;
+  };
+  supplies: {
+    total: number;
+    alertsCount: number;
+    alerts: { name: string }[];
+  };
+  machines: {
+    total: number;
+    costsSummary: unknown[];
+  };
+  tasks: {
+    total: number;
+    openCount: number;
+  };
+  agenda: {
+    upcomingCount: number;
+    upcoming: { title: string; scheduledDate: string; overdue: boolean }[];
+  };
+  map: {
+    featuresCount: number;
+    soilAnalysesCount: number;
+  };
+  documents: { total: number };
+  notifications: { unreadCount: number };
+  quotations: { commodity: string; price: number; unit: string }[];
+}
+
 export type WeatherAlertType = 'GEADA' | 'TEMPESTADE' | 'GRANIZO' | 'SECA' | 'VENTO_FORTE';
 
 export interface WeatherRecord {
