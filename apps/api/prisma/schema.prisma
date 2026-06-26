@@ -68,6 +68,7 @@ model Farm {
   workLogs           WorkLog[]
   shifts             Shift[]
   agendaEvents       AgendaEvent[]
+  mapFeatures        MapFeature[]
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
 }
@@ -498,4 +499,34 @@ model AgendaEvent {
   notes         String?
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
+}
+
+enum MapFeatureType {
+  CERCA
+  PASTAGEM
+  NASCENTE
+  RESERVA
+  OUTRO
+}
+
+enum GeometryType {
+  PONTO
+  POLIGONO
+}
+
+// Farm map features (cercas, pastagens, nascentes, reservas). Coordinates are stored as
+// JSON: a single [lat, lng] pair for PONTO, or an array of [lat, lng] pairs for POLIGONO.
+// Rendered client-side with Leaflet + OpenStreetMap (no API key required), since
+// Google Maps/Mapbox would need paid API credentials not available in this environment.
+model MapFeature {
+  id           String         @id @default(uuid())
+  farm         Farm           @relation(fields: [farmId], references: [id])
+  farmId       String
+  name         String
+  type         MapFeatureType
+  geometryType GeometryType
+  coordinates  Json
+  notes        String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 }
