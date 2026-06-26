@@ -21,7 +21,7 @@ function OAuthCallbackContent() {
     }
 
     loginWithTokens(accessToken, refreshToken)
-      .then(() => router.replace('/farms'))
+      .then(() => router.replace('/fazendas'))
       .catch(() => setError('Não foi possível concluir o login com Google.'));
   }, [searchParams, loginWithTokens, router]);
 
@@ -31,7 +31,7 @@ function OAuthCallbackContent() {
         <>
           <p className="text-sm text-red-600">{error}</p>
           <button
-            onClick={() => router.replace('/login')}
+            onClick={() => router.replace('/entrar')}
             className="mt-4 text-sm font-medium text-green-700 hover:underline"
           >
             Voltar para o login

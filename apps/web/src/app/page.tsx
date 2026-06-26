@@ -10,7 +10,7 @@ export default function HomePage() {
 
   useEffect(() => {
     if (loading) return;
-    router.replace(user ? '/farms' : '/login');
+    router.replace(user ? '/fazendas' : '/entrar');
   }, [loading, user, router]);
 
   return (
