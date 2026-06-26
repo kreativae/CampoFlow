@@ -1,4 +1,4 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Post, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -49,5 +49,17 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   disableMfa(@CurrentUser() user: AuthenticatedUser) {
     return this.authService.disableMfa(user.id);
+  }
+
+  @Get('me/export')
+  @UseGuards(JwtAuthGuard)
+  exportPersonalData(@CurrentUser() user: AuthenticatedUser) {
+    return this.authService.exportPersonalData(user.id);
+  }
+
+  @Delete('me')
+  @UseGuards(JwtAuthGuard)
+  deleteAccount(@CurrentUser() user: AuthenticatedUser) {
+    return this.authService.deleteAccount(user.id);
   }
 }

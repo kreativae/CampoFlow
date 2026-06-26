@@ -2,12 +2,15 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService, JwtSignOptions } from '@nestjs/jwt';
+import { randomBytes } from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { authenticator } from 'otplib';
 import * as QRCode from 'qrcode';
+import { Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EncryptionService } from '../common/crypto/encryption.service';
 import { RegisterDto } from './dto/register.dto';
@@ -158,6 +161,96 @@ export class AuthService {
       where: { id: userId },
       data: { refreshTokenHash: null },
     });
+    return { success: true };
+  }
+
+  // LGPD right of access: a self-service export of everything personal data the
+  // platform holds about the user, in one JSON document.
+  async exportPersonalData(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        memberships: {
+          include: { farm: { select: { id: true, name: true } } },
+        },
+        assignedTasks: true,
+        workLogs: true,
+        shifts: true,
+        notifications: true,
+      },
+    });
+    if (!user) {
+      throw new NotFoundException('Usuário não encontrado');
+    }
+
+    return {
+      exportedAt: new Date().toISOString(),
+      profile: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        mfaEnabled: user.mfaEnabled,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      },
+      memberships: user.memberships.map((m) => ({
+        farmId: m.farmId,
+        farmName: m.farm.name,
+        role: m.role,
+        since: m.createdAt,
+      })),
+      assignedTasks: user.assignedTasks,
+      workLogs: user.workLogs,
+      shifts: user.shifts,
+      notifications: user.notifications,
+    };
+  }
+
+  // LGPD right to erasure. We don't hard-delete the User row outright: WorkLog/Shift/
+  // Task records reference it and are legitimate shared operational history of a farm
+  // (other members rely on them), so we anonymize the account instead of corrupting
+  // that history. Memberships and personal in-app notifications, which belong only to
+  // this user, are actually deleted. If the user is the sole OWNER of any farm, we
+  // refuse — deleting them would leave that farm ownerless.
+  async deleteAccount(userId: string) {
+    const ownerships = await this.prisma.membership.findMany({
+      where: { userId, role: Role.OWNER },
+      include: {
+        farm: {
+          include: { memberships: { where: { role: Role.OWNER } } },
+        },
+      },
+    });
+    const soleOwnerFarms = ownerships
+      .filter((m) => m.farm.memberships.length <= 1)
+      .map((m) => m.farm.name);
+
+    if (soleOwnerFarms.length > 0) {
+      throw new ConflictException(
+        `Você é o único proprietário das fazendas: ${soleOwnerFarms.join(', ')}. ` +
+          'Transfira a propriedade para outro membro ou exclua essas fazendas antes de excluir sua conta.',
+      );
+    }
+
+    await this.prisma.notification.deleteMany({ where: { userId } });
+    await this.prisma.membership.deleteMany({ where: { userId } });
+
+    const unusablePassword = await bcrypt.hash(
+      randomBytes(32).toString('hex'),
+      PASSWORD_SALT_ROUNDS,
+    );
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        email: `deleted-${userId}@campoflow.invalid`,
+        name: 'Usuário removido',
+        passwordHash: unusablePassword,
+        refreshTokenHash: null,
+        mfaSecret: null,
+        mfaEnabled: false,
+      },
+    });
+
     return { success: true };
   }
 
