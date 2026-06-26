@@ -59,6 +59,7 @@ model Farm {
   animals            Animal[]
   transactions       Transaction[]
   weatherRecords     WeatherRecord[]
+  supplies           Supply[]
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
 }
@@ -320,4 +321,46 @@ model WeatherRecord {
   notes           String?
   recordedAt      DateTime          @default(now())
   createdAt       DateTime          @default(now())
+}
+
+enum SupplyCategory {
+  SAL_MINERAL
+  RACAO
+  FERTILIZANTE
+  HERBICIDA
+  DEFENSIVO
+  OUTROS
+}
+
+enum SupplyMovementType {
+  ENTRADA
+  SAIDA
+}
+
+model Supply {
+  id              String           @id @default(uuid())
+  farm            Farm             @relation(fields: [farmId], references: [id])
+  farmId          String
+  name            String
+  category        SupplyCategory
+  unit            String
+  currentQuantity Float            @default(0)
+  minimumQuantity Float            @default(0)
+  expirationDate  DateTime?
+  notes           String?
+  movements       SupplyMovement[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+// Stock entries/exits; Supply.currentQuantity is kept in sync transactionally on each movement.
+model SupplyMovement {
+  id         String             @id @default(uuid())
+  supply     Supply             @relation(fields: [supplyId], references: [id])
+  supplyId   String
+  type       SupplyMovementType
+  quantity   Float
+  notes      String?
+  occurredAt DateTime           @default(now())
+  createdAt  DateTime           @default(now())
 }
