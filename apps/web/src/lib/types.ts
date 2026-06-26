@@ -270,3 +270,46 @@ export interface SupplyAlert {
   expiringSoon: boolean;
   expired: boolean;
 }
+
+export type MachineType = 'TRATOR' | 'CAMINHAO' | 'IMPLEMENTO' | 'OUTRO';
+
+export interface MachineMaintenance {
+  id: string;
+  description: string;
+  cost: number | null;
+  hourMeterAt: number | null;
+  performedAt: string;
+  notes: string | null;
+}
+
+export interface MachineFuelRecord {
+  id: string;
+  liters: number;
+  cost: number | null;
+  hourMeterAt: number | null;
+  recordedAt: string;
+  notes: string | null;
+}
+
+export interface Machine {
+  id: string;
+  name: string;
+  type: MachineType;
+  brand: string | null;
+  model: string | null;
+  year: number | null;
+  currentHourMeter: number;
+  notes: string | null;
+  maintenances?: MachineMaintenance[];
+  fuelRecords?: MachineFuelRecord[];
+}
+
+export interface MachineCostSummary {
+  machineId: string;
+  name: string;
+  currentHourMeter: number;
+  maintenanceCost: number;
+  fuelCost: number;
+  totalCost: number;
+  totalLiters: number;
+}
