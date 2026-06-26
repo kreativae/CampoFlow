@@ -25,6 +25,7 @@ import { AgendaModule } from './agenda/agenda.module';
 import { MapFeaturesModule } from './map-features/map-features.module';
 import { DocumentsModule } from './documents/documents.module';
 import { ReportsModule } from './reports/reports.module';
+import { BiModule } from './bi/bi.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { ReportsModule } from './reports/reports.module';
     MapFeaturesModule,
     DocumentsModule,
     ReportsModule,
+    BiModule,
   ],
   controllers: [AppController],
   providers: [
