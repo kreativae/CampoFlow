@@ -436,3 +436,30 @@ export interface AppNotification {
   readAt: string | null;
   createdAt: string;
 }
+
+export interface SoilAnalysis {
+  id: string;
+  mapFeatureId: string | null;
+  areaLabel: string | null;
+  collectedAt: string;
+  ph: number | null;
+  phosphorusMgDm3: number | null;
+  potassiumCmolcDm3: number | null;
+  calciumCmolcDm3: number | null;
+  magnesiumCmolcDm3: number | null;
+  aluminumCmolcDm3: number | null;
+  organicMatterPercent: number | null;
+  baseSaturationPercent: number | null;
+  ctcCmolcDm3: number | null;
+  documentPath: string | null;
+  documentFileName: string | null;
+  notes: string | null;
+  createdAt: string;
+}
+
+export interface SoilAnalysisRecommendation {
+  limingNeeded: boolean;
+  limestoneTonPerHa: number | null;
+  targetBaseSaturationPercent: number;
+  notes: string[];
+}

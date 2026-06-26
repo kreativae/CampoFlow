@@ -204,12 +204,23 @@ export default function FarmMapPage() {
       ) : (
         <ul className="space-y-2">
           {features.map((f) => (
-            <li key={f.id} className="rounded border border-gray-200 bg-white px-4 py-3">
-              <p className="font-medium text-gray-900">{f.name}</p>
-              <p className="text-sm text-gray-500">
-                {TYPE_OPTIONS.find((opt) => opt.value === f.type)?.label} ·{' '}
-                {f.geometryType === 'PONTO' ? 'Ponto' : `Polígono (${f.coordinates.length} pontos)`}
-              </p>
+            <li
+              key={f.id}
+              className="flex items-center justify-between rounded border border-gray-200 bg-white px-4 py-3"
+            >
+              <div>
+                <p className="font-medium text-gray-900">{f.name}</p>
+                <p className="text-sm text-gray-500">
+                  {TYPE_OPTIONS.find((opt) => opt.value === f.type)?.label} ·{' '}
+                  {f.geometryType === 'PONTO' ? 'Ponto' : `Polígono (${f.coordinates.length} pontos)`}
+                </p>
+              </div>
+              <Link
+                href={`/fazendas/${farmId}/mapa/solo/${f.id}`}
+                className="shrink-0 text-sm font-medium text-green-700 hover:underline"
+              >
+                Análises de solo →
+              </Link>
             </li>
           ))}
         </ul>
