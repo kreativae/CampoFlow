@@ -386,3 +386,29 @@ export interface FarmDocument {
   notes: string | null;
   createdAt: string;
 }
+
+export interface BiOverview {
+  kpis: {
+    totalReceita: number;
+    totalDespesa: number;
+    lucro: number;
+    arrobasProduzidas: number;
+    custoPorArroba: number;
+    lucroPorAnimal: number;
+    roi: number;
+    rentabilidade: number;
+  };
+  forecastWeightGain: {
+    windowDays: number;
+    averageDailyGainKg: number;
+    herdSize: number;
+    projectedArrobas: number;
+    weatherRiskActive: boolean;
+    weatherAdjustedProjectedArrobas: number;
+  };
+  forecastSales: {
+    recentMonths: { period: string; receita: number; despesa: number; saldo: number }[];
+    projectedNextMonthReceita: number;
+  };
+  managementSuggestions: string[];
+}
