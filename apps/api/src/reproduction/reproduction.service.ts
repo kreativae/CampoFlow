@@ -6,6 +6,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateReproductiveEventDto } from './dto/create-reproductive-event.dto';
+import { UpdateReproductiveEventDto } from './dto/update-reproductive-event.dto';
 
 const BREEDING_EVENT_TYPES: ReproductiveEventType[] = [
   ReproductiveEventType.IATF,
@@ -63,6 +64,45 @@ export class ReproductionService {
       where: { animalId },
       orderBy: { eventDate: 'desc' },
     });
+  }
+
+  private async findOwnedEvent(
+    farmId: string,
+    animalId: string,
+    eventId: string,
+  ) {
+    await this.assertAnimalBelongsToFarm(farmId, animalId);
+    const event = await this.prisma.reproductiveEvent.findUnique({
+      where: { id: eventId },
+    });
+    if (!event || event.animalId !== animalId) {
+      throw new NotFoundException('Evento reprodutivo não encontrado');
+    }
+    return event;
+  }
+
+  async update(
+    farmId: string,
+    animalId: string,
+    eventId: string,
+    dto: UpdateReproductiveEventDto,
+  ) {
+    await this.findOwnedEvent(farmId, animalId, eventId);
+    return this.prisma.reproductiveEvent.update({
+      where: { id: eventId },
+      data: {
+        type: dto.type,
+        result: dto.result,
+        notes: dto.notes,
+        eventDate: dto.eventDate ? new Date(dto.eventDate) : undefined,
+      },
+    });
+  }
+
+  async remove(farmId: string, animalId: string, eventId: string) {
+    await this.findOwnedEvent(farmId, animalId, eventId);
+    await this.prisma.reproductiveEvent.delete({ where: { id: eventId } });
+    return { success: true };
   }
 
   // Farm-level reproductive KPIs: conception rate, pregnancy rate, births, abortions.

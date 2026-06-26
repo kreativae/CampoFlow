@@ -148,4 +148,40 @@ describe('Weather (e2e)', () => {
     expect(history.length).toBe(2);
     expect(history[0].alertType).toBe('GEADA');
   });
+
+  it('updates a weather record', async () => {
+    const history = await request(app.getHttpServer())
+      .get(`/fazendas/${farmId}/clima`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+    const target = (history.body as WeatherRecordResponseBody[])[0];
+
+    const res = await request(app.getHttpServer())
+      .patch(`/fazendas/${farmId}/clima/${target.id}`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ notes: 'Corrigido via teste' })
+      .expect(200);
+
+    expect((res.body as { notes: string }).notes).toBe('Corrigido via teste');
+  });
+
+  it('removes a weather record', async () => {
+    const before = await request(app.getHttpServer())
+      .get(`/fazendas/${farmId}/clima`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+    const countBefore = (before.body as unknown[]).length;
+    const target = (before.body as WeatherRecordResponseBody[])[0];
+
+    await request(app.getHttpServer())
+      .delete(`/fazendas/${farmId}/clima/${target.id}`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+
+    const after = await request(app.getHttpServer())
+      .get(`/fazendas/${farmId}/clima`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+    expect((after.body as unknown[]).length).toBe(countBefore - 1);
+  });
 });

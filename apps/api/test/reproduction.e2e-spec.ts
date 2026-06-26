@@ -156,4 +156,44 @@ describe('Reproduction (e2e)', () => {
     expect(stats.births).toBe(1);
     expect(stats.abortions).toBe(0);
   });
+
+  it('updates a reproductive event', async () => {
+    const list = await request(app.getHttpServer())
+      .get(`/fazendas/${farmId}/animais/${cowAId}/eventos-reprodutivos`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+    const target = (list.body as { id: string; type: string }[])[0];
+
+    const res = await request(app.getHttpServer())
+      .patch(
+        `/fazendas/${farmId}/animais/${cowAId}/eventos-reprodutivos/${target.id}`,
+      )
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ notes: 'Atualizado via teste' })
+      .expect(200);
+
+    expect((res.body as { notes: string }).notes).toBe('Atualizado via teste');
+  });
+
+  it('removes a reproductive event', async () => {
+    const before = await request(app.getHttpServer())
+      .get(`/fazendas/${farmId}/animais/${cowAId}/eventos-reprodutivos`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+    const countBefore = (before.body as unknown[]).length;
+    const target = (before.body as { id: string }[])[0];
+
+    await request(app.getHttpServer())
+      .delete(
+        `/fazendas/${farmId}/animais/${cowAId}/eventos-reprodutivos/${target.id}`,
+      )
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+
+    const after = await request(app.getHttpServer())
+      .get(`/fazendas/${farmId}/animais/${cowAId}/eventos-reprodutivos`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+    expect((after.body as unknown[]).length).toBe(countBefore - 1);
+  });
 });
