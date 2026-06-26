@@ -22,6 +22,7 @@ interface AuthContextValue {
     mfaCode?: string,
   ) => Promise<{ mfaRequired: boolean }>;
   register: (email: string, password: string, name: string) => Promise<void>;
+  loginWithTokens: (accessToken: string, refreshToken: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -80,6 +81,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     persist({ user: res.user!, accessToken: res.accessToken!, refreshToken: res.refreshToken! });
   }
 
+  async function loginWithTokens(accessToken: string, refreshToken: string) {
+    const fetchedUser = await apiFetch<User>('/auth/me', { token: accessToken });
+    setUser(fetchedUser);
+    setAccessToken(accessToken);
+    persist({ user: fetchedUser, accessToken, refreshToken });
+  }
+
   function logout() {
     setUser(null);
     setAccessToken(null);
@@ -87,7 +95,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, accessToken, loading, login, register, logout }}>
+    <AuthContext.Provider
+      value={{ user, accessToken, loading, login, register, loginWithTokens, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );

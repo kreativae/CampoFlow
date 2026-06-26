@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { ApiError } from '@/lib/api';
+import GoogleLoginButton from '@/components/GoogleLoginButton';
 
 export default function RegisterPage() {
   const { register } = useAuth();
@@ -96,6 +97,14 @@ export default function RegisterPage() {
         >
           {submitting ? 'Cadastrando...' : 'Cadastrar'}
         </button>
+
+        <div className="flex items-center gap-2 text-xs text-gray-400">
+          <span className="h-px flex-1 bg-gray-200" />
+          ou
+          <span className="h-px flex-1 bg-gray-200" />
+        </div>
+
+        <GoogleLoginButton />
 
         <p className="text-center text-sm text-gray-500">
           Já tem conta?{' '}
