@@ -228,3 +228,45 @@ export interface WeatherRecord {
   notes: string | null;
   recordedAt: string;
 }
+
+export type SupplyCategory =
+  | 'SAL_MINERAL'
+  | 'RACAO'
+  | 'FERTILIZANTE'
+  | 'HERBICIDA'
+  | 'DEFENSIVO'
+  | 'OUTROS';
+
+export type SupplyMovementType = 'ENTRADA' | 'SAIDA';
+
+export interface SupplyMovement {
+  id: string;
+  type: SupplyMovementType;
+  quantity: number;
+  notes: string | null;
+  occurredAt: string;
+}
+
+export interface Supply {
+  id: string;
+  name: string;
+  category: SupplyCategory;
+  unit: string;
+  currentQuantity: number;
+  minimumQuantity: number;
+  expirationDate: string | null;
+  notes: string | null;
+  movements?: SupplyMovement[];
+}
+
+export interface SupplyAlert {
+  id: string;
+  name: string;
+  unit: string;
+  currentQuantity: number;
+  minimumQuantity: number;
+  lowStock: boolean;
+  expirationDate: string | null;
+  expiringSoon: boolean;
+  expired: boolean;
+}
