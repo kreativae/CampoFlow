@@ -4,13 +4,13 @@ import { useEffect, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
-import { apiFetch, ApiError } from '@/lib/api';
+import { apiFetch, apiDownload, ApiError } from '@/lib/api';
 import type { MfaSetupResponse } from '@/lib/types';
 
 type Step = 'idle' | 'setup' | 'enabled';
 
 export default function SecurityPage() {
-  const { user, accessToken, loading } = useAuth();
+  const { user, accessToken, loading, logout } = useAuth();
   const router = useRouter();
 
   const [step, setStep] = useState<Step>(user?.mfaEnabled ? 'enabled' : 'idle');
@@ -19,6 +19,10 @@ export default function SecurityPage() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [lgpdError, setLgpdError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   useEffect(() => {
     if (loading) return;
@@ -81,6 +85,33 @@ export default function SecurityPage() {
       setError(err instanceof ApiError ? err.message : 'Erro ao desabilitar o MFA');
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleExportData() {
+    setLgpdError(null);
+    setExporting(true);
+    try {
+      await apiDownload('/auth/me/export', 'meus-dados-campoflow.json', accessToken);
+    } catch (err) {
+      setLgpdError(err instanceof ApiError ? err.message : 'Erro ao exportar seus dados');
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  async function handleDeleteAccount() {
+    setLgpdError(null);
+    setDeletingAccount(true);
+    try {
+      await apiFetch('/auth/me', { method: 'DELETE', token: accessToken });
+      logout();
+      router.replace('/login');
+    } catch (err) {
+      setLgpdError(err instanceof ApiError ? err.message : 'Erro ao excluir a conta');
+      setConfirmingDelete(false);
+    } finally {
+      setDeletingAccount(false);
     }
   }
 
@@ -160,6 +191,58 @@ export default function SecurityPage() {
             {submitting ? 'Desabilitando...' : 'Desabilitar MFA'}
           </button>
         )}
+      </section>
+
+      <section className="mt-6 rounded border border-gray-200 bg-white p-6">
+        <h2 className="text-lg font-semibold">Privacidade e dados (LGPD)</h2>
+        <p className="mt-1 text-sm text-gray-600">
+          Você pode exportar uma cópia de todos os seus dados pessoais ou solicitar a exclusão
+          da sua conta.
+        </p>
+
+        {lgpdError && <p className="mt-3 text-sm text-red-600">{lgpdError}</p>}
+
+        <button
+          onClick={handleExportData}
+          disabled={exporting}
+          className="mt-4 rounded bg-gray-200 px-4 py-2 text-sm font-medium text-gray-800 hover:bg-gray-300 disabled:opacity-50"
+        >
+          {exporting ? 'Exportando...' : 'Exportar meus dados'}
+        </button>
+
+        <div className="mt-6 border-t border-gray-100 pt-4">
+          {!confirmingDelete ? (
+            <button
+              onClick={() => setConfirmingDelete(true)}
+              className="rounded bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+            >
+              Excluir minha conta
+            </button>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm font-medium text-red-700">
+                Tem certeza? Sua conta será anonimizada e você perderá o acesso. Se você for o
+                único proprietário de alguma fazenda, será necessário transferir a propriedade
+                antes.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleDeleteAccount}
+                  disabled={deletingAccount}
+                  className="rounded bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                >
+                  {deletingAccount ? 'Excluindo...' : 'Sim, excluir minha conta'}
+                </button>
+                <button
+                  onClick={() => setConfirmingDelete(false)}
+                  className="rounded bg-gray-200 px-4 py-2 text-sm font-medium text-gray-800 hover:bg-gray-300"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </section>
     </div>
   );
