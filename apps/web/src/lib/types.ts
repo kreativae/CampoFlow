@@ -50,6 +50,8 @@ export interface Farm {
   type: string;
   totalAreaHectares: number | null;
   usableAreaHectares: number | null;
+  latitude: number | null;
+  longitude: number | null;
   registryNumber: string | null;
   technicalManager: string | null;
 }
@@ -359,4 +361,16 @@ export interface AgendaEvent {
 
 export interface AgendaAlert extends AgendaEvent {
   overdue: boolean;
+}
+
+export type MapFeatureType = 'CERCA' | 'PASTAGEM' | 'NASCENTE' | 'RESERVA' | 'OUTRO';
+export type GeometryType = 'PONTO' | 'POLIGONO';
+
+export interface MapFeature {
+  id: string;
+  name: string;
+  type: MapFeatureType;
+  geometryType: GeometryType;
+  coordinates: [number, number][];
+  notes: string | null;
 }
