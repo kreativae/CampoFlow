@@ -60,6 +60,7 @@ model Farm {
   transactions       Transaction[]
   weatherRecords     WeatherRecord[]
   supplies           Supply[]
+  machines           Machine[]
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
 }
@@ -363,4 +364,54 @@ model SupplyMovement {
   notes      String?
   occurredAt DateTime           @default(now())
   createdAt  DateTime           @default(now())
+}
+
+enum MachineType {
+  TRATOR
+  CAMINHAO
+  IMPLEMENTO
+  OUTRO
+}
+
+model Machine {
+  id               String               @id @default(uuid())
+  farm             Farm                 @relation(fields: [farmId], references: [id])
+  farmId           String
+  name             String
+  type             MachineType
+  brand            String?
+  model            String?
+  year             Int?
+  currentHourMeter Float                @default(0)
+  notes            String?
+  maintenances     MachineMaintenance[]
+  fuelRecords      MachineFuelRecord[]
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+}
+
+// Machine.currentHourMeter is kept in sync when a higher reading is reported here.
+model MachineMaintenance {
+  id          String   @id @default(uuid())
+  machine     Machine  @relation(fields: [machineId], references: [id])
+  machineId   String
+  description String
+  cost        Float?
+  hourMeterAt Float?
+  performedAt DateTime @default(now())
+  notes       String?
+  createdAt   DateTime @default(now())
+}
+
+// Machine.currentHourMeter is kept in sync when a higher reading is reported here.
+model MachineFuelRecord {
+  id          String   @id @default(uuid())
+  machine     Machine  @relation(fields: [machineId], references: [id])
+  machineId   String
+  liters      Float
+  cost        Float?
+  hourMeterAt Float?
+  recordedAt  DateTime @default(now())
+  notes       String?
+  createdAt   DateTime @default(now())
 }

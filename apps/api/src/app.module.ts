@@ -19,6 +19,7 @@ import { AuditLogInterceptor } from './audit/audit-log.interceptor';
 import { QuotationsModule } from './quotations/quotations.module';
 import { WeatherModule } from './weather/weather.module';
 import { SuppliesModule } from './supplies/supplies.module';
+import { MachinesModule } from './machines/machines.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { SuppliesModule } from './supplies/supplies.module';
     QuotationsModule,
     WeatherModule,
     SuppliesModule,
+    MachinesModule,
   ],
   controllers: [AppController],
   providers: [
