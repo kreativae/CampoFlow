@@ -412,3 +412,19 @@ export interface BiOverview {
   };
   managementSuggestions: string[];
 }
+
+export type NotificationChannel = 'IN_APP' | 'EMAIL' | 'SMS' | 'PUSH';
+export type NotificationStatus = 'PENDING' | 'SENT' | 'SIMULATED' | 'FAILED';
+export type NotificationSource = 'SANIDADE' | 'AGENDA' | 'INSUMOS' | 'CLIMA' | 'OUTRO';
+
+export interface AppNotification {
+  id: string;
+  title: string;
+  message: string;
+  channel: NotificationChannel;
+  status: NotificationStatus;
+  source: NotificationSource;
+  read: boolean;
+  readAt: string | null;
+  createdAt: string;
+}

@@ -111,6 +111,12 @@ export default function FarmDashboardPage() {
         <Link href={`/farms/${farmId}/bi`} className="font-medium text-green-700 hover:underline">
           BI
         </Link>
+        <Link
+          href={`/farms/${farmId}/notifications`}
+          className="font-medium text-green-700 hover:underline"
+        >
+          Notificações
+        </Link>
         <Link href={`/farms/${farmId}/finance`} className="font-medium text-green-700 hover:underline">
           Financeiro
         </Link>
