@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, ApiError } from '@/lib/api';
+import { useConfirm } from '@/lib/confirm-context';
 import type { Supply, SupplyAlert, SupplyCategory } from '@/lib/types';
 
 const CATEGORY_OPTIONS: { value: SupplyCategory; label: string }[] = [
@@ -16,14 +17,21 @@ const CATEGORY_OPTIONS: { value: SupplyCategory; label: string }[] = [
   { value: 'OUTROS', label: 'Outros' },
 ];
 
-function categoryLabel(category: SupplyCategory) {
-  return CATEGORY_OPTIONS.find((opt) => opt.value === category)?.label ?? category;
+const UNIT_OPTIONS = ['kg', 't', 'L', 'mL', 'un', 'sc', 'fardo', 'dose'];
+const CUSTOM_UNIT = '__custom__';
+
+function categoryLabel(supply: { category: SupplyCategory; customCategory: string | null }) {
+  if (supply.category === 'OUTROS' && supply.customCategory) {
+    return supply.customCategory;
+  }
+  return CATEGORY_OPTIONS.find((opt) => opt.value === supply.category)?.label ?? supply.category;
 }
 
 export default function SuppliesPage() {
   const { farmId } = useParams<{ farmId: string }>();
   const { user, accessToken, loading } = useAuth();
   const router = useRouter();
+  const confirm = useConfirm();
 
   const [supplies, setSupplies] = useState<Supply[]>([]);
   const [alerts, setAlerts] = useState<SupplyAlert[]>([]);
@@ -33,10 +41,21 @@ export default function SuppliesPage() {
 
   const [name, setName] = useState('');
   const [category, setCategory] = useState<SupplyCategory>('SAL_MINERAL');
-  const [unit, setUnit] = useState('kg');
-  const [initialQuantity, setInitialQuantity] = useState('');
-  const [minimumQuantity, setMinimumQuantity] = useState('');
+  const [customCategory, setCustomCategory] = useState('');
+  const [unitSelect, setUnitSelect] = useState('kg');
+  const [customUnit, setCustomUnit] = useState('');
+  const [quantity, setQuantity] = useState('');
   const [expirationDate, setExpirationDate] = useState('');
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editCategory, setEditCategory] = useState<SupplyCategory>('SAL_MINERAL');
+  const [editCustomCategory, setEditCustomCategory] = useState('');
+  const [editUnitSelect, setEditUnitSelect] = useState('kg');
+  const [editCustomUnit, setEditCustomUnit] = useState('');
+  const [editMinimumQuantity, setEditMinimumQuantity] = useState('');
+  const [editExpirationDate, setEditExpirationDate] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const loadData = useCallback(async () => {
     setFetching(true);
@@ -77,21 +96,84 @@ export default function SuppliesPage() {
         body: {
           name,
           category,
-          unit,
-          initialQuantity: initialQuantity ? Number(initialQuantity) : undefined,
-          minimumQuantity: Number(minimumQuantity),
+          customCategory: category === 'OUTROS' ? customCategory || undefined : undefined,
+          unit: unitSelect === CUSTOM_UNIT ? customUnit : unitSelect,
+          initialQuantity: quantity ? Number(quantity) : undefined,
           expirationDate: expirationDate || undefined,
         },
       });
       setName('');
-      setInitialQuantity('');
-      setMinimumQuantity('');
+      setCustomCategory('');
+      setCustomUnit('');
+      setQuantity('');
       setExpirationDate('');
       await loadData();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao cadastrar insumo');
     } finally {
       setCreating(false);
+    }
+  }
+
+  function startEdit(supply: Supply) {
+    setEditingId(supply.id);
+    setEditName(supply.name);
+    setEditCategory(supply.category);
+    setEditCustomCategory(supply.customCategory ?? '');
+    if (UNIT_OPTIONS.includes(supply.unit)) {
+      setEditUnitSelect(supply.unit);
+      setEditCustomUnit('');
+    } else {
+      setEditUnitSelect(CUSTOM_UNIT);
+      setEditCustomUnit(supply.unit);
+    }
+    setEditMinimumQuantity(String(supply.minimumQuantity));
+    setEditExpirationDate(supply.expirationDate ? supply.expirationDate.slice(0, 10) : '');
+  }
+
+  async function handleSaveEdit(supplyId: string) {
+    setSaving(true);
+    setError(null);
+    try {
+      await apiFetch(`/fazendas/${farmId}/insumos/${supplyId}`, {
+        method: 'PATCH',
+        token: accessToken,
+        body: {
+          name: editName,
+          category: editCategory,
+          customCategory:
+            editCategory === 'OUTROS' ? editCustomCategory || undefined : undefined,
+          unit: editUnitSelect === CUSTOM_UNIT ? editCustomUnit : editUnitSelect,
+          minimumQuantity: Number(editMinimumQuantity),
+          expirationDate: editExpirationDate || undefined,
+        },
+      });
+      setEditingId(null);
+      await loadData();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao atualizar insumo');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete(supply: Supply) {
+    const ok = await confirm({
+      title: 'Excluir insumo',
+      message: `Excluir o insumo ${supply.name}? Essa ação não pode ser desfeita.`,
+      confirmLabel: 'Excluir',
+      danger: true,
+    });
+    if (!ok) return;
+    setError(null);
+    try {
+      await apiFetch(`/fazendas/${farmId}/insumos/${supply.id}`, {
+        method: 'DELETE',
+        token: accessToken,
+      });
+      await loadData();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao excluir insumo');
     }
   }
 
@@ -165,38 +247,51 @@ export default function SuppliesPage() {
               </option>
             ))}
           </select>
+          {category === 'OUTROS' && (
+            <input
+              type="text"
+              placeholder="Nome da categoria"
+              required
+              value={customCategory}
+              onChange={(e) => setCustomCategory(e.target.value)}
+              className="mt-2 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            />
+          )}
         </div>
 
         <div>
           <label className="text-xs font-medium text-gray-600">Unidade</label>
-          <input
-            type="text"
-            required
-            value={unit}
-            onChange={(e) => setUnit(e.target.value)}
+          <select
+            value={unitSelect}
+            onChange={(e) => setUnitSelect(e.target.value)}
             className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
-          />
+          >
+            {UNIT_OPTIONS.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
+              </option>
+            ))}
+            <option value={CUSTOM_UNIT}>Outra...</option>
+          </select>
+          {unitSelect === CUSTOM_UNIT && (
+            <input
+              type="text"
+              placeholder="Unidade personalizada"
+              required
+              value={customUnit}
+              onChange={(e) => setCustomUnit(e.target.value)}
+              className="mt-2 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            />
+          )}
         </div>
 
         <div>
-          <label className="text-xs font-medium text-gray-600">Qtd. inicial</label>
+          <label className="text-xs font-medium text-gray-600">Quantidade</label>
           <input
             type="number"
             step="0.01"
-            value={initialQuantity}
-            onChange={(e) => setInitialQuantity(e.target.value)}
-            className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
-          />
-        </div>
-
-        <div>
-          <label className="text-xs font-medium text-gray-600">Estoque mínimo</label>
-          <input
-            type="number"
-            step="0.01"
-            required
-            value={minimumQuantity}
-            onChange={(e) => setMinimumQuantity(e.target.value)}
+            value={quantity}
+            onChange={(e) => setQuantity(e.target.value)}
             className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
           />
         </div>
@@ -228,22 +323,138 @@ export default function SuppliesPage() {
         <p className="text-gray-500">Nenhum insumo cadastrado ainda.</p>
       ) : (
         <ul className="space-y-2">
-          {supplies.map((supply) => (
-            <li key={supply.id}>
-              <Link
-                href={`/fazendas/${farmId}/insumos/${supply.id}`}
+          {supplies.map((supply) =>
+            editingId === supply.id ? (
+              <li
+                key={supply.id}
+                className="grid grid-cols-2 gap-3 rounded border border-green-600 bg-white p-4 sm:grid-cols-4"
+              >
+                <div className="col-span-2">
+                  <label className="text-xs font-medium text-gray-600">Nome</label>
+                  <input
+                    type="text"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-600">Categoria</label>
+                  <select
+                    value={editCategory}
+                    onChange={(e) => setEditCategory(e.target.value as SupplyCategory)}
+                    className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                  >
+                    {CATEGORY_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                  {editCategory === 'OUTROS' && (
+                    <input
+                      type="text"
+                      placeholder="Nome da categoria"
+                      value={editCustomCategory}
+                      onChange={(e) => setEditCustomCategory(e.target.value)}
+                      className="mt-2 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                    />
+                  )}
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-600">Unidade</label>
+                  <select
+                    value={editUnitSelect}
+                    onChange={(e) => setEditUnitSelect(e.target.value)}
+                    className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                  >
+                    {UNIT_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                    <option value={CUSTOM_UNIT}>Outra...</option>
+                  </select>
+                  {editUnitSelect === CUSTOM_UNIT && (
+                    <input
+                      type="text"
+                      placeholder="Unidade personalizada"
+                      value={editCustomUnit}
+                      onChange={(e) => setEditCustomUnit(e.target.value)}
+                      className="mt-2 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                    />
+                  )}
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-600">
+                    Estoque mínimo (alertas)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={editMinimumQuantity}
+                    onChange={(e) => setEditMinimumQuantity(e.target.value)}
+                    className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-xs font-medium text-gray-600">Validade</label>
+                  <input
+                    type="date"
+                    value={editExpirationDate}
+                    onChange={(e) => setEditExpirationDate(e.target.value)}
+                    className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                  />
+                </div>
+                <div className="col-span-full flex gap-2">
+                  <button
+                    type="button"
+                    disabled={saving}
+                    onClick={() => handleSaveEdit(supply.id)}
+                    className="rounded bg-green-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+                  >
+                    {saving ? 'Salvando...' : 'Salvar'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingId(null)}
+                    className="rounded border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </li>
+            ) : (
+              <li
+                key={supply.id}
                 className="flex items-center justify-between rounded border border-gray-200 bg-white px-4 py-3 hover:border-green-600 hover:shadow-sm"
               >
-                <div>
+                <Link href={`/fazendas/${farmId}/insumos/${supply.id}`} className="flex-1">
                   <p className="font-medium text-gray-900">{supply.name}</p>
-                  <p className="text-sm text-gray-500">{categoryLabel(supply.category)}</p>
+                  <p className="text-sm text-gray-500">{categoryLabel(supply)}</p>
+                </Link>
+                <div className="flex items-center gap-3">
+                  <p className="text-sm text-gray-500">
+                    {supply.currentQuantity} {supply.unit}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => startEdit(supply)}
+                    className="text-sm font-medium text-green-700 hover:underline"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(supply)}
+                    className="text-sm font-medium text-red-600 hover:underline"
+                  >
+                    Excluir
+                  </button>
                 </div>
-                <p className="text-sm text-gray-500">
-                  {supply.currentQuantity} {supply.unit}
-                </p>
-              </Link>
-            </li>
-          ))}
+              </li>
+            ),
+          )}
         </ul>
       )}
     </main>

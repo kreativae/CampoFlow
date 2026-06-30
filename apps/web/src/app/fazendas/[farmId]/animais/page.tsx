@@ -5,7 +5,14 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, ApiError } from '@/lib/api';
-import type { Animal, AnimalCategory, AnimalSex, Pasture } from '@/lib/types';
+import { useConfirm } from '@/lib/confirm-context';
+import type {
+  Animal,
+  AnimalCategory,
+  AnimalSex,
+  Pasture,
+  ReproductiveEventType,
+} from '@/lib/types';
 
 const SEX_OPTIONS: AnimalSex[] = ['FEMALE', 'MALE'];
 const CATEGORY_OPTIONS: AnimalCategory[] = [
@@ -20,13 +27,39 @@ const CATEGORY_OPTIONS: AnimalCategory[] = [
   'MATRIZ',
 ];
 
+const REPRODUCTIVE_EVENT_OPTIONS: { value: ReproductiveEventType; label: string }[] = [
+  { value: 'IATF', label: 'IATF' },
+  { value: 'MONTA_NATURAL', label: 'Monta natural' },
+  { value: 'INSEMINACAO', label: 'Inseminação' },
+  { value: 'DIAGNOSTICO_PRENHEZ', label: 'Diagnóstico de prenhez' },
+  { value: 'PARTO', label: 'Parto' },
+  { value: 'ABORTO', label: 'Aborto' },
+];
+
+type VaccinationStatusFilter = '' | 'APLICADA' | 'AGENDADA';
+
+interface VaccinationRecordSummary {
+  animalId: string;
+  administeredAt: string | null;
+}
+
+interface ReproductiveEventSummary {
+  animalId: string;
+  type: ReproductiveEventType;
+}
+
 export default function AnimalsPage() {
   const { farmId } = useParams<{ farmId: string }>();
   const { user, accessToken, loading } = useAuth();
   const router = useRouter();
+  const confirm = useConfirm();
 
   const [animals, setAnimals] = useState<Animal[]>([]);
   const [pastures, setPastures] = useState<Pasture[]>([]);
+  const [vaccinations, setVaccinations] = useState<VaccinationRecordSummary[]>([]);
+  const [reproductiveEvents, setReproductiveEvents] = useState<ReproductiveEventSummary[]>(
+    [],
+  );
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -37,16 +70,49 @@ export default function AnimalsPage() {
   const [breed, setBreed] = useState('');
   const [pastureId, setPastureId] = useState('');
 
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editEarTag, setEditEarTag] = useState('');
+  const [editCategory, setEditCategory] = useState<AnimalCategory>('VACA');
+  const [editBreed, setEditBreed] = useState('');
+  const [editPastureId, setEditPastureId] = useState('');
+  const [editName, setEditName] = useState('');
+  const [editRfid, setEditRfid] = useState('');
+  const [editSex, setEditSex] = useState<AnimalSex>('FEMALE');
+  const [editBirthDate, setEditBirthDate] = useState('');
+  const [editCurrentWeightKg, setEditCurrentWeightKg] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [filterCategory, setFilterCategory] = useState<AnimalCategory | ''>('');
+  const [filterSex, setFilterSex] = useState<AnimalSex | ''>('');
+  const [filterPastureId, setFilterPastureId] = useState('');
+  const [filterVaccination, setFilterVaccination] = useState<VaccinationStatusFilter>('');
+  const [filterReproductionType, setFilterReproductionType] = useState<
+    ReproductiveEventType | ''
+  >('');
+
   const loadData = useCallback(async () => {
     setFetching(true);
     setError(null);
     try {
-      const [animalsData, pasturesData] = await Promise.all([
-        apiFetch<Animal[]>(`/fazendas/${farmId}/animais`, { token: accessToken }),
-        apiFetch<Pasture[]>(`/fazendas/${farmId}/pastagens`, { token: accessToken }),
-      ]);
+      const [animalsData, pasturesData, vaccinationsData, reproductiveEventsData] =
+        await Promise.all([
+          apiFetch<Animal[]>(`/fazendas/${farmId}/animais`, { token: accessToken }),
+          apiFetch<Pasture[]>(`/fazendas/${farmId}/pastagens`, { token: accessToken }),
+          apiFetch<VaccinationRecordSummary[]>(`/fazendas/${farmId}/sanidade/vacinacoes`, {
+            token: accessToken,
+          }),
+          apiFetch<ReproductiveEventSummary[]>(`/fazendas/${farmId}/reproducao/eventos`, {
+            token: accessToken,
+          }),
+        ]);
       setAnimals(animalsData);
       setPastures(pasturesData);
+      setVaccinations(vaccinationsData);
+      setReproductiveEvents(reproductiveEventsData);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao carregar o rebanho');
     } finally {
@@ -91,6 +157,133 @@ export default function AnimalsPage() {
       setCreating(false);
     }
   }
+
+  function startEdit(animal: Animal) {
+    setEditingId(animal.id);
+    setEditEarTag(animal.earTag);
+    setEditCategory(animal.category);
+    setEditBreed(animal.breed ?? '');
+    setEditPastureId(animal.pastureId ?? '');
+    setEditName(animal.name ?? '');
+    setEditRfid(animal.rfid ?? '');
+    setEditSex(animal.sex);
+    setEditBirthDate(animal.birthDate ? animal.birthDate.slice(0, 10) : '');
+    setEditCurrentWeightKg(
+      animal.currentWeightKg !== null ? String(animal.currentWeightKg) : '',
+    );
+  }
+
+  async function handleSaveEdit(animalId: string) {
+    setSaving(true);
+    setError(null);
+    try {
+      await apiFetch(`/fazendas/${farmId}/animais/${animalId}`, {
+        method: 'PATCH',
+        token: accessToken,
+        body: {
+          earTag: editEarTag,
+          category: editCategory,
+          breed: editBreed || undefined,
+          pastureId: editPastureId || undefined,
+          name: editName || undefined,
+          rfid: editRfid || undefined,
+          sex: editSex,
+          birthDate: editBirthDate || undefined,
+          currentWeightKg: editCurrentWeightKg
+            ? Number(editCurrentWeightKg)
+            : undefined,
+        },
+      });
+      setEditingId(null);
+      await loadData();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao atualizar animal');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete(animal: Animal) {
+    const ok = await confirm({
+      title: 'Excluir animal',
+      message: `Excluir o animal ${animal.earTag}? Essa ação não pode ser desfeita.`,
+      confirmLabel: 'Excluir',
+      danger: true,
+    });
+    if (!ok) return;
+    setError(null);
+    try {
+      await apiFetch(`/fazendas/${farmId}/animais/${animal.id}`, {
+        method: 'DELETE',
+        token: accessToken,
+      });
+      await loadData();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao excluir animal');
+    }
+  }
+
+  function toggleSelected(animalId: string, checked: boolean) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(animalId);
+      else next.delete(animalId);
+      return next;
+    });
+  }
+
+  const filteredAnimals = animals.filter((a) => {
+    if (
+      searchTerm &&
+      !a.earTag.toLowerCase().includes(searchTerm.trim().toLowerCase())
+    ) {
+      return false;
+    }
+    if (filterCategory && a.category !== filterCategory) return false;
+    if (filterSex && a.sex !== filterSex) return false;
+    if (filterPastureId && a.pastureId !== filterPastureId) return false;
+    if (filterVaccination) {
+      const animalVaccinations = vaccinations.filter((v) => v.animalId === a.id);
+      if (filterVaccination === 'APLICADA') {
+        if (!animalVaccinations.some((v) => v.administeredAt !== null)) return false;
+      } else if (filterVaccination === 'AGENDADA') {
+        if (!animalVaccinations.some((v) => v.administeredAt === null)) return false;
+      }
+    }
+    if (filterReproductionType) {
+      const hasType = reproductiveEvents.some(
+        (e) => e.animalId === a.id && e.type === filterReproductionType,
+      );
+      if (!hasType) return false;
+    }
+    return true;
+  });
+
+  const hasActiveFilters = Boolean(
+    filterCategory ||
+      filterSex ||
+      filterPastureId ||
+      filterVaccination ||
+      filterReproductionType,
+  );
+
+  function clearFilters() {
+    setFilterCategory('');
+    setFilterSex('');
+    setFilterPastureId('');
+    setFilterVaccination('');
+    setFilterReproductionType('');
+  }
+
+  function toggleSelectAll(checked: boolean) {
+    setSelected(checked ? new Set(filteredAnimals.map((a) => a.id)) : new Set());
+  }
+
+  const selectedAnimals = animals.filter((a) => selected.has(a.id));
+  const selectedTotalWeightKg = selectedAnimals.reduce(
+    (sum, a) => sum + (a.currentWeightKg ?? 0),
+    0,
+  );
 
   if (loading || !user) {
     return (
@@ -202,26 +395,353 @@ export default function AnimalsPage() {
       ) : animals.length === 0 ? (
         <p className="text-gray-500">Nenhum animal cadastrado ainda.</p>
       ) : (
-        <ul className="space-y-2">
-          {animals.map((animal) => (
-            <li key={animal.id}>
-              <Link
-                href={`/fazendas/${farmId}/animais/${animal.id}`}
+        <>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded border border-gray-200 bg-gray-50 px-3 py-2 text-sm">
+            <label className="flex items-center gap-2 text-gray-600">
+              <input
+                type="checkbox"
+                checked={
+                  filteredAnimals.length > 0 &&
+                  selected.size === filteredAnimals.length
+                }
+                onChange={(e) => toggleSelectAll(e.target.checked)}
+              />
+              Selecionar todos
+            </label>
+
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2 text-gray-400">
+                  🔍
+                </span>
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Buscar por brinco..."
+                  className="w-44 rounded border border-gray-300 py-1.5 pl-7 pr-2 text-sm focus:border-green-600 focus:outline-none"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowFilters((v) => !v)}
+                className={`rounded border px-3 py-1.5 text-sm font-medium ${
+                  hasActiveFilters
+                    ? 'border-green-600 bg-green-50 text-green-700'
+                    : 'border-gray-300 text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                Filtros
+                {hasActiveFilters
+                  ? ` (${[
+                      filterCategory,
+                      filterSex,
+                      filterPastureId,
+                      filterVaccination,
+                      filterReproductionType,
+                    ].filter(Boolean).length})`
+                  : ''}
+              </button>
+            </div>
+          </div>
+
+          {showFilters && (
+            <div className="mb-3 grid grid-cols-2 gap-3 rounded border border-gray-200 bg-white p-3 sm:grid-cols-4">
+              <div>
+                <label className="text-xs font-medium text-gray-600">Categoria</label>
+                <select
+                  value={filterCategory}
+                  onChange={(e) => setFilterCategory(e.target.value as AnimalCategory | '')}
+                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                >
+                  <option value="">Todas</option>
+                  {CATEGORY_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600">Sexo</label>
+                <select
+                  value={filterSex}
+                  onChange={(e) => setFilterSex(e.target.value as AnimalSex | '')}
+                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                >
+                  <option value="">Todos</option>
+                  {SEX_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt === 'FEMALE' ? 'Fêmea' : 'Macho'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600">Pasto</label>
+                <select
+                  value={filterPastureId}
+                  onChange={(e) => setFilterPastureId(e.target.value)}
+                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                >
+                  <option value="">Todos</option>
+                  {pastures.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600">Vacinação</label>
+                <select
+                  value={filterVaccination}
+                  onChange={(e) =>
+                    setFilterVaccination(e.target.value as VaccinationStatusFilter)
+                  }
+                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                >
+                  <option value="">Todas</option>
+                  <option value="APLICADA">Aplicadas</option>
+                  <option value="AGENDADA">Agendadas</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600">Reprodução</label>
+                <select
+                  value={filterReproductionType}
+                  onChange={(e) =>
+                    setFilterReproductionType(e.target.value as ReproductiveEventType | '')
+                  }
+                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                >
+                  <option value="">Todos os tipos</option>
+                  {REPRODUCTIVE_EVENT_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-end">
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  disabled={!hasActiveFilters}
+                  className="text-sm font-medium text-gray-500 hover:text-gray-700 disabled:opacity-40"
+                >
+                  Limpar filtros
+                </button>
+              </div>
+            </div>
+          )}
+
+          {selected.size > 0 && (
+            <p className="mb-3 text-sm font-medium text-gray-900">
+              {selected.size} brinco(s) selecionado(s) · peso total{' '}
+              {selectedTotalWeightKg.toLocaleString('pt-BR', {
+                maximumFractionDigits: 1,
+              })}{' '}
+              kg
+            </p>
+          )}
+
+          {filteredAnimals.length === 0 ? (
+            <p className="text-gray-500">Nenhum animal encontrado para esse filtro.</p>
+          ) : (
+          <ul className="space-y-2">
+            {filteredAnimals.map((animal) => (
+              <li
+                key={animal.id}
                 className="flex items-center justify-between rounded border border-gray-200 bg-white px-4 py-3 hover:border-green-600 hover:shadow-sm"
               >
-                <div>
+                <input
+                  type="checkbox"
+                  checked={selected.has(animal.id)}
+                  onChange={(e) => toggleSelected(animal.id, e.target.checked)}
+                  className="mr-3"
+                />
+                <Link href={`/fazendas/${farmId}/animais/${animal.id}`} className="flex-1">
                   <p className="font-medium text-gray-900">{animal.earTag}</p>
                   <p className="text-sm text-gray-500">
                     {animal.category} · {animal.breed ?? 'Raça não informada'}
                   </p>
+                </Link>
+                <div className="flex items-center gap-3">
+                  <p className="text-sm text-gray-500">
+                    {animal.currentWeightKg ? `${animal.currentWeightKg} kg` : '—'}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => startEdit(animal)}
+                    className="text-sm font-medium text-green-700 hover:underline"
+                  >
+                    Visualização rápida
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(animal)}
+                    className="text-sm font-medium text-red-600 hover:underline"
+                  >
+                    Excluir
+                  </button>
                 </div>
-                <p className="text-sm text-gray-500">
-                  {animal.currentWeightKg ? `${animal.currentWeightKg} kg` : '—'}
-                </p>
+              </li>
+            ))}
+          </ul>
+          )}
+        </>
+      )}
+
+      {editingId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-lg">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Visualização rápida — {editEarTag}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setEditingId(null)}
+                className="text-gray-400 hover:text-gray-600"
+                aria-label="Fechar"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium text-gray-600">Brinco</label>
+                <input
+                  type="text"
+                  value={editEarTag}
+                  onChange={(e) => setEditEarTag(e.target.value)}
+                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600">Categoria</label>
+                <select
+                  value={editCategory}
+                  onChange={(e) => setEditCategory(e.target.value as AnimalCategory)}
+                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                >
+                  {CATEGORY_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600">Raça</label>
+                <input
+                  type="text"
+                  value={editBreed}
+                  onChange={(e) => setEditBreed(e.target.value)}
+                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600">Pasto</label>
+                <select
+                  value={editPastureId}
+                  onChange={(e) => setEditPastureId(e.target.value)}
+                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                >
+                  <option value="">— Sem pasto —</option>
+                  {pastures.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600">Nome</label>
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600">RFID</label>
+                <input
+                  type="text"
+                  value={editRfid}
+                  onChange={(e) => setEditRfid(e.target.value)}
+                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600">Sexo</label>
+                <select
+                  value={editSex}
+                  onChange={(e) => setEditSex(e.target.value as AnimalSex)}
+                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                >
+                  {SEX_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt === 'FEMALE' ? 'Fêmea' : 'Macho'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600">
+                  Data de nascimento
+                </label>
+                <input
+                  type="date"
+                  value={editBirthDate}
+                  onChange={(e) => setEditBirthDate(e.target.value)}
+                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600">
+                  Peso atual (kg)
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={editCurrentWeightKg}
+                  onChange={(e) => setEditCurrentWeightKg(e.target.value)}
+                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="mt-6 flex items-center justify-between">
+              <Link
+                href={`/fazendas/${farmId}/animais/${editingId}`}
+                className="text-sm font-medium text-green-700 hover:underline"
+              >
+                Ver detalhes completos →
               </Link>
-            </li>
-          ))}
-        </ul>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingId(null)}
+                  className="rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => handleSaveEdit(editingId)}
+                  className="rounded bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+                >
+                  {saving ? 'Salvando...' : 'Salvar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </main>
   );

@@ -21,9 +21,10 @@ export class SuppliesService {
         farmId,
         name: dto.name,
         category: dto.category,
+        customCategory: dto.customCategory,
         unit: dto.unit,
         currentQuantity: dto.initialQuantity ?? 0,
-        minimumQuantity: dto.minimumQuantity,
+        minimumQuantity: dto.minimumQuantity ?? 0,
         expirationDate: dto.expirationDate
           ? new Date(dto.expirationDate)
           : undefined,

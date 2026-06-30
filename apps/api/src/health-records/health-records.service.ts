@@ -3,6 +3,7 @@ import { AnimalEventType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateVaccinationDto } from './dto/create-vaccination.dto';
 import { ApplyVaccinationDto } from './dto/apply-vaccination.dto';
+import { UpdateVaccinationDto } from './dto/update-vaccination.dto';
 import { CreateTreatmentDto } from './dto/create-treatment.dto';
 
 const UPCOMING_VACCINATION_WINDOW_DAYS = 7;
@@ -18,6 +19,7 @@ export class HealthRecordsService {
     if (!animal || animal.farmId !== farmId) {
       throw new NotFoundException('Animal não encontrado');
     }
+    return animal;
   }
 
   async scheduleVaccination(
@@ -88,6 +90,46 @@ export class HealthRecordsService {
     });
   }
 
+  // General edit, distinct from applyVaccination() — lets staff fix a typo'd
+  // scheduledDate/administeredAt or vaccine name after the fact, without the
+  // "mark as applied" semantics that endpoint carries.
+  async updateVaccination(
+    farmId: string,
+    animalId: string,
+    vaccinationId: string,
+    dto: UpdateVaccinationDto,
+  ) {
+    await this.assertAnimalBelongsToFarm(farmId, animalId);
+    const record = await this.prisma.vaccinationRecord.findUnique({
+      where: { id: vaccinationId },
+    });
+    if (!record || record.animalId !== animalId) {
+      throw new NotFoundException('Registro de vacinação não encontrado');
+    }
+
+    return this.prisma.vaccinationRecord.update({
+      where: { id: vaccinationId },
+      data: {
+        ...(dto.vaccineName !== undefined
+          ? { vaccineName: dto.vaccineName }
+          : {}),
+        ...(dto.scheduledDate !== undefined
+          ? { scheduledDate: new Date(dto.scheduledDate) }
+          : {}),
+        ...(dto.administeredAt !== undefined
+          ? { administeredAt: new Date(dto.administeredAt) }
+          : {}),
+        ...(dto.batchNumber !== undefined
+          ? { batchNumber: dto.batchNumber }
+          : {}),
+        ...(dto.administeredBy !== undefined
+          ? { administeredBy: dto.administeredBy }
+          : {}),
+        ...(dto.notes !== undefined ? { notes: dto.notes } : {}),
+      },
+    });
+  }
+
   async createTreatment(
     farmId: string,
     animalId: string,
@@ -127,6 +169,15 @@ export class HealthRecordsService {
     return this.prisma.treatmentRecord.findMany({
       where: { animalId },
       orderBy: { treatmentDate: 'desc' },
+    });
+  }
+
+  // Farm-wide vaccination records (all animals), used by the herd list page to filter
+  // animals by vaccination status (aplicada vs. agendada).
+  listAllForFarm(farmId: string) {
+    return this.prisma.vaccinationRecord.findMany({
+      where: { animal: { farmId } },
+      select: { animalId: true, administeredAt: true },
     });
   }
 

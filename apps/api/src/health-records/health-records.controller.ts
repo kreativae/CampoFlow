@@ -15,6 +15,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { HealthRecordsService } from './health-records.service';
 import { CreateVaccinationDto } from './dto/create-vaccination.dto';
 import { ApplyVaccinationDto } from './dto/apply-vaccination.dto';
+import { UpdateVaccinationDto } from './dto/update-vaccination.dto';
 import { CreateTreatmentDto } from './dto/create-treatment.dto';
 
 @Controller('fazendas/:farmId')
@@ -26,6 +27,12 @@ export class HealthRecordsController {
   @UseGuards(FarmAccessGuard)
   pendingAlerts(@Param('farmId') farmId: string) {
     return this.healthRecordsService.pendingAlerts(farmId);
+  }
+
+  @Get('sanidade/vacinacoes')
+  @UseGuards(FarmAccessGuard)
+  listAllVaccinations(@Param('farmId') farmId: string) {
+    return this.healthRecordsService.listAllForFarm(farmId);
   }
 
   @Post('animais/:animalId/vacinacoes')
@@ -58,6 +65,23 @@ export class HealthRecordsController {
     @Body() dto: ApplyVaccinationDto,
   ) {
     return this.healthRecordsService.applyVaccination(
+      farmId,
+      animalId,
+      vaccinationId,
+      dto,
+    );
+  }
+
+  @Patch('animais/:animalId/vacinacoes/:vaccinationId')
+  @UseGuards(RolesGuard)
+  @Roles(Role.OWNER, Role.MANAGER, Role.VETERINARIAN, Role.EMPLOYEE)
+  updateVaccination(
+    @Param('farmId') farmId: string,
+    @Param('animalId') animalId: string,
+    @Param('vaccinationId') vaccinationId: string,
+    @Body() dto: UpdateVaccinationDto,
+  ) {
+    return this.healthRecordsService.updateVaccination(
       farmId,
       animalId,
       vaccinationId,

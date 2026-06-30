@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -13,22 +14,37 @@ import * as QRCode from 'qrcode';
 import { Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EncryptionService } from '../common/crypto/encryption.service';
+import { EmailService } from '../common/email/email.service';
+import { BillingService } from '../billing/billing.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { AuthTokens, JwtPayload } from './auth.types';
 import { GoogleProfile } from './strategies/google.strategy';
 
 const PASSWORD_SALT_ROUNDS = 10;
 const MFA_ISSUER = 'CampoFlow';
+const PASSWORD_RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1h
+const LOGIN_LOCKOUT_THRESHOLD = 5;
+const LOGIN_LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15min
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly encryptionService: EncryptionService,
+    private readonly emailService: EmailService,
+    private readonly billingService: BillingService,
   ) {}
 
+  // Every registration creates its own billing Account (1 user = 1 account, unless
+  // later invited as a collaborator elsewhere — see Account/Subscription comments in
+  // schema.prisma) with a 30-day trial subscription, so the platform can enforce plan
+  // limits (e.g. farm count) from the very first farm the user creates.
   async register(dto: RegisterDto) {
     const existing = await this.prisma.user.findUnique({
       where: { email: dto.email },
@@ -38,9 +54,26 @@ export class AuthService {
     }
 
     const passwordHash = await bcrypt.hash(dto.password, PASSWORD_SALT_ROUNDS);
-    const user = await this.prisma.user.create({
-      data: { email: dto.email, passwordHash, name: dto.name },
+    const isPlatformAdmin = this.isPlatformAdminEmail(dto.email);
+    const account = await this.prisma.account.create({
+      data: { name: `${dto.name} - Conta`, billingEmail: dto.email },
     });
+    const user = await this.prisma.user.create({
+      data: {
+        email: dto.email,
+        passwordHash,
+        name: dto.name,
+        accountId: account.id,
+        isAccountAdmin: true,
+        isPlatformAdmin,
+      },
+    });
+    // Platform staff manage the business, not a farm — they don't need a trial/plan
+    // limit of their own. Their Account row still exists only because accountId is
+    // required on User; it just never gets a Subscription.
+    if (!isPlatformAdmin) {
+      await this.billingService.createTrialSubscription(account.id);
+    }
 
     const tokens = await this.issueTokens(user.id, user.email);
     await this.persistRefreshToken(user.id, tokens.refreshToken);
@@ -55,6 +88,15 @@ export class AuthService {
       throw new UnauthorizedException('Credenciais inválidas');
     }
 
+    if (user.lockedUntil && user.lockedUntil > new Date()) {
+      const minutesLeft = Math.ceil(
+        (user.lockedUntil.getTime() - Date.now()) / 60000,
+      );
+      throw new UnauthorizedException(
+        `Conta temporariamente bloqueada por excesso de tentativas. Tente novamente em ${minutesLeft} minuto(s) ou redefina sua senha.`,
+      );
+    }
+
     if (!user.passwordHash) {
       throw new UnauthorizedException(
         'Esta conta usa login com Google. Use o botão "Entrar com Google".',
@@ -66,7 +108,15 @@ export class AuthService {
       user.passwordHash,
     );
     if (!passwordMatches) {
+      await this.registerFailedLogin(user.id, user.failedLoginAttempts);
       throw new UnauthorizedException('Credenciais inválidas');
+    }
+
+    if (user.failedLoginAttempts > 0 || user.lockedUntil) {
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { failedLoginAttempts: 0, lockedUntil: null },
+      });
     }
 
     if (user.mfaEnabled) {
@@ -171,6 +221,97 @@ export class AuthService {
     return { success: true };
   }
 
+  // Always returns the same generic response regardless of whether the e-mail exists,
+  // to avoid leaking which addresses are registered (account enumeration). The reset
+  // link is only ever sent if the account exists and has a local password (OAuth-only
+  // accounts have nothing to reset — they sign in via "Entrar com Google").
+  async forgotPassword(dto: ForgotPasswordDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
+
+    if (user?.passwordHash) {
+      const rawToken = randomBytes(32).toString('hex');
+      const tokenHash = await bcrypt.hash(rawToken, PASSWORD_SALT_ROUNDS);
+
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          passwordResetTokenHash: tokenHash,
+          passwordResetExpiresAt: new Date(
+            Date.now() + PASSWORD_RESET_TOKEN_TTL_MS,
+          ),
+        },
+      });
+
+      const resetBase =
+        process.env.WEB_PASSWORD_RESET_URL ||
+        'http://localhost:3100/redefinir-senha';
+      const resetUrl = `${resetBase}?token=${encodeURIComponent(rawToken)}`;
+
+      if (this.emailService.isConfigured()) {
+        await this.emailService.send(
+          user.email,
+          'Redefinição de senha — CampoFlow',
+          `<p>Olá, ${user.name}.</p>` +
+            '<p>Recebemos uma solicitação para redefinir a senha da sua conta no CampoFlow.</p>' +
+            `<p><a href="${resetUrl}">Clique aqui para criar uma nova senha</a>. Este link expira em 1 hora.</p>` +
+            '<p>Se você não solicitou isso, pode ignorar este e-mail com segurança.</p>',
+        );
+      } else {
+        this.logger.warn(
+          `RESEND_API_KEY não configurado — link de redefinição para ${user.email}: ${resetUrl}`,
+        );
+      }
+    }
+
+    return {
+      message:
+        'Se o e-mail informado estiver cadastrado, enviaremos instruções para redefinir a senha.',
+    };
+  }
+
+  async resetPassword(dto: ResetPasswordDto) {
+    const candidates = await this.prisma.user.findMany({
+      where: {
+        passwordResetTokenHash: { not: null },
+        passwordResetExpiresAt: { gt: new Date() },
+      },
+    });
+
+    let matchedUser: (typeof candidates)[number] | undefined;
+    for (const candidate of candidates) {
+      if (
+        candidate.passwordResetTokenHash &&
+        (await bcrypt.compare(dto.token, candidate.passwordResetTokenHash))
+      ) {
+        matchedUser = candidate;
+        break;
+      }
+    }
+
+    if (!matchedUser) {
+      throw new BadRequestException('Token inválido ou expirado');
+    }
+
+    const passwordHash = await bcrypt.hash(
+      dto.newPassword,
+      PASSWORD_SALT_ROUNDS,
+    );
+
+    await this.prisma.user.update({
+      where: { id: matchedUser.id },
+      data: {
+        passwordHash,
+        passwordResetTokenHash: null,
+        passwordResetExpiresAt: null,
+        refreshTokenHash: null,
+      },
+    });
+
+    return { success: true };
+  }
+
   isGoogleConfigured(): boolean {
     return Boolean(
       process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET,
@@ -202,18 +343,33 @@ export class AuthService {
         where: { email: profile.email },
       });
 
-      user = existingByEmail
-        ? await this.prisma.user.update({
-            where: { id: existingByEmail.id },
-            data: { googleId: profile.googleId },
-          })
-        : await this.prisma.user.create({
-            data: {
-              email: profile.email,
-              name: profile.name,
-              googleId: profile.googleId,
-            },
-          });
+      if (existingByEmail) {
+        user = await this.prisma.user.update({
+          where: { id: existingByEmail.id },
+          data: { googleId: profile.googleId },
+        });
+      } else {
+        const isPlatformAdmin = this.isPlatformAdminEmail(profile.email);
+        const account = await this.prisma.account.create({
+          data: {
+            name: `${profile.name} - Conta`,
+            billingEmail: profile.email,
+          },
+        });
+        user = await this.prisma.user.create({
+          data: {
+            email: profile.email,
+            name: profile.name,
+            googleId: profile.googleId,
+            accountId: account.id,
+            isAccountAdmin: true,
+            isPlatformAdmin,
+          },
+        });
+        if (!isPlatformAdmin) {
+          await this.billingService.createTrialSubscription(account.id);
+        }
+      }
     }
 
     const tokens = await this.issueTokens(user.id, user.email);
@@ -347,12 +503,43 @@ export class AuthService {
     email: string;
     name: string;
     mfaEnabled: boolean;
+    isAccountAdmin: boolean;
+    isPlatformAdmin: boolean;
   }) {
     return {
       id: user.id,
       email: user.email,
       name: user.name,
       mfaEnabled: user.mfaEnabled,
+      isAccountAdmin: user.isAccountAdmin,
+      isPlatformAdmin: user.isPlatformAdmin,
     };
+  }
+
+  // Bootstraps the very first platform admin(s) without needing direct DB access:
+  // list the e-mail(s) in PLATFORM_ADMIN_EMAILS (comma-separated) and they get
+  // isPlatformAdmin=true automatically the moment they register or sign in with
+  // Google. Promoting anyone else afterwards requires an existing admin (see
+  // AdminController) or direct DB access — never a self-service toggle.
+  private isPlatformAdminEmail(email: string): boolean {
+    const admins = (process.env.PLATFORM_ADMIN_EMAILS ?? '')
+      .split(',')
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean);
+    return admins.includes(email.toLowerCase());
+  }
+
+  // Brute-force protection: after LOGIN_LOCKOUT_THRESHOLD consecutive wrong
+  // passwords, lock the account for LOGIN_LOCKOUT_DURATION_MS. The counter and lock
+  // are cleared on the next successful login (see login()).
+  private async registerFailedLogin(userId: string, currentAttempts: number) {
+    const attempts = currentAttempts + 1;
+    const data: { failedLoginAttempts: number; lockedUntil?: Date } = {
+      failedLoginAttempts: attempts,
+    };
+    if (attempts >= LOGIN_LOCKOUT_THRESHOLD) {
+      data.lockedUntil = new Date(Date.now() + LOGIN_LOCKOUT_DURATION_MS);
+    }
+    await this.prisma.user.update({ where: { id: userId }, data });
   }
 }

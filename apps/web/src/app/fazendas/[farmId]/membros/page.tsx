@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, ApiError } from '@/lib/api';
-import type { Member, Role } from '@/lib/types';
+import type { FarmInvite, Member, Role } from '@/lib/types';
 
 const ROLE_OPTIONS: Role[] = ['MANAGER', 'VETERINARIAN', 'EMPLOYEE', 'CONSULTANT'];
 
@@ -23,10 +23,12 @@ export default function MembersPage() {
   const router = useRouter();
 
   const [members, setMembers] = useState<Member[]>([]);
+  const [invites, setInvites] = useState<FarmInvite[]>([]);
   const [fetching, setFetching] = useState(true);
   const [forbidden, setForbidden] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [inviting, setInviting] = useState(false);
+  const [lastInviteSent, setLastInviteSent] = useState<string | null>(null);
 
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<Role>('EMPLOYEE');
@@ -35,8 +37,12 @@ export default function MembersPage() {
     setFetching(true);
     setError(null);
     try {
-      const data = await apiFetch<Member[]>(`/fazendas/${farmId}/membros`, { token: accessToken });
-      setMembers(data);
+      const [membersData, invitesData] = await Promise.all([
+        apiFetch<Member[]>(`/fazendas/${farmId}/membros`, { token: accessToken }),
+        apiFetch<FarmInvite[]>(`/fazendas/${farmId}/convites`, { token: accessToken }),
+      ]);
+      setMembers(membersData);
+      setInvites(invitesData);
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) {
         setForbidden(true);
@@ -63,12 +69,19 @@ export default function MembersPage() {
     event.preventDefault();
     setInviting(true);
     setError(null);
+    setLastInviteSent(null);
     try {
-      await apiFetch(`/fazendas/${farmId}/membros`, {
-        method: 'POST',
-        token: accessToken,
-        body: { email, role },
-      });
+      const result = await apiFetch<{ invited?: boolean; email?: string }>(
+        `/fazendas/${farmId}/membros`,
+        {
+          method: 'POST',
+          token: accessToken,
+          body: { email, role },
+        },
+      );
+      if (result?.invited) {
+        setLastInviteSent(email);
+      }
       setEmail('');
       setRole('EMPLOYEE');
       await loadData();
@@ -89,6 +102,19 @@ export default function MembersPage() {
       await loadData();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao remover membro');
+    }
+  }
+
+  async function handleRevokeInvite(inviteId: string) {
+    setError(null);
+    try {
+      await apiFetch(`/fazendas/${farmId}/convites/${inviteId}`, {
+        method: 'DELETE',
+        token: accessToken,
+      });
+      await loadData();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao revogar convite');
     }
   }
 
@@ -117,6 +143,13 @@ export default function MembersPage() {
         </p>
       )}
 
+      {lastInviteSent && (
+        <p className="mb-4 rounded bg-green-50 px-3 py-2 text-sm text-green-800" role="status">
+          Convite enviado para {lastInviteSent}. A pessoa precisa criar uma conta (ou entrar, se
+          já tiver) com esse mesmo e-mail para aceitar.
+        </p>
+      )}
+
       {forbidden ? (
         <p className="rounded border border-gray-200 bg-white px-4 py-3 text-sm text-gray-500">
           Seu perfil não tem permissão para gerenciar a equipe desta propriedade.
@@ -129,7 +162,7 @@ export default function MembersPage() {
           >
             <div className="flex-1">
               <label className="text-xs font-medium text-gray-600">
-                E-mail do usuário (já deve ter cadastro no CampoFlow)
+                E-mail (se a pessoa ainda não tiver conta, receberá um convite por e-mail)
               </label>
               <input
                 type="email"
@@ -187,6 +220,34 @@ export default function MembersPage() {
               </li>
             ))}
           </ul>
+
+          {invites.length > 0 && (
+            <div className="mt-8">
+              <h2 className="mb-3 font-semibold text-gray-800">Convites pendentes</h2>
+              <ul className="space-y-2">
+                {invites.map((invite) => (
+                  <li
+                    key={invite.id}
+                    className="flex items-center justify-between rounded border border-amber-200 bg-amber-50 px-4 py-3"
+                  >
+                    <div>
+                      <p className="font-medium text-gray-900">{invite.email}</p>
+                      <p className="text-sm text-gray-500">
+                        {ROLE_LABELS[invite.role]} · expira em{' '}
+                        {new Date(invite.expiresAt).toLocaleDateString('pt-BR')}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleRevokeInvite(invite.id)}
+                      className="text-xs font-medium text-red-600 hover:underline"
+                    >
+                      Revogar
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </>
       )}
     </main>

@@ -6,6 +6,9 @@ export interface AuthenticatedUser {
   id: string;
   email: string;
   name: string;
+  accountId: string;
+  isAccountAdmin: boolean;
+  isPlatformAdmin: boolean;
   memberships: Membership[];
 }
 

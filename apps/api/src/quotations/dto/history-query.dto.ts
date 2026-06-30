@@ -1,11 +1,15 @@
 import { Type } from 'class-transformer';
 import { IsEnum, IsInt, IsOptional, Max, Min } from 'class-validator';
-import { Commodity } from '@prisma/client';
+import { BrazilianState, Commodity } from '@prisma/client';
 
 export class HistoryQueryDto {
   @IsOptional()
   @IsEnum(Commodity)
   commodity?: Commodity;
+
+  @IsOptional()
+  @IsEnum(BrazilianState)
+  state?: BrazilianState;
 
   @IsOptional()
   @Type(() => Number)

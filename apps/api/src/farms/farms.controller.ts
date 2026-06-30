@@ -27,7 +27,7 @@ export class FarmsController {
 
   @Post()
   create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateFarmDto) {
-    return this.farmsService.create(user.id, dto);
+    return this.farmsService.create(user.id, user.accountId, dto);
   }
 
   @Get()
@@ -58,8 +58,12 @@ export class FarmsController {
   @Post(':farmId/membros')
   @UseGuards(RolesGuard)
   @Roles(Role.OWNER, Role.MANAGER)
-  addMember(@Param('farmId') farmId: string, @Body() dto: AddMemberDto) {
-    return this.farmsService.addMember(farmId, dto);
+  addMember(
+    @Param('farmId') farmId: string,
+    @Body() dto: AddMemberDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.farmsService.addMember(farmId, dto, user.id);
   }
 
   @Get(':farmId/membros')
@@ -77,5 +81,22 @@ export class FarmsController {
     @Param('userId') userId: string,
   ) {
     return this.farmsService.removeMember(farmId, userId);
+  }
+
+  @Get(':farmId/convites')
+  @UseGuards(RolesGuard)
+  @Roles(Role.OWNER, Role.MANAGER)
+  listInvites(@Param('farmId') farmId: string) {
+    return this.farmsService.listInvites(farmId);
+  }
+
+  @Delete(':farmId/convites/:inviteId')
+  @UseGuards(RolesGuard)
+  @Roles(Role.OWNER, Role.MANAGER)
+  revokeInvite(
+    @Param('farmId') farmId: string,
+    @Param('inviteId') inviteId: string,
+  ) {
+    return this.farmsService.revokeInvite(farmId, inviteId);
   }
 }

@@ -26,23 +26,93 @@ enum Role {
 }
 
 model User {
-  id               String         @id @default(uuid())
-  email            String         @unique
+  id                     String          @id @default(uuid())
+  email                  String          @unique
   // Nullable because OAuth-only accounts (Google) never set a local password.
-  passwordHash     String?
-  name             String
+  passwordHash           String?
+  name                   String
   // Set when the account was created/linked via "Entrar com Google".
-  googleId         String?        @unique
-  refreshTokenHash String?
-  mfaSecret        String?
-  mfaEnabled       Boolean        @default(false)
-  memberships      Membership[]
-  assignedTasks    Task[]         @relation("TaskAssignee")
-  workLogs         WorkLog[]
-  shifts           Shift[]
-  notifications    Notification[]
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
+  googleId               String?         @unique
+  refreshTokenHash       String?
+  mfaSecret              String?
+  mfaEnabled             Boolean         @default(false)
+  passwordResetTokenHash String?
+  passwordResetExpiresAt DateTime?
+  // Brute-force protection: incremented on each wrong password, reset on success.
+  // After LOGIN_LOCKOUT_THRESHOLD failures, lockedUntil is set and login is refused
+  // (even with the correct password) until it passes — see AuthService.login().
+  failedLoginAttempts    Int             @default(0)
+  lockedUntil            DateTime?
+  // Billing account this user belongs to (created automatically at registration).
+  // A user can still be added as a Membership/collaborator on farms owned by other
+  // accounts (e.g. a veterinarian consulting for multiple clients) — accountId only
+  // determines which subscription/plan this user's own farms are billed under.
+  account                Account         @relation(fields: [accountId], references: [id])
+  accountId              String
+  ticketsCreated         Ticket[]        @relation("TicketCreatedBy")
+  ticketMessages         TicketMessage[]
+  // First user to register under an Account; can manage billing/plan and invite others.
+  isAccountAdmin         Boolean         @default(true)
+  // Platform staff (you/your team), not a customer role. Granted automatically at
+  // registration if the e-mail is in PLATFORM_ADMIN_EMAILS (see AuthService.register).
+  // Gates every /admin/* route via PlatformAdminGuard.
+  isPlatformAdmin        Boolean         @default(false)
+  memberships            Membership[]
+  assignedTasks          Task[]          @relation("TaskAssignee")
+  workLogs               WorkLog[]
+  shifts                 Shift[]
+  notifications          Notification[]
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
+}
+
+enum PlanTier {
+  TRIAL
+  BASICO
+  PROFISSIONAL
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  SUSPENDED
+}
+
+// Billing entity: owns N farms and one subscription/plan. Created automatically the
+// moment the first user registers; additional users invited later join the same
+// Account only if explicitly created under it (see AccountsService).
+model Account {
+  id           String        @id @default(uuid())
+  name         String
+  billingEmail String
+  document     String?
+  users        User[]
+  farms        Farm[]
+  subscription Subscription?
+  tickets      Ticket[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+// One-to-one with Account. planTier drives the farm-count limit enforced in
+// FarmsService.create() (see PLAN_LIMITS in billing/plans.ts). status TRIALING/ACTIVE
+// allow normal use; PAST_DUE/SUSPENDED/CANCELED block mutating requests outside of
+// /conta/assinatura and /auth (see SubscriptionGuard).
+model Subscription {
+  id                       String             @id @default(uuid())
+  account                  Account            @relation(fields: [accountId], references: [id])
+  accountId                String             @unique
+  planTier                 PlanTier           @default(TRIAL)
+  status                   SubscriptionStatus @default(TRIALING)
+  mercadoPagoPreapprovalId String?
+  trialEndsAt              DateTime?
+  currentPeriodEnd         DateTime?
+  canceledAt               DateTime?
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
 }
 
 enum FarmType {
@@ -55,6 +125,8 @@ enum FarmType {
 
 model Farm {
   id                 String          @id @default(uuid())
+  account            Account         @relation(fields: [accountId], references: [id])
+  accountId          String
   name               String
   type               FarmType        @default(FAZENDA)
   totalAreaHectares  Float?
@@ -64,6 +136,7 @@ model Farm {
   registryNumber     String?
   technicalManager   String?
   memberships        Membership[]
+  invites            FarmInvite[]
   pastures           Pasture[]
   animals            Animal[]
   transactions       Transaction[]
@@ -78,8 +151,28 @@ model Farm {
   mapFeatures        MapFeature[]
   documents          Document[]
   soilAnalyses       SoilAnalysis[]
+  cropCycles         CropCycle[]
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
+}
+
+// Pending invitation for someone who doesn't have an account yet. If the invited
+// e-mail already belongs to a registered user, FarmsService.addMember() skips this
+// entirely and creates the Membership immediately (existing behavior) — invites only
+// exist to bridge "I want to add my vet/employee but they haven't signed up yet".
+model FarmInvite {
+  id          String    @id @default(uuid())
+  farm        Farm      @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  farmId      String
+  email       String
+  role        Role
+  tokenHash   String
+  invitedById String?
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([farmId])
 }
 
 model Membership {
@@ -111,7 +204,7 @@ model Pasture {
 // Tracks a batch of animals occupying a pasture between rotations (history of occupation).
 model PastureOccupation {
   id        String    @id @default(uuid())
-  pasture   Pasture   @relation(fields: [pastureId], references: [id])
+  pasture   Pasture   @relation(fields: [pastureId], references: [id], onDelete: Cascade)
   pastureId String
   headCount Int
   enteredAt DateTime  @default(now())
@@ -300,20 +393,58 @@ enum Commodity {
   SOJA
   SORGO
   FARELO_SOJA
+  MERCADO_FUTURO
+  BOI_MUNDO
+  ATACADO
+  EQUIVALENTES
+}
+
+enum BrazilianState {
+  AC
+  AL
+  AP
+  AM
+  BA
+  CE
+  DF
+  ES
+  GO
+  MA
+  MT
+  MS
+  MG
+  PA
+  PB
+  PR
+  PE
+  PI
+  RJ
+  RN
+  RS
+  RO
+  RR
+  SC
+  SP
+  SE
+  TO
 }
 
 // Market price reference data, shared across all farms (not tenant-scoped).
-// MVP supports manual entry; automatic ingestion from external sources
-// (Scot Consultoria, CEPEA, B3) is a future integration, not implemented yet.
+// state is null for national/aggregate quotes (e.g. the automatic Redação Agro feed)
+// and set for manually entered regional quotes, mirroring how Scot Consultoria/CEPEA
+// break down prices by state — those sources are commercial products without a public
+// API (and CEPEA's robots.txt explicitly disallows AI crawlers), so this stays
+// manual-entry only rather than scraped.
 model Quotation {
-  id          String    @id @default(uuid())
+  id          String          @id @default(uuid())
   commodity   Commodity
+  state       BrazilianState?
   price       Float
   unit        String
   source      String?
-  recordedAt  DateTime  @default(now())
+  recordedAt  DateTime        @default(now())
   createdById String?
-  createdAt   DateTime  @default(now())
+  createdAt   DateTime        @default(now())
 }
 
 enum WeatherAlertType {
@@ -363,6 +494,9 @@ model Supply {
   farmId          String
   name            String
   category        SupplyCategory
+  // Free-text label shown instead of "Outros" when category is OUTROS — lets
+  // the customer name their own category without expanding the fixed enum.
+  customCategory  String?
   unit            String
   currentQuantity Float            @default(0)
   minimumQuantity Float            @default(0)
@@ -376,7 +510,7 @@ model Supply {
 // Stock entries/exits; Supply.currentQuantity is kept in sync transactionally on each movement.
 model SupplyMovement {
   id         String             @id @default(uuid())
-  supply     Supply             @relation(fields: [supplyId], references: [id])
+  supply     Supply             @relation(fields: [supplyId], references: [id], onDelete: Cascade)
   supplyId   String
   type       SupplyMovementType
   quantity   Float
@@ -412,7 +546,7 @@ model Machine {
 // Machine.currentHourMeter is kept in sync when a higher reading is reported here.
 model MachineMaintenance {
   id          String   @id @default(uuid())
-  machine     Machine  @relation(fields: [machineId], references: [id])
+  machine     Machine  @relation(fields: [machineId], references: [id], onDelete: Cascade)
   machineId   String
   description String
   cost        Float?
@@ -425,7 +559,7 @@ model MachineMaintenance {
 // Machine.currentHourMeter is kept in sync when a higher reading is reported here.
 model MachineFuelRecord {
   id          String   @id @default(uuid())
-  machine     Machine  @relation(fields: [machineId], references: [id])
+  machine     Machine  @relation(fields: [machineId], references: [id], onDelete: Cascade)
   machineId   String
   liters      Float
   cost        Float?
@@ -539,8 +673,31 @@ model MapFeature {
   coordinates  Json
   notes        String?
   soilAnalyses SoilAnalysis[]
+  cropCycles   CropCycle[]
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
+}
+
+// A single planting cycle ("safra") of a crop on a talhão (MapFeature), from planting
+// through harvest. mapFeatureId is optional so a cycle can be registered before the
+// talhão itself is mapped. Status is derived on read (not stored) from the three dates.
+model CropCycle {
+  id                String      @id @default(uuid())
+  farm              Farm        @relation(fields: [farmId], references: [id])
+  farmId            String
+  mapFeature        MapFeature? @relation(fields: [mapFeatureId], references: [id], onDelete: SetNull)
+  mapFeatureId      String?
+  cropName          String
+  variety           String?
+  areaHectares      Float?
+  plantedAt         DateTime
+  expectedHarvestAt DateTime?
+  harvestedAt       DateTime?
+  yieldKg           Float?
+  notes             String?
+  createdById       String?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
 }
 
 enum DocumentCategory {
@@ -622,7 +779,7 @@ model SoilAnalysis {
   id                    String      @id @default(uuid())
   farm                  Farm        @relation(fields: [farmId], references: [id])
   farmId                String
-  mapFeature            MapFeature? @relation(fields: [mapFeatureId], references: [id])
+  mapFeature            MapFeature? @relation(fields: [mapFeatureId], references: [id], onDelete: SetNull)
   mapFeatureId          String?
   areaLabel             String?
   collectedAt           DateTime
@@ -640,4 +797,77 @@ model SoilAnalysis {
   notes                 String?
   createdById           String?
   createdAt             DateTime    @default(now())
+}
+
+enum TicketStatus {
+  ABERTO
+  EM_ANDAMENTO
+  RESOLVIDO
+  FECHADO
+}
+
+enum TicketPriority {
+  BAIXA
+  MEDIA
+  ALTA
+}
+
+// Support ticket, scoped to the billing Account (not a Farm) since the customer
+// side of a conversation may concern billing/plan issues unrelated to any one farm.
+model Ticket {
+  id          String          @id @default(uuid())
+  account     Account         @relation(fields: [accountId], references: [id])
+  accountId   String
+  createdBy   User            @relation("TicketCreatedBy", fields: [createdById], references: [id])
+  createdById String
+  subject     String
+  status      TicketStatus    @default(ABERTO)
+  priority    TicketPriority  @default(MEDIA)
+  messages    TicketMessage[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model TicketMessage {
+  id        String   @id @default(uuid())
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  ticketId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  authorId  String
+  // True when written by platform staff (admin) replying — drives styling on the
+  // customer-facing thread so it's visually obvious who said what.
+  fromStaff Boolean  @default(false)
+  message   String
+  createdAt DateTime @default(now())
+}
+
+// Singleton row (id is always "mercadopago") holding the platform's Mercado Pago
+// credentials when configured from the admin UI instead of the MERCADOPAGO_ACCESS_TOKEN
+// env var. accessToken is encrypted at rest via EncryptionService — see
+// MercadoPagoService for the env-var-vs-DB precedence and decryption.
+model PlatformSetting {
+  id            String   @id @default("mercadopago")
+  accessToken   String?
+  publicKey     String?
+  webhookSecret String?
+  updatedAt     DateTime @updatedAt
+}
+
+enum MercadoPagoLogEvent {
+  CREATE_SUBSCRIPTION
+  CANCEL_SUBSCRIPTION
+  WEBHOOK
+  PAYMENT_HISTORY_FETCH
+  CONFIG_UPDATED
+}
+
+model MercadoPagoLog {
+  id            String              @id @default(uuid())
+  event         MercadoPagoLogEvent
+  preapprovalId String?
+  success       Boolean
+  message       String
+  createdAt     DateTime            @default(now())
+
+  @@index([createdAt])
 }

@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Query,
   Res,
@@ -24,6 +25,7 @@ import type { AuthenticatedUser } from '../auth/decorators/current-user.decorato
 import { SoilAnalysisService } from './soil-analysis.service';
 import { StorageService } from '../common/storage/storage.service';
 import { CreateSoilAnalysisDto } from './dto/create-soil-analysis.dto';
+import { UpdateSoilAnalysisDto } from './dto/update-soil-analysis.dto';
 
 @Controller('fazendas/:farmId/analises-solo')
 @UseGuards(JwtAuthGuard)
@@ -96,6 +98,17 @@ export class SoilAnalysisController {
       id,
     );
     await this.storageService.downloadToResponse(path, fileName, res);
+  }
+
+  @Patch(':id')
+  @UseGuards(RolesGuard)
+  @Roles(Role.OWNER, Role.MANAGER, Role.EMPLOYEE, Role.VETERINARIAN)
+  update(
+    @Param('farmId') farmId: string,
+    @Param('id') id: string,
+    @Body() dto: UpdateSoilAnalysisDto,
+  ) {
+    return this.soilAnalysisService.update(farmId, id, dto);
   }
 
   @Delete(':id')

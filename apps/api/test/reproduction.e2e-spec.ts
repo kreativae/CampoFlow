@@ -157,6 +157,19 @@ describe('Reproduction (e2e)', () => {
     expect(stats.abortions).toBe(0);
   });
 
+  it('lists all reproductive events for the farm, for the herd filter', async () => {
+    const res = await request(app.getHttpServer())
+      .get(`/fazendas/${farmId}/reproducao/eventos`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+
+    const events = res.body as { animalId: string; type: string }[];
+    expect(events.length).toBeGreaterThanOrEqual(4);
+    expect(events.some((e) => e.animalId === cowAId && e.type === 'IATF')).toBe(
+      true,
+    );
+  });
+
   it('updates a reproductive event', async () => {
     const list = await request(app.getHttpServer())
       .get(`/fazendas/${farmId}/animais/${cowAId}/eventos-reprodutivos`)

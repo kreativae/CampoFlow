@@ -13,6 +13,7 @@ import { TeamsModule } from '../teams/teams.module';
 import { AgendaModule } from '../agenda/agenda.module';
 import { MapFeaturesModule } from '../map-features/map-features.module';
 import { SoilAnalysisModule } from '../soil-analysis/soil-analysis.module';
+import { CropsModule } from '../crops/crops.module';
 import { DocumentsModule } from '../documents/documents.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { QuotationsModule } from '../quotations/quotations.module';
@@ -35,6 +36,7 @@ import { DashboardController } from './dashboard.controller';
     AgendaModule,
     MapFeaturesModule,
     SoilAnalysisModule,
+    CropsModule,
     DocumentsModule,
     NotificationsModule,
     QuotationsModule,

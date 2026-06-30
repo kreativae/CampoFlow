@@ -79,6 +79,16 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-green-600 focus:outline-none disabled:bg-gray-100"
           />
+          {!mfaRequired && (
+            <p className="text-right">
+              <Link
+                href="/esqueci-senha"
+                className="text-xs font-medium text-green-700 hover:underline"
+              >
+                Esqueci minha senha
+              </Link>
+            </p>
+          )}
         </div>
 
         {mfaRequired && (

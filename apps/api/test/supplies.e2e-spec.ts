@@ -111,6 +111,33 @@ describe('Supplies (e2e)', () => {
     supplyId = supply.id;
   });
 
+  it('creates a supply without minimumQuantity, defaulting it to 0', async () => {
+    const res = await request(app.getHttpServer())
+      .post(`/fazendas/${farmId}/insumos`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ name: 'Cal Agrícola', category: 'FERTILIZANTE', unit: 'kg' })
+      .expect(201);
+
+    expect((res.body as { minimumQuantity: number }).minimumQuantity).toBe(0);
+  });
+
+  it('lets a custom category label be set when category is OUTROS', async () => {
+    const res = await request(app.getHttpServer())
+      .post(`/fazendas/${farmId}/insumos`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({
+        name: 'Vacina X',
+        category: 'OUTROS',
+        customCategory: 'Vacinas',
+        unit: 'dose',
+      })
+      .expect(201);
+
+    expect((res.body as { customCategory: string }).customCategory).toBe(
+      'Vacinas',
+    );
+  });
+
   it('rejects a consultant (read-only role) from creating a supply', async () => {
     await request(app.getHttpServer())
       .post(`/fazendas/${farmId}/insumos`)

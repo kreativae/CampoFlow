@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { apiFetch } from './api';
 import type { AuthResponse, User } from './types';
 
@@ -40,6 +41,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const pathname = usePathname();
+  const router = useRouter();
+
+  // Platform staff have no customer features (no Account/Subscription of their
+  // own — see AuthService.register) and the API blocks them from every non-/admin,
+  // non-/auth route. Mirrors the inverse check in admin/layout.tsx, but lives here
+  // so it applies app-wide instead of only inside the customer pages staff would
+  // otherwise be allowed to land on.
+  useEffect(() => {
+    if (loading || !user) return;
+    if (user.isPlatformAdmin && !pathname.startsWith('/admin')) {
+      router.replace('/admin');
+    }
+  }, [loading, user, pathname, router]);
 
   useEffect(() => {
     const raw = localStorage.getItem(STORAGE_KEY);

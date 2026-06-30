@@ -67,7 +67,7 @@ export default function BiPage() {
         <Link href={`/fazendas/${farmId}`} className="text-sm text-green-700 hover:underline">
           ← Dashboard
         </Link>
-        <h1 className="text-2xl font-semibold text-green-800">BI &amp; Inteligência de Dados</h1>
+        <h1 className="text-2xl font-semibold text-green-800">IA &amp; Inteligência de Dados</h1>
         <p className="text-sm text-gray-500">
           KPIs calculados a partir de dados reais. Previsões e sugestões usam heurísticas
           estatísticas/baseadas em regras — não há infraestrutura de IA/ML treinada disponível
@@ -83,7 +83,7 @@ export default function BiPage() {
 
       {forbidden ? (
         <p className="rounded border border-gray-200 bg-white px-4 py-3 text-sm text-gray-500">
-          Seu perfil não tem permissão para visualizar o BI desta propriedade.
+          Seu perfil não tem permissão para visualizar a IA desta propriedade.
         </p>
       ) : data ? (
         <>
@@ -126,6 +126,41 @@ export default function BiPage() {
               Receita projetada:{' '}
               <strong>{formatCurrency(data.forecastSales.projectedNextMonthReceita)}</strong>{' '}
               (média dos últimos {data.forecastSales.recentMonths.length} meses)
+            </p>
+          </section>
+
+          <section className="mb-8 rounded border border-gray-200 bg-white p-4">
+            <h2 className="mb-3 font-semibold text-gray-800">Dados de outros módulos</h2>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <KpiCard
+                label="Cotação boi gordo"
+                value={
+                  data.additionalData.cotacaoBoiGordo
+                    ? `${formatCurrency(data.additionalData.cotacaoBoiGordo.price)}/${data.additionalData.cotacaoBoiGordo.unit}`
+                    : '—'
+                }
+              />
+              <KpiCard
+                label="Valor estimado do rebanho"
+                value={
+                  data.additionalData.valorEstimadoRebanho != null
+                    ? formatCurrency(data.additionalData.valorEstimadoRebanho)
+                    : '—'
+                }
+              />
+              <KpiCard
+                label="Custos com máquinas"
+                value={`${formatCurrency(data.additionalData.custosMaquinas)} (${data.additionalData.maquinasCount} máq.)`}
+              />
+              <KpiCard
+                label="Análises de solo"
+                value={`${data.additionalData.analisesSoloCount} (${data.additionalData.areasComCalagemPendente} c/ calagem pendente)`}
+              />
+              <KpiCard label="Documentos cadastrados" value={`${data.additionalData.documentosCount}`} />
+            </div>
+            <p className="mt-3 text-xs text-gray-400">
+              Cotação nacional (Redação Agro/CEPEA), custos reais de manutenção + combustível das
+              máquinas da fazenda, e contagem de análises de solo e documentos cadastrados.
             </p>
           </section>
 

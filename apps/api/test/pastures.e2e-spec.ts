@@ -184,4 +184,104 @@ describe('Properties & Pastures (e2e)', () => {
       .send({ headCount: 9 })
       .expect(201);
   });
+
+  describe('partial exit, editing, and moving between pastures', () => {
+    let secondPastureId: string;
+
+    it('creates a second pasture to move batches into', async () => {
+      const res = await request(app.getHttpServer())
+        .post(`/fazendas/${farmId}/pastagens`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({ name: 'Pasto 2', areaHectares: 15, animalCapacity: 10 })
+        .expect(201);
+      secondPastureId = (res.body as PastureResponseBody).id;
+    });
+
+    it('lets the owner edit an occupation record directly', async () => {
+      const createRes = await request(app.getHttpServer())
+        .post(`/fazendas/${farmId}/pastagens/${secondPastureId}/ocupacoes`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({ headCount: 6, notes: 'Lote B' })
+        .expect(201);
+      const occupationId = (createRes.body as OccupationResponseBody).id;
+
+      const res = await request(app.getHttpServer())
+        .patch(
+          `/fazendas/${farmId}/pastagens/${secondPastureId}/ocupacoes/${occupationId}`,
+        )
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({ headCount: 7, notes: 'Lote B (corrigido)' })
+        .expect(200);
+
+      expect((res.body as { headCount: number }).headCount).toBe(7);
+    });
+
+    it('lets the owner exit only part of a batch, keeping the rest active', async () => {
+      const pastureRes = await request(app.getHttpServer())
+        .get(`/fazendas/${farmId}/pastagens/${secondPastureId}`)
+        .set('Authorization', `Bearer ${ownerToken}`);
+      const active = (
+        pastureRes.body as { occupations: OccupationResponseBody[] }
+      ).occupations.find((o) => o.exitedAt === null)!;
+
+      const exitRes = await request(app.getHttpServer())
+        .patch(
+          `/fazendas/${farmId}/pastagens/${secondPastureId}/ocupacoes/${active.id}/saida`,
+        )
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({ headCount: 3, notes: 'Saída parcial' })
+        .expect(200);
+
+      expect((exitRes.body as { headCount: number }).headCount).toBe(3);
+      expect((exitRes.body as OccupationResponseBody).exitedAt).not.toBeNull();
+
+      const afterRes = await request(app.getHttpServer())
+        .get(`/fazendas/${farmId}/pastagens/${secondPastureId}`)
+        .set('Authorization', `Bearer ${ownerToken}`);
+      const occupations = (
+        afterRes.body as {
+          occupations: { headCount: number; exitedAt: string | null }[];
+        }
+      ).occupations;
+      const stillActive = occupations.find((o) => o.exitedAt === null)!;
+      expect(stillActive.headCount).toBe(4); // 7 - 3 remained active
+    });
+
+    it('lets the owner move a batch to another pasture when registering an exit', async () => {
+      const thirdRes = await request(app.getHttpServer())
+        .post(`/fazendas/${farmId}/pastagens`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({ name: 'Pasto 3', areaHectares: 12, animalCapacity: 10 })
+        .expect(201);
+      const thirdPastureId = (thirdRes.body as PastureResponseBody).id;
+
+      const pastureRes = await request(app.getHttpServer())
+        .get(`/fazendas/${farmId}/pastagens/${secondPastureId}`)
+        .set('Authorization', `Bearer ${ownerToken}`);
+      const active = (
+        pastureRes.body as { occupations: OccupationResponseBody[] }
+      ).occupations.find((o) => o.exitedAt === null)!;
+
+      await request(app.getHttpServer())
+        .patch(
+          `/fazendas/${farmId}/pastagens/${secondPastureId}/ocupacoes/${active.id}/saida`,
+        )
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({ destinationPastureId: thirdPastureId })
+        .expect(200);
+
+      const thirdPastureRes = await request(app.getHttpServer())
+        .get(`/fazendas/${farmId}/pastagens/${thirdPastureId}`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .expect(200);
+      const thirdOccupations = (
+        thirdPastureRes.body as {
+          occupations: { headCount: number; exitedAt: string | null }[];
+        }
+      ).occupations;
+      expect(
+        thirdOccupations.some((o) => o.headCount === 4 && o.exitedAt === null),
+      ).toBe(true);
+    });
+  });
 });

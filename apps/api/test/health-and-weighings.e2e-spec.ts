@@ -156,6 +156,24 @@ describe('Health records & Weighings (e2e)', () => {
 
       expect((res.body as AlertResponseBody[]).length).toBe(0);
     });
+
+    it('lists all vaccination records for the farm, for the herd filter', async () => {
+      const res = await request(app.getHttpServer())
+        .get(`/fazendas/${farmId}/sanidade/vacinacoes`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .expect(200);
+
+      const records = res.body as {
+        animalId: string;
+        administeredAt: string | null;
+      }[];
+      expect(records.length).toBeGreaterThanOrEqual(2);
+      expect(records.some((r) => r.animalId === animalId)).toBe(true);
+      expect(
+        records.some((r) => r.administeredAt !== null) &&
+          records.some((r) => r.administeredAt === null),
+      ).toBe(true);
+    });
   });
 
   describe('treatments', () => {
@@ -216,6 +234,76 @@ describe('Health records & Weighings (e2e)', () => {
       expect(summary.weighingsCount).toBe(2);
       expect(summary.averageDailyGainKg).toBeCloseTo(1, 0);
       expect(summary.averageMonthlyGainKg).toBeCloseTo(30, 0);
+    });
+
+    it('lets the owner edit a weighing date/weight and recomputes current weight', async () => {
+      const listRes = await request(app.getHttpServer())
+        .get(`/fazendas/${farmId}/animais/${animalId}/pesagens`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .expect(200);
+      const weighings = listRes.body as { id: string; weightKg: number }[];
+      const latest = weighings[weighings.length - 1];
+
+      await request(app.getHttpServer())
+        .patch(`/fazendas/${farmId}/animais/${animalId}/pesagens/${latest.id}`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({ weightKg: 340 })
+        .expect(200);
+
+      const animalRes = await request(app.getHttpServer())
+        .get(`/fazendas/${farmId}/animais/${animalId}`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .expect(200);
+      expect((animalRes.body as AnimalResponseBody).currentWeightKg).toBe(340);
+    });
+
+    it('lets the owner delete a weighing, recomputing current weight to the remaining latest', async () => {
+      const listRes = await request(app.getHttpServer())
+        .get(`/fazendas/${farmId}/animais/${animalId}/pesagens`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .expect(200);
+      const weighings = listRes.body as { id: string; weightKg: number }[];
+      const latest = weighings[weighings.length - 1];
+      const previous = weighings[weighings.length - 2];
+
+      await request(app.getHttpServer())
+        .delete(`/fazendas/${farmId}/animais/${animalId}/pesagens/${latest.id}`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .expect(200);
+
+      const animalRes = await request(app.getHttpServer())
+        .get(`/fazendas/${farmId}/animais/${animalId}`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .expect(200);
+      expect((animalRes.body as AnimalResponseBody).currentWeightKg).toBe(
+        previous.weightKg,
+      );
+    });
+  });
+
+  describe('editing vaccination records', () => {
+    it('lets the owner edit a vaccination scheduledDate after creation', async () => {
+      const createRes = await request(app.getHttpServer())
+        .post(`/fazendas/${farmId}/animais/${animalId}/vacinacoes`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({ vaccineName: 'Raiva', scheduledDate: new Date().toISOString() })
+        .expect(201);
+      const vaccinationId = (createRes.body as VaccinationResponseBody).id;
+
+      const newDate = new Date();
+      newDate.setDate(newDate.getDate() + 10);
+
+      const res = await request(app.getHttpServer())
+        .patch(
+          `/fazendas/${farmId}/animais/${animalId}/vacinacoes/${vaccinationId}`,
+        )
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({ scheduledDate: newDate.toISOString() })
+        .expect(200);
+
+      expect(
+        new Date((res.body as { scheduledDate: string }).scheduledDate),
+      ).toEqual(new Date(newDate.toISOString()));
     });
   });
 });

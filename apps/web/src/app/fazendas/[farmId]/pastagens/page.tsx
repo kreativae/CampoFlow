@@ -5,12 +5,14 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, ApiError } from '@/lib/api';
+import { useConfirm } from '@/lib/confirm-context';
 import type { Pasture } from '@/lib/types';
 
 export default function PasturesPage() {
   const { farmId } = useParams<{ farmId: string }>();
   const { user, accessToken, loading } = useAuth();
   const router = useRouter();
+  const confirm = useConfirm();
 
   const [pastures, setPastures] = useState<Pasture[]>([]);
   const [fetching, setFetching] = useState(true);
@@ -21,6 +23,13 @@ export default function PasturesPage() {
   const [areaHectares, setAreaHectares] = useState('');
   const [grassType, setGrassType] = useState('');
   const [animalCapacity, setAnimalCapacity] = useState('');
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editAreaHectares, setEditAreaHectares] = useState('');
+  const [editGrassType, setEditGrassType] = useState('');
+  const [editAnimalCapacity, setEditAnimalCapacity] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const loadData = useCallback(async () => {
     setFetching(true);
@@ -70,6 +79,57 @@ export default function PasturesPage() {
       setError(err instanceof ApiError ? err.message : 'Erro ao cadastrar pasto');
     } finally {
       setCreating(false);
+    }
+  }
+
+  function startEdit(pasture: Pasture) {
+    setEditingId(pasture.id);
+    setEditName(pasture.name);
+    setEditAreaHectares(String(pasture.areaHectares));
+    setEditGrassType(pasture.grassType ?? '');
+    setEditAnimalCapacity(String(pasture.animalCapacity));
+  }
+
+  async function handleSaveEdit(pastureId: string) {
+    setSaving(true);
+    setError(null);
+    try {
+      await apiFetch(`/fazendas/${farmId}/pastagens/${pastureId}`, {
+        method: 'PATCH',
+        token: accessToken,
+        body: {
+          name: editName,
+          areaHectares: Number(editAreaHectares),
+          grassType: editGrassType || undefined,
+          animalCapacity: Number(editAnimalCapacity),
+        },
+      });
+      setEditingId(null);
+      await loadData();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao atualizar pasto');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete(pasture: Pasture) {
+    const ok = await confirm({
+      title: 'Excluir pasto',
+      message: `Excluir o pasto ${pasture.name}? Essa ação não pode ser desfeita.`,
+      confirmLabel: 'Excluir',
+      danger: true,
+    });
+    if (!ok) return;
+    setError(null);
+    try {
+      await apiFetch(`/fazendas/${farmId}/pastagens/${pasture.id}`, {
+        method: 'DELETE',
+        token: accessToken,
+      });
+      await loadData();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao excluir pasto');
     }
   }
 
@@ -161,23 +221,131 @@ export default function PasturesPage() {
         <p className="text-gray-500">Nenhum pasto cadastrado ainda.</p>
       ) : (
         <ul className="space-y-2">
-          {pastures.map((pasture) => (
-            <li key={pasture.id}>
-              <Link
-                href={`/fazendas/${farmId}/pastagens/${pasture.id}`}
+          {pastures.map((pasture) => {
+            const occupiedHeadCount = (pasture.occupations ?? []).reduce(
+              (sum, o) => sum + o.headCount,
+              0,
+            );
+            return (
+              <li
+                key={pasture.id}
                 className="flex items-center justify-between rounded border border-gray-200 bg-white px-4 py-3 hover:border-green-600 hover:shadow-sm"
               >
-                <div>
+                <Link href={`/fazendas/${farmId}/pastagens/${pasture.id}`} className="flex-1">
                   <p className="font-medium text-gray-900">{pasture.name}</p>
                   <p className="text-sm text-gray-500">
                     {pasture.areaHectares} ha · {pasture.grassType ?? 'Capim não informado'}
                   </p>
+                </Link>
+                <div className="flex items-center gap-3">
+                  <p className="text-sm text-gray-500">
+                    {occupiedHeadCount}/{pasture.animalCapacity} animais
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => startEdit(pasture)}
+                    className="text-sm font-medium text-green-700 hover:underline"
+                  >
+                    Visualização rápida
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(pasture)}
+                    className="text-sm font-medium text-red-600 hover:underline"
+                  >
+                    Excluir
+                  </button>
                 </div>
-                <p className="text-sm text-gray-500">Cap. {pasture.animalCapacity} animais</p>
-              </Link>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
+      )}
+
+      {editingId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-lg">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Visualização rápida — {editName}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setEditingId(null)}
+                className="text-gray-400 hover:text-gray-600"
+                aria-label="Fechar"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2">
+                <label className="text-xs font-medium text-gray-600">Nome</label>
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600">Área (ha)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={editAreaHectares}
+                  onChange={(e) => setEditAreaHectares(e.target.value)}
+                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600">Capacidade</label>
+                <input
+                  type="number"
+                  value={editAnimalCapacity}
+                  onChange={(e) => setEditAnimalCapacity(e.target.value)}
+                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="text-xs font-medium text-gray-600">Tipo de capim</label>
+                <input
+                  type="text"
+                  value={editGrassType}
+                  onChange={(e) => setEditGrassType(e.target.value)}
+                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="mt-6 flex items-center justify-between">
+              <Link
+                href={`/fazendas/${farmId}/pastagens/${editingId}`}
+                className="text-sm font-medium text-green-700 hover:underline"
+              >
+                Ver detalhes completos →
+              </Link>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingId(null)}
+                  className="rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => handleSaveEdit(editingId)}
+                  className="rounded bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+                >
+                  {saving ? 'Salvando...' : 'Salvar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </main>
   );

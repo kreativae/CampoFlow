@@ -1,14 +1,17 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
-import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { SentryModule } from '@sentry/nestjs/setup';
+import { SentryGlobalFilter } from '@sentry/nestjs/setup';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { EncryptionModule } from './common/crypto/encryption.module';
 import { StorageModule } from './common/storage/storage.module';
 import { EmailModule } from './common/email/email.module';
+import { QueueModule } from './common/queue/queue.module';
 import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
 import { FarmsModule } from './farms/farms.module';
@@ -28,13 +31,18 @@ import { TeamsModule } from './teams/teams.module';
 import { AgendaModule } from './agenda/agenda.module';
 import { MapFeaturesModule } from './map-features/map-features.module';
 import { SoilAnalysisModule } from './soil-analysis/soil-analysis.module';
+import { CropsModule } from './crops/crops.module';
 import { DocumentsModule } from './documents/documents.module';
 import { ReportsModule } from './reports/reports.module';
 import { BiModule } from './bi/bi.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { BillingModule } from './billing/billing.module';
+import { AdminModule } from './admin/admin.module';
+import { TicketsModule } from './tickets/tickets.module';
 
 @Module({
   imports: [
+    SentryModule.forRoot(),
     ConfigModule.forRoot({ isGlobal: true }),
     ScheduleModule.forRoot(),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
@@ -42,6 +50,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     EncryptionModule,
     StorageModule,
     EmailModule,
+    QueueModule,
     HealthModule,
     AuthModule,
     FarmsModule,
@@ -60,14 +69,21 @@ import { NotificationsModule } from './notifications/notifications.module';
     AgendaModule,
     MapFeaturesModule,
     SoilAnalysisModule,
+    CropsModule,
     DocumentsModule,
     ReportsModule,
     BiModule,
     NotificationsModule,
+    BillingModule,
+    AdminModule,
+    TicketsModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
+    // Must be registered before any other exception filter (SentryGlobalFilter is a
+    // no-op when SENTRY_DSN isn't set — it just rethrows for Nest's default handler).
+    { provide: APP_FILTER, useClass: SentryGlobalFilter },
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_INTERCEPTOR, useClass: AuditLogInterceptor },
   ],

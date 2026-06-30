@@ -7,6 +7,10 @@ import { SuppliesModule } from '../supplies/supplies.module';
 import { AgendaModule } from '../agenda/agenda.module';
 import { HealthRecordsModule } from '../health-records/health-records.module';
 import { WeatherModule } from '../weather/weather.module';
+import { QuotationsModule } from '../quotations/quotations.module';
+import { MachinesModule } from '../machines/machines.module';
+import { SoilAnalysisModule } from '../soil-analysis/soil-analysis.module';
+import { DocumentsModule } from '../documents/documents.module';
 import { BiService } from './bi.service';
 import { BiController } from './bi.controller';
 
@@ -20,6 +24,10 @@ import { BiController } from './bi.controller';
     AgendaModule,
     HealthRecordsModule,
     WeatherModule,
+    QuotationsModule,
+    MachinesModule,
+    SoilAnalysisModule,
+    DocumentsModule,
   ],
   providers: [BiService],
   controllers: [BiController],

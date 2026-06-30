@@ -105,6 +105,15 @@ export class ReproductionService {
     return { success: true };
   }
 
+  // Farm-wide reproductive events (all animals), used by the herd list page to filter
+  // animals by reproductive event type.
+  listAllForFarm(farmId: string) {
+    return this.prisma.reproductiveEvent.findMany({
+      where: { animal: { farmId } },
+      select: { animalId: true, type: true },
+    });
+  }
+
   // Farm-level reproductive KPIs: conception rate, pregnancy rate, births, abortions.
   async stats(farmId: string) {
     const events = await this.prisma.reproductiveEvent.findMany({

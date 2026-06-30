@@ -1,11 +1,18 @@
+// Must be imported before anything else so Sentry can instrument every other
+// module as it loads (see src/instrument.ts for why and the SENTRY_DSN gate).
+import './instrument';
+
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
+import { JsonLogger } from './common/logging/json-logger.service';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    logger: new JsonLogger(),
+  });
 
   app.use(helmet());
   app.enableCors({

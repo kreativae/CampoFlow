@@ -5,6 +5,7 @@ import { SoilAnalysis } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../common/storage/storage.service';
 import { CreateSoilAnalysisDto } from './dto/create-soil-analysis.dto';
+import { UpdateSoilAnalysisDto } from './dto/update-soil-analysis.dto';
 
 const DEFAULT_TARGET_BASE_SATURATION = 70;
 // 1 cmolc/dm³ of base saturation deficit ≈ 1 t/ha of limestone (PRNT 100%) for the
@@ -93,6 +94,45 @@ export class SoilAnalysisService {
       throw new NotFoundException('Análise de solo não encontrada');
     }
     return analysis;
+  }
+
+  async update(farmId: string, id: string, dto: UpdateSoilAnalysisDto) {
+    await this.findOne(farmId, id);
+    return this.prisma.soilAnalysis.update({
+      where: { id },
+      data: {
+        ...(dto.areaLabel !== undefined ? { areaLabel: dto.areaLabel } : {}),
+        ...(dto.collectedAt !== undefined
+          ? { collectedAt: new Date(dto.collectedAt) }
+          : {}),
+        ...(dto.ph !== undefined ? { ph: dto.ph } : {}),
+        ...(dto.phosphorusMgDm3 !== undefined
+          ? { phosphorusMgDm3: dto.phosphorusMgDm3 }
+          : {}),
+        ...(dto.potassiumCmolcDm3 !== undefined
+          ? { potassiumCmolcDm3: dto.potassiumCmolcDm3 }
+          : {}),
+        ...(dto.calciumCmolcDm3 !== undefined
+          ? { calciumCmolcDm3: dto.calciumCmolcDm3 }
+          : {}),
+        ...(dto.magnesiumCmolcDm3 !== undefined
+          ? { magnesiumCmolcDm3: dto.magnesiumCmolcDm3 }
+          : {}),
+        ...(dto.aluminumCmolcDm3 !== undefined
+          ? { aluminumCmolcDm3: dto.aluminumCmolcDm3 }
+          : {}),
+        ...(dto.organicMatterPercent !== undefined
+          ? { organicMatterPercent: dto.organicMatterPercent }
+          : {}),
+        ...(dto.baseSaturationPercent !== undefined
+          ? { baseSaturationPercent: dto.baseSaturationPercent }
+          : {}),
+        ...(dto.ctcCmolcDm3 !== undefined
+          ? { ctcCmolcDm3: dto.ctcCmolcDm3 }
+          : {}),
+        ...(dto.notes !== undefined ? { notes: dto.notes } : {}),
+      },
+    });
   }
 
   async remove(farmId: string, id: string) {

@@ -84,10 +84,13 @@ export default function RegisterPage() {
             type="password"
             required
             minLength={8}
+            pattern="(?=.*[A-Za-z])(?=.*\d).+"
+            title="Pelo menos 8 caracteres, incluindo letras e números"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-green-600 focus:outline-none"
           />
+          <p className="text-xs text-gray-400">Pelo menos 8 caracteres, incluindo letras e números.</p>
         </div>
 
         <button

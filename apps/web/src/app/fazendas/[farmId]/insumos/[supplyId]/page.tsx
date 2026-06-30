@@ -90,9 +90,8 @@ export default function SupplyDetailPage() {
         </p>
       )}
 
-      <section className="mb-8 grid grid-cols-2 gap-3">
+      <section className="mb-8">
         <SummaryCard label="Quantidade atual" value={`${supply?.currentQuantity} ${supply?.unit}`} />
-        <SummaryCard label="Estoque mínimo" value={`${supply?.minimumQuantity} ${supply?.unit}`} />
       </section>
 
       <section className="mb-8 rounded border border-gray-200 bg-white p-4">

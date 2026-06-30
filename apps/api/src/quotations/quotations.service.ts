@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Commodity } from '@prisma/client';
+import { BrazilianState, Commodity } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateQuotationDto } from './dto/create-quotation.dto';
 
@@ -11,6 +11,7 @@ export class QuotationsService {
     return this.prisma.quotation.create({
       data: {
         commodity: dto.commodity,
+        state: dto.state,
         price: dto.price,
         unit: dto.unit,
         source: dto.source,
@@ -20,35 +21,42 @@ export class QuotationsService {
     });
   }
 
-  history(commodity?: Commodity, limit = 50) {
+  history(commodity?: Commodity, state?: BrazilianState, limit = 50) {
     return this.prisma.quotation.findMany({
-      where: commodity ? { commodity } : undefined,
+      where: {
+        ...(commodity ? { commodity } : {}),
+        ...(state ? { state } : {}),
+      },
       orderBy: { recordedAt: 'desc' },
       take: limit,
     });
   }
 
-  // Latest recorded price per commodity, with percentage change vs. the previous record.
+  // Latest recorded price per commodity+state combination (state null = national/
+  // aggregate quote), with percentage change vs. the previous record in that same
+  // combination.
   async latest() {
     const all = await this.prisma.quotation.findMany({
       orderBy: { recordedAt: 'desc' },
     });
 
-    const byCommodity = new Map<Commodity, typeof all>();
+    const byGroup = new Map<string, typeof all>();
     for (const quotation of all) {
-      const list = byCommodity.get(quotation.commodity) ?? [];
+      const key = `${quotation.commodity}::${quotation.state ?? ''}`;
+      const list = byGroup.get(key) ?? [];
       list.push(quotation);
-      byCommodity.set(quotation.commodity, list);
+      byGroup.set(key, list);
     }
 
-    return Array.from(byCommodity.entries()).map(([commodity, records]) => {
+    return Array.from(byGroup.values()).map((records) => {
       const [current, previous] = records;
       const changePercent = previous
         ? ((current.price - previous.price) / previous.price) * 100
         : 0;
 
       return {
-        commodity,
+        commodity: current.commodity,
+        state: current.state,
         price: current.price,
         unit: current.unit,
         source: current.source,

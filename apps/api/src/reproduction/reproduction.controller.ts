@@ -28,6 +28,12 @@ export class ReproductionController {
     return this.reproductionService.stats(farmId);
   }
 
+  @Get('reproducao/eventos')
+  @UseGuards(FarmAccessGuard)
+  listAllEvents(@Param('farmId') farmId: string) {
+    return this.reproductionService.listAllForFarm(farmId);
+  }
+
   @Post('animais/:animalId/eventos-reprodutivos')
   @UseGuards(RolesGuard)
   @Roles(Role.OWNER, Role.MANAGER, Role.VETERINARIAN, Role.EMPLOYEE)

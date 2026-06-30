@@ -90,9 +90,6 @@ export default function FarmDashboardPage() {
         <Link href={`/fazendas/${farmId}/reproducao`} className="font-medium text-green-700 hover:underline">
           Reprodução
         </Link>
-        <Link href={`/fazendas/${farmId}/clima`} className="font-medium text-green-700 hover:underline">
-          Clima
-        </Link>
         <Link href={`/fazendas/${farmId}/insumos`} className="font-medium text-green-700 hover:underline">
           Insumos
         </Link>
@@ -106,7 +103,10 @@ export default function FarmDashboardPage() {
           Agenda
         </Link>
         <Link href={`/fazendas/${farmId}/mapa`} className="font-medium text-green-700 hover:underline">
-          Mapa
+          Solo
+        </Link>
+        <Link href={`/fazendas/${farmId}/safras`} className="font-medium text-green-700 hover:underline">
+          Safras
         </Link>
         <Link href={`/fazendas/${farmId}/documentos`} className="font-medium text-green-700 hover:underline">
           Documentos
@@ -115,7 +115,7 @@ export default function FarmDashboardPage() {
           Relatórios
         </Link>
         <Link href={`/fazendas/${farmId}/inteligencia`} className="font-medium text-green-700 hover:underline">
-          BI
+          IA
         </Link>
         <Link
           href={`/fazendas/${farmId}/notificacoes`}
@@ -185,7 +185,7 @@ export default function FarmDashboardPage() {
             />
             <SummaryCard
               title="Clima"
-              href={`/fazendas/${farmId}/clima`}
+              href={`/fazendas/${farmId}/mapa`}
               lines={[
                 `Alertas ativos: ${resumo.weather.activeAlertsCount}`,
                 resumo.weather.latestAlert
@@ -223,11 +223,19 @@ export default function FarmDashboardPage() {
               highlight={resumo.agenda.upcomingCount > 0}
             />
             <SummaryCard
-              title="Mapa"
+              title="Solo"
               href={`/fazendas/${farmId}/mapa`}
               lines={[
                 `${resumo.map.featuresCount} elemento(s)`,
                 `${resumo.map.soilAnalysesCount} análise(s) de solo`,
+              ]}
+            />
+            <SummaryCard
+              title="Safras"
+              href={`/fazendas/${farmId}/safras`}
+              lines={[
+                `${resumo.crops.total} safra(s)`,
+                `${resumo.crops.activeCount} em andamento`,
               ]}
             />
             <SummaryCard
@@ -252,7 +260,7 @@ export default function FarmDashboardPage() {
               lines={['Exportação de dados gerenciais']}
             />
             <SummaryCard
-              title="BI / Inteligência"
+              title="IA / Inteligência"
               href={`/fazendas/${farmId}/inteligencia`}
               lines={['KPIs, previsões e sugestões']}
             />

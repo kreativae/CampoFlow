@@ -144,4 +144,89 @@ describe('Machines (e2e)', () => {
     expect(summary.totalCost).toBe(550);
     expect(summary.totalLiters).toBe(50);
   });
+
+  describe('editing and deleting maintenance/fuel records', () => {
+    let maintenanceId: string;
+    let fuelRecordId: string;
+
+    it('lets the owner edit a maintenance record, recomputing the hour meter', async () => {
+      const machineRes = await request(app.getHttpServer())
+        .get(`/fazendas/${farmId}/maquinas/${machineId}`)
+        .set('Authorization', `Bearer ${ownerToken}`);
+      maintenanceId = (machineRes.body as { maintenances: { id: string }[] })
+        .maintenances[0].id;
+
+      const res = await request(app.getHttpServer())
+        .patch(
+          `/fazendas/${farmId}/maquinas/${machineId}/manutencoes/${maintenanceId}`,
+        )
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({ cost: 250, hourMeterAt: 150 })
+        .expect(200);
+
+      expect((res.body as { cost: number }).cost).toBe(250);
+
+      const updatedMachine = await request(app.getHttpServer())
+        .get(`/fazendas/${farmId}/maquinas/${machineId}`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .expect(200);
+      // 150 (edited maintenance) is now higher than 120 (fuel)
+      expect(
+        (updatedMachine.body as MachineResponseBody).currentHourMeter,
+      ).toBe(150);
+    });
+
+    it('lets the owner delete a maintenance record, recomputing the hour meter back down', async () => {
+      await request(app.getHttpServer())
+        .delete(
+          `/fazendas/${farmId}/maquinas/${machineId}/manutencoes/${maintenanceId}`,
+        )
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .expect(200);
+
+      const updatedMachine = await request(app.getHttpServer())
+        .get(`/fazendas/${farmId}/maquinas/${machineId}`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .expect(200);
+      // back to 120, the remaining fuel record's reading
+      expect(
+        (updatedMachine.body as MachineResponseBody).currentHourMeter,
+      ).toBe(120);
+    });
+
+    it('lets the owner edit a fuel record', async () => {
+      const machineRes = await request(app.getHttpServer())
+        .get(`/fazendas/${farmId}/maquinas/${machineId}`)
+        .set('Authorization', `Bearer ${ownerToken}`);
+      fuelRecordId = (machineRes.body as { fuelRecords: { id: string }[] })
+        .fuelRecords[0].id;
+
+      const res = await request(app.getHttpServer())
+        .patch(
+          `/fazendas/${farmId}/maquinas/${machineId}/registros-combustivel/${fuelRecordId}`,
+        )
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({ liters: 60, cost: 420 })
+        .expect(200);
+
+      expect((res.body as { liters: number }).liters).toBe(60);
+    });
+
+    it('lets the owner delete a fuel record, recomputing the hour meter to 0', async () => {
+      await request(app.getHttpServer())
+        .delete(
+          `/fazendas/${farmId}/maquinas/${machineId}/registros-combustivel/${fuelRecordId}`,
+        )
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .expect(200);
+
+      const updatedMachine = await request(app.getHttpServer())
+        .get(`/fazendas/${farmId}/maquinas/${machineId}`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .expect(200);
+      expect(
+        (updatedMachine.body as MachineResponseBody).currentHourMeter,
+      ).toBe(0);
+    });
+  });
 });

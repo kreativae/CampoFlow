@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, ApiError } from '@/lib/api';
+import { useConfirm } from '@/lib/confirm-context';
 import type { Machine, MachineCostSummary, MachineType } from '@/lib/types';
 
 const TYPE_OPTIONS: { value: MachineType; label: string }[] = [
@@ -26,6 +27,7 @@ export default function MachinesPage() {
   const { farmId } = useParams<{ farmId: string }>();
   const { user, accessToken, loading } = useAuth();
   const router = useRouter();
+  const confirm = useConfirm();
 
   const [machines, setMachines] = useState<Machine[]>([]);
   const [costs, setCosts] = useState<MachineCostSummary[]>([]);
@@ -37,6 +39,13 @@ export default function MachinesPage() {
   const [type, setType] = useState<MachineType>('TRATOR');
   const [brand, setBrand] = useState('');
   const [year, setYear] = useState('');
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editType, setEditType] = useState<MachineType>('TRATOR');
+  const [editBrand, setEditBrand] = useState('');
+  const [editYear, setEditYear] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const loadData = useCallback(async () => {
     setFetching(true);
@@ -84,6 +93,57 @@ export default function MachinesPage() {
       setError(err instanceof ApiError ? err.message : 'Erro ao cadastrar máquina');
     } finally {
       setCreating(false);
+    }
+  }
+
+  function startEdit(machine: Machine) {
+    setEditingId(machine.id);
+    setEditName(machine.name);
+    setEditType(machine.type);
+    setEditBrand(machine.brand ?? '');
+    setEditYear(machine.year ? String(machine.year) : '');
+  }
+
+  async function handleSaveEdit(machineId: string) {
+    setSaving(true);
+    setError(null);
+    try {
+      await apiFetch(`/fazendas/${farmId}/maquinas/${machineId}`, {
+        method: 'PATCH',
+        token: accessToken,
+        body: {
+          name: editName,
+          type: editType,
+          brand: editBrand || undefined,
+          year: editYear ? Number(editYear) : undefined,
+        },
+      });
+      setEditingId(null);
+      await loadData();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao atualizar máquina');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete(machine: Machine) {
+    const ok = await confirm({
+      title: 'Excluir máquina',
+      message: `Excluir a máquina ${machine.name}? Essa ação não pode ser desfeita.`,
+      confirmLabel: 'Excluir',
+      danger: true,
+    });
+    if (!ok) return;
+    setError(null);
+    try {
+      await apiFetch(`/fazendas/${farmId}/maquinas/${machine.id}`, {
+        method: 'DELETE',
+        token: accessToken,
+      });
+      await loadData();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao excluir máquina');
     }
   }
 
@@ -179,22 +239,103 @@ export default function MachinesPage() {
         <ul className="space-y-2">
           {machines.map((machine) => {
             const cost = costs.find((c) => c.machineId === machine.id);
-            return (
-              <li key={machine.id}>
-                <Link
-                  href={`/fazendas/${farmId}/maquinas/${machine.id}`}
-                  className="flex items-center justify-between rounded border border-gray-200 bg-white px-4 py-3 hover:border-green-600 hover:shadow-sm"
+            if (editingId === machine.id) {
+              return (
+                <li
+                  key={machine.id}
+                  className="grid grid-cols-2 gap-3 rounded border border-green-600 bg-white p-4 sm:grid-cols-4"
                 >
-                  <div>
-                    <p className="font-medium text-gray-900">{machine.name}</p>
-                    <p className="text-sm text-gray-500">
-                      {typeLabel(machine.type)} · {machine.currentHourMeter}h
-                    </p>
+                  <div className="col-span-2">
+                    <label className="text-xs font-medium text-gray-600">Nome</label>
+                    <input
+                      type="text"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                    />
                   </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-600">Tipo</label>
+                    <select
+                      value={editType}
+                      onChange={(e) => setEditType(e.target.value as MachineType)}
+                      className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                    >
+                      {TYPE_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-600">Ano</label>
+                    <input
+                      type="number"
+                      value={editYear}
+                      onChange={(e) => setEditYear(e.target.value)}
+                      className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="text-xs font-medium text-gray-600">Marca</label>
+                    <input
+                      type="text"
+                      value={editBrand}
+                      onChange={(e) => setEditBrand(e.target.value)}
+                      className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                    />
+                  </div>
+                  <div className="col-span-full flex gap-2">
+                    <button
+                      type="button"
+                      disabled={saving}
+                      onClick={() => handleSaveEdit(machine.id)}
+                      className="rounded bg-green-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+                    >
+                      {saving ? 'Salvando...' : 'Salvar'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingId(null)}
+                      className="rounded border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </li>
+              );
+            }
+            return (
+              <li
+                key={machine.id}
+                className="flex items-center justify-between rounded border border-gray-200 bg-white px-4 py-3 hover:border-green-600 hover:shadow-sm"
+              >
+                <Link href={`/fazendas/${farmId}/maquinas/${machine.id}`} className="flex-1">
+                  <p className="font-medium text-gray-900">{machine.name}</p>
+                  <p className="text-sm text-gray-500">
+                    {typeLabel(machine.type)} · {machine.currentHourMeter}h
+                  </p>
+                </Link>
+                <div className="flex items-center gap-3">
                   {cost && (
                     <p className="text-sm text-gray-500">Custo total: {formatCurrency(cost.totalCost)}</p>
                   )}
-                </Link>
+                  <button
+                    type="button"
+                    onClick={() => startEdit(machine)}
+                    className="text-sm font-medium text-green-700 hover:underline"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(machine)}
+                    className="text-sm font-medium text-red-600 hover:underline"
+                  >
+                    Excluir
+                  </button>
+                </div>
               </li>
             );
           })}

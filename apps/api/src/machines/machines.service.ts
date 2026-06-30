@@ -3,7 +3,9 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateMachineDto } from './dto/create-machine.dto';
 import { UpdateMachineDto } from './dto/update-machine.dto';
 import { CreateMaintenanceDto } from './dto/create-maintenance.dto';
+import { UpdateMaintenanceDto } from './dto/update-maintenance.dto';
 import { CreateFuelRecordDto } from './dto/create-fuel-record.dto';
+import { UpdateFuelRecordDto } from './dto/update-fuel-record.dto';
 
 @Injectable()
 export class MachinesService {
@@ -109,6 +111,143 @@ export class MachinesService {
     ]);
 
     return fuelRecord;
+  }
+
+  // currentHourMeter always tracks the highest hourMeterAt across every
+  // maintenance/fuel record — recomputed here because editing/deleting a record
+  // can change which one holds that high-water mark without it being the one
+  // just touched.
+  private async recomputeHourMeter(machineId: string) {
+    const [maintenances, fuelRecords] = await Promise.all([
+      this.prisma.machineMaintenance.findMany({
+        where: { machineId, hourMeterAt: { not: null } },
+        select: { hourMeterAt: true },
+      }),
+      this.prisma.machineFuelRecord.findMany({
+        where: { machineId, hourMeterAt: { not: null } },
+        select: { hourMeterAt: true },
+      }),
+    ]);
+    const readings = [...maintenances, ...fuelRecords]
+      .map((r) => r.hourMeterAt ?? 0)
+      .filter((v) => v > 0);
+    const max = readings.length > 0 ? Math.max(...readings) : 0;
+    await this.prisma.machine.update({
+      where: { id: machineId },
+      data: { currentHourMeter: max },
+    });
+  }
+
+  private async assertMaintenanceBelongsToMachine(
+    machineId: string,
+    maintenanceId: string,
+  ) {
+    const record = await this.prisma.machineMaintenance.findUnique({
+      where: { id: maintenanceId },
+    });
+    if (!record || record.machineId !== machineId) {
+      throw new NotFoundException('Manutenção não encontrada');
+    }
+    return record;
+  }
+
+  async updateMaintenance(
+    farmId: string,
+    machineId: string,
+    maintenanceId: string,
+    dto: UpdateMaintenanceDto,
+  ) {
+    await this.findOne(farmId, machineId);
+    await this.assertMaintenanceBelongsToMachine(machineId, maintenanceId);
+
+    const record = await this.prisma.machineMaintenance.update({
+      where: { id: maintenanceId },
+      data: {
+        ...(dto.description !== undefined
+          ? { description: dto.description }
+          : {}),
+        ...(dto.cost !== undefined ? { cost: dto.cost } : {}),
+        ...(dto.hourMeterAt !== undefined
+          ? { hourMeterAt: dto.hourMeterAt }
+          : {}),
+        ...(dto.performedAt !== undefined
+          ? { performedAt: new Date(dto.performedAt) }
+          : {}),
+        ...(dto.notes !== undefined ? { notes: dto.notes } : {}),
+      },
+    });
+    await this.recomputeHourMeter(machineId);
+    return record;
+  }
+
+  async removeMaintenance(
+    farmId: string,
+    machineId: string,
+    maintenanceId: string,
+  ) {
+    await this.findOne(farmId, machineId);
+    await this.assertMaintenanceBelongsToMachine(machineId, maintenanceId);
+
+    await this.prisma.machineMaintenance.delete({
+      where: { id: maintenanceId },
+    });
+    await this.recomputeHourMeter(machineId);
+    return { success: true };
+  }
+
+  private async assertFuelRecordBelongsToMachine(
+    machineId: string,
+    fuelRecordId: string,
+  ) {
+    const record = await this.prisma.machineFuelRecord.findUnique({
+      where: { id: fuelRecordId },
+    });
+    if (!record || record.machineId !== machineId) {
+      throw new NotFoundException('Registro de combustível não encontrado');
+    }
+    return record;
+  }
+
+  async updateFuelRecord(
+    farmId: string,
+    machineId: string,
+    fuelRecordId: string,
+    dto: UpdateFuelRecordDto,
+  ) {
+    await this.findOne(farmId, machineId);
+    await this.assertFuelRecordBelongsToMachine(machineId, fuelRecordId);
+
+    const record = await this.prisma.machineFuelRecord.update({
+      where: { id: fuelRecordId },
+      data: {
+        ...(dto.liters !== undefined ? { liters: dto.liters } : {}),
+        ...(dto.cost !== undefined ? { cost: dto.cost } : {}),
+        ...(dto.hourMeterAt !== undefined
+          ? { hourMeterAt: dto.hourMeterAt }
+          : {}),
+        ...(dto.recordedAt !== undefined
+          ? { recordedAt: new Date(dto.recordedAt) }
+          : {}),
+        ...(dto.notes !== undefined ? { notes: dto.notes } : {}),
+      },
+    });
+    await this.recomputeHourMeter(machineId);
+    return record;
+  }
+
+  async removeFuelRecord(
+    farmId: string,
+    machineId: string,
+    fuelRecordId: string,
+  ) {
+    await this.findOne(farmId, machineId);
+    await this.assertFuelRecordBelongsToMachine(machineId, fuelRecordId);
+
+    await this.prisma.machineFuelRecord.delete({
+      where: { id: fuelRecordId },
+    });
+    await this.recomputeHourMeter(machineId);
+    return { success: true };
   }
 
   // Total maintenance + fuel cost per machine for the farm.

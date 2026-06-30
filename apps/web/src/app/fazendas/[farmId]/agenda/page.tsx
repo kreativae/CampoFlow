@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, ApiError } from '@/lib/api';
+import { useConfirm } from '@/lib/confirm-context';
 import type { AgendaAlert, AgendaEvent, AgendaEventType } from '@/lib/types';
 
 const TYPE_OPTIONS: { value: AgendaEventType; label: string }[] = [
@@ -20,10 +21,31 @@ function typeLabel(type: AgendaEventType) {
   return TYPE_OPTIONS.find((opt) => opt.value === type)?.label ?? type;
 }
 
+const WEEKDAY_LABELS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+
+function buildCalendarGrid(year: number, month: number): (Date | null)[] {
+  const firstDay = new Date(year, month, 1);
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const leadingBlanks = firstDay.getDay();
+  const cells: (Date | null)[] = Array(leadingBlanks).fill(null);
+  for (let day = 1; day <= daysInMonth; day++) {
+    cells.push(new Date(year, month, day));
+  }
+  while (cells.length % 7 !== 0) {
+    cells.push(null);
+  }
+  return cells;
+}
+
+function isSameDay(a: Date, b: Date) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
 export default function AgendaPage() {
   const { farmId } = useParams<{ farmId: string }>();
   const { user, accessToken, loading } = useAuth();
   const router = useRouter();
+  const confirm = useConfirm();
 
   const [events, setEvents] = useState<AgendaEvent[]>([]);
   const [alerts, setAlerts] = useState<AgendaAlert[]>([]);
@@ -34,6 +56,11 @@ export default function AgendaPage() {
   const [title, setTitle] = useState('');
   const [type, setType] = useState<AgendaEventType>('MANEJO');
   const [scheduledDate, setScheduledDate] = useState('');
+
+  const [view, setView] = useState<'lista' | 'calendario'>('lista');
+  const today = new Date();
+  const [calendarMonth, setCalendarMonth] = useState(today.getMonth());
+  const [calendarYear, setCalendarYear] = useState(today.getFullYear());
 
   const loadData = useCallback(async () => {
     setFetching(true);
@@ -93,6 +120,26 @@ export default function AgendaPage() {
       await loadData();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao concluir evento');
+    }
+  }
+
+  async function handleDelete(event: AgendaEvent) {
+    const ok = await confirm({
+      title: 'Excluir evento',
+      message: `Excluir o evento ${event.title}? Essa ação não pode ser desfeita.`,
+      confirmLabel: 'Excluir',
+      danger: true,
+    });
+    if (!ok) return;
+    setError(null);
+    try {
+      await apiFetch(`/fazendas/${farmId}/agenda/${event.id}`, {
+        method: 'DELETE',
+        token: accessToken,
+      });
+      await loadData();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao excluir evento');
     }
   }
 
@@ -188,7 +235,107 @@ export default function AgendaPage() {
         </div>
       </form>
 
-      {events.length === 0 ? (
+      <div className="mb-4 flex gap-2">
+        <button
+          type="button"
+          onClick={() => setView('lista')}
+          className={`rounded px-3 py-1.5 text-sm font-medium ${
+            view === 'lista' ? 'bg-green-700 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          Lista
+        </button>
+        <button
+          type="button"
+          onClick={() => setView('calendario')}
+          className={`rounded px-3 py-1.5 text-sm font-medium ${
+            view === 'calendario' ? 'bg-green-700 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          Calendário
+        </button>
+      </div>
+
+      {view === 'calendario' && (
+        <div className="mb-8 rounded border border-gray-200 bg-white p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => {
+                const prev = new Date(calendarYear, calendarMonth - 1, 1);
+                setCalendarMonth(prev.getMonth());
+                setCalendarYear(prev.getFullYear());
+              }}
+              className="rounded px-2 py-1 text-sm font-medium text-gray-600 hover:bg-gray-100"
+            >
+              ← Anterior
+            </button>
+            <p className="font-semibold text-gray-800">
+              {new Date(calendarYear, calendarMonth, 1).toLocaleDateString('pt-BR', {
+                month: 'long',
+                year: 'numeric',
+              })}
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                const next = new Date(calendarYear, calendarMonth + 1, 1);
+                setCalendarMonth(next.getMonth());
+                setCalendarYear(next.getFullYear());
+              }}
+              className="rounded px-2 py-1 text-sm font-medium text-gray-600 hover:bg-gray-100"
+            >
+              Próximo →
+            </button>
+          </div>
+          <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-gray-500">
+            {WEEKDAY_LABELS.map((d, i) => (
+              <div key={i} className="py-1">
+                {d}
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7 gap-1">
+            {buildCalendarGrid(calendarYear, calendarMonth).map((date, i) => {
+              const dayEvents = date
+                ? events.filter((e) => isSameDay(new Date(e.scheduledDate), date))
+                : [];
+              const isToday = date ? isSameDay(date, today) : false;
+              return (
+                <div
+                  key={i}
+                  className={`min-h-20 rounded border p-1 text-xs ${
+                    date ? 'border-gray-200 bg-white' : 'border-transparent'
+                  } ${isToday ? 'ring-2 ring-green-600' : ''}`}
+                >
+                  {date && (
+                    <>
+                      <p className="mb-1 font-medium text-gray-700">{date.getDate()}</p>
+                      <ul className="space-y-0.5">
+                        {dayEvents.map((e) => (
+                          <li
+                            key={e.id}
+                            title={`${typeLabel(e.type)}: ${e.title}`}
+                            className={`truncate rounded px-1 ${
+                              e.completedAt
+                                ? 'bg-gray-100 text-gray-500'
+                                : 'bg-green-100 text-green-800'
+                            }`}
+                          >
+                            {e.title}
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {view !== 'lista' ? null : events.length === 0 ? (
         <p className="text-gray-500">Nenhum evento registrado ainda.</p>
       ) : (
         <ul className="space-y-2">
@@ -204,14 +351,22 @@ export default function AgendaPage() {
                   {e.completedAt ? ' · concluído' : ''}
                 </p>
               </div>
-              {!e.completedAt && (
+              <div className="flex items-center gap-3">
+                {!e.completedAt && (
+                  <button
+                    onClick={() => handleComplete(e.id)}
+                    className="text-xs font-medium text-green-700 hover:underline"
+                  >
+                    Marcar como concluído
+                  </button>
+                )}
                 <button
-                  onClick={() => handleComplete(e.id)}
-                  className="text-xs font-medium text-green-700 hover:underline"
+                  onClick={() => handleDelete(e)}
+                  className="text-xs font-medium text-red-600 hover:underline"
                 >
-                  Marcar como concluído
+                  Excluir
                 </button>
-              )}
+              </div>
             </li>
           ))}
         </ul>

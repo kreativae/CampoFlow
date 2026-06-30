@@ -14,6 +14,7 @@ import { TasksService } from '../teams/tasks.service';
 import { AgendaService } from '../agenda/agenda.service';
 import { MapFeaturesService } from '../map-features/map-features.service';
 import { SoilAnalysisService } from '../soil-analysis/soil-analysis.service';
+import { CropsService } from '../crops/crops.service';
 import { DocumentsService } from '../documents/documents.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { QuotationsService } from '../quotations/quotations.service';
@@ -38,6 +39,7 @@ export class DashboardService {
     private readonly agendaService: AgendaService,
     private readonly mapFeaturesService: MapFeaturesService,
     private readonly soilAnalysisService: SoilAnalysisService,
+    private readonly cropsService: CropsService,
     private readonly documentsService: DocumentsService,
     private readonly notificationsService: NotificationsService,
     private readonly quotationsService: QuotationsService,
@@ -106,6 +108,7 @@ export class DashboardService {
       agendaAlerts,
       mapFeatures,
       soilAnalyses,
+      cropCycles,
       documents,
       unreadNotifications,
       recentQuotations,
@@ -122,6 +125,7 @@ export class DashboardService {
       this.agendaService.alerts(farmId),
       this.mapFeaturesService.findAll(farmId),
       this.soilAnalysisService.findAll(farmId),
+      this.cropsService.findAll(farmId),
       this.documentsService.findAll(farmId),
       this.notificationsService.unreadCount(farmId, userId),
       this.quotationsService.latest(),
@@ -160,6 +164,10 @@ export class DashboardService {
       map: {
         featuresCount: mapFeatures.length,
         soilAnalysesCount: soilAnalyses.length,
+      },
+      crops: {
+        total: cropCycles.length,
+        activeCount: cropCycles.filter((c) => c.status !== 'COLHIDA').length,
       },
       documents: { total: documents.length },
       notifications: { unreadCount: unreadNotifications },

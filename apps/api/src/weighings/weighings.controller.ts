@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -6,6 +15,7 @@ import { FarmAccessGuard } from '../auth/guards/farm-access.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { WeighingsService } from './weighings.service';
 import { CreateWeighingDto } from './dto/create-weighing.dto';
+import { UpdateWeighingDto } from './dto/update-weighing.dto';
 
 @Controller('fazendas/:farmId/animais/:animalId/pesagens')
 @UseGuards(JwtAuthGuard)
@@ -36,5 +46,28 @@ export class WeighingsController {
     @Param('animalId') animalId: string,
   ) {
     return this.weighingsService.gainSummary(farmId, animalId);
+  }
+
+  @Patch(':weighingId')
+  @UseGuards(RolesGuard)
+  @Roles(Role.OWNER, Role.MANAGER, Role.VETERINARIAN, Role.EMPLOYEE)
+  update(
+    @Param('farmId') farmId: string,
+    @Param('animalId') animalId: string,
+    @Param('weighingId') weighingId: string,
+    @Body() dto: UpdateWeighingDto,
+  ) {
+    return this.weighingsService.update(farmId, animalId, weighingId, dto);
+  }
+
+  @Delete(':weighingId')
+  @UseGuards(RolesGuard)
+  @Roles(Role.OWNER, Role.MANAGER, Role.VETERINARIAN)
+  remove(
+    @Param('farmId') farmId: string,
+    @Param('animalId') animalId: string,
+    @Param('weighingId') weighingId: string,
+  ) {
+    return this.weighingsService.remove(farmId, animalId, weighingId);
   }
 }

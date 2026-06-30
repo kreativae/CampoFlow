@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, ApiError } from '@/lib/api';
+import { useConfirm } from '@/lib/confirm-context';
 import type {
   Animal,
   AnimalEvent,
@@ -15,6 +16,7 @@ import type {
   VaccinationRecord,
   WeighingRecord,
 } from '@/lib/types';
+import { ANIMAL_EVENT_TYPE_LABEL } from '@/lib/types';
 
 const REPRODUCTIVE_EVENT_OPTIONS: { value: ReproductiveEventType; label: string }[] = [
   { value: 'IATF', label: 'IATF' },
@@ -29,6 +31,7 @@ export default function AnimalDetailPage() {
   const { farmId, animalId } = useParams<{ farmId: string; animalId: string }>();
   const { user, accessToken, loading } = useAuth();
   const router = useRouter();
+  const confirm = useConfirm();
 
   const [animal, setAnimal] = useState<Animal | null>(null);
   const [weighings, setWeighings] = useState<WeighingRecord[]>([]);
@@ -42,13 +45,33 @@ export default function AnimalDetailPage() {
   const [newWeight, setNewWeight] = useState('');
   const [savingWeight, setSavingWeight] = useState(false);
 
+  const [editingWeighingId, setEditingWeighingId] = useState<string | null>(null);
+  const [editWeighingKg, setEditWeighingKg] = useState('');
+  const [editWeighingDate, setEditWeighingDate] = useState('');
+  const [savingWeighingEdit, setSavingWeighingEdit] = useState(false);
+
   const [vaccineName, setVaccineName] = useState('');
   const [scheduledDate, setScheduledDate] = useState('');
   const [savingVaccination, setSavingVaccination] = useState(false);
 
+  const [editingVaccinationId, setEditingVaccinationId] = useState<string | null>(
+    null,
+  );
+  const [editVaccinationScheduledDate, setEditVaccinationScheduledDate] =
+    useState('');
+  const [editVaccinationAdministeredAt, setEditVaccinationAdministeredAt] =
+    useState('');
+  const [savingVaccinationEdit, setSavingVaccinationEdit] = useState(false);
+
   const [reproEventType, setReproEventType] = useState<ReproductiveEventType>('IATF');
   const [reproResult, setReproResult] = useState<PregnancyDiagnosisResult | ''>('');
   const [savingReproEvent, setSavingReproEvent] = useState(false);
+
+  const [editingReproId, setEditingReproId] = useState<string | null>(null);
+  const [editReproType, setEditReproType] = useState<ReproductiveEventType>('IATF');
+  const [editReproResult, setEditReproResult] = useState<PregnancyDiagnosisResult | ''>('');
+  const [editReproDate, setEditReproDate] = useState('');
+  const [savingReproEdit, setSavingReproEdit] = useState(false);
 
   const loadData = useCallback(async () => {
     setFetching(true);
@@ -113,6 +136,55 @@ export default function AnimalDetailPage() {
     }
   }
 
+  function startEditWeighing(w: WeighingRecord) {
+    setEditingWeighingId(w.id);
+    setEditWeighingKg(String(w.weightKg));
+    setEditWeighingDate(w.weighedAt.slice(0, 10));
+  }
+
+  async function handleSaveWeighingEdit(weighingId: string) {
+    setSavingWeighingEdit(true);
+    setError(null);
+    try {
+      await apiFetch(`/fazendas/${farmId}/animais/${animalId}/pesagens/${weighingId}`, {
+        method: 'PATCH',
+        token: accessToken,
+        body: {
+          weightKg: Number(editWeighingKg),
+          weighedAt: editWeighingDate
+            ? new Date(editWeighingDate).toISOString()
+            : undefined,
+        },
+      });
+      setEditingWeighingId(null);
+      await loadData();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao atualizar pesagem');
+    } finally {
+      setSavingWeighingEdit(false);
+    }
+  }
+
+  async function handleDeleteWeighing(weighingId: string) {
+    const ok = await confirm({
+      title: 'Excluir pesagem',
+      message: 'Excluir esta pesagem? Essa ação não pode ser desfeita.',
+      confirmLabel: 'Excluir',
+      danger: true,
+    });
+    if (!ok) return;
+    setError(null);
+    try {
+      await apiFetch(`/fazendas/${farmId}/animais/${animalId}/pesagens/${weighingId}`, {
+        method: 'DELETE',
+        token: accessToken,
+      });
+      await loadData();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao excluir pesagem');
+    }
+  }
+
   async function handleScheduleVaccination(event: FormEvent) {
     event.preventDefault();
     setSavingVaccination(true);
@@ -155,6 +227,57 @@ export default function AnimalDetailPage() {
     }
   }
 
+  function startEditReproEvent(e: ReproductiveEvent) {
+    setEditingReproId(e.id);
+    setEditReproType(e.type);
+    setEditReproResult(e.result ?? '');
+    setEditReproDate(e.eventDate.slice(0, 10));
+  }
+
+  async function handleSaveReproEdit(eventId: string) {
+    setSavingReproEdit(true);
+    setError(null);
+    try {
+      await apiFetch(`/fazendas/${farmId}/animais/${animalId}/eventos-reprodutivos/${eventId}`, {
+        method: 'PATCH',
+        token: accessToken,
+        body: {
+          type: editReproType,
+          result: editReproType === 'DIAGNOSTICO_PRENHEZ' && editReproResult ? editReproResult : undefined,
+          eventDate: editReproDate
+            ? new Date(editReproDate).toISOString()
+            : undefined,
+        },
+      });
+      setEditingReproId(null);
+      await loadData();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao atualizar evento reprodutivo');
+    } finally {
+      setSavingReproEdit(false);
+    }
+  }
+
+  async function handleDeleteReproEvent(eventId: string) {
+    const ok = await confirm({
+      title: 'Excluir evento reprodutivo',
+      message: 'Excluir este evento reprodutivo? Essa ação não pode ser desfeita.',
+      confirmLabel: 'Excluir',
+      danger: true,
+    });
+    if (!ok) return;
+    setError(null);
+    try {
+      await apiFetch(`/fazendas/${farmId}/animais/${animalId}/eventos-reprodutivos/${eventId}`, {
+        method: 'DELETE',
+        token: accessToken,
+      });
+      await loadData();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao excluir evento reprodutivo');
+    }
+  }
+
   async function handleApplyVaccination(vaccinationId: string) {
     setError(null);
     try {
@@ -165,6 +288,42 @@ export default function AnimalDetailPage() {
       await loadData();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao confirmar vacina');
+    }
+  }
+
+  function startEditVaccination(v: VaccinationRecord) {
+    setEditingVaccinationId(v.id);
+    setEditVaccinationScheduledDate(v.scheduledDate.slice(0, 10));
+    setEditVaccinationAdministeredAt(
+      v.administeredAt ? v.administeredAt.slice(0, 10) : '',
+    );
+  }
+
+  async function handleSaveVaccinationEdit(vaccinationId: string) {
+    setSavingVaccinationEdit(true);
+    setError(null);
+    try {
+      await apiFetch(
+        `/fazendas/${farmId}/animais/${animalId}/vacinacoes/${vaccinationId}`,
+        {
+          method: 'PATCH',
+          token: accessToken,
+          body: {
+            scheduledDate: editVaccinationScheduledDate
+              ? new Date(editVaccinationScheduledDate).toISOString()
+              : undefined,
+            administeredAt: editVaccinationAdministeredAt
+              ? new Date(editVaccinationAdministeredAt).toISOString()
+              : undefined,
+          },
+        },
+      );
+      setEditingVaccinationId(null);
+      await loadData();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao atualizar vacina');
+    } finally {
+      setSavingVaccinationEdit(false);
     }
   }
 
@@ -230,16 +389,71 @@ export default function AnimalDetailPage() {
         {weighings.length === 0 ? (
           <p className="text-sm text-gray-500">Nenhuma pesagem registrada.</p>
         ) : (
-          <ul className="space-y-1 text-sm text-gray-700">
-            {weighings
-              .slice()
-              .reverse()
-              .map((w) => (
-                <li key={w.id}>
-                  {new Date(w.weighedAt).toLocaleDateString('pt-BR')} — {w.weightKg} kg
-                </li>
-              ))}
-          </ul>
+          <>
+            <WeightEvolutionChart weighings={weighings} />
+            <ul className="space-y-1 text-sm text-gray-700">
+              {weighings
+                .slice()
+                .reverse()
+                .map((w) =>
+                  editingWeighingId === w.id ? (
+                    <li key={w.id} className="flex flex-wrap items-center gap-2 py-1">
+                      <input
+                        type="date"
+                        value={editWeighingDate}
+                        onChange={(e) => setEditWeighingDate(e.target.value)}
+                        className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+                      />
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={editWeighingKg}
+                        onChange={(e) => setEditWeighingKg(e.target.value)}
+                        className="w-24 rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        disabled={savingWeighingEdit}
+                        onClick={() => handleSaveWeighingEdit(w.id)}
+                        className="rounded bg-green-700 px-2 py-1 text-xs font-medium text-white hover:bg-green-800 disabled:opacity-50"
+                      >
+                        {savingWeighingEdit ? 'Salvando...' : 'Salvar'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingWeighingId(null)}
+                        className="rounded border border-gray-300 px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50"
+                      >
+                        Cancelar
+                      </button>
+                    </li>
+                  ) : (
+                    <li key={w.id} className="flex items-center justify-between">
+                      <span>
+                        {new Date(w.weighedAt).toLocaleDateString('pt-BR')} —{' '}
+                        {w.weightKg} kg
+                      </span>
+                      <span className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => startEditWeighing(w)}
+                          className="text-xs font-medium text-green-700 hover:underline"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteWeighing(w.id)}
+                          className="text-xs font-medium text-red-600 hover:underline"
+                        >
+                          Excluir
+                        </button>
+                      </span>
+                    </li>
+                  ),
+                )}
+            </ul>
+          </>
         )}
       </section>
 
@@ -273,22 +487,75 @@ export default function AnimalDetailPage() {
           <p className="text-sm text-gray-500">Nenhuma vacina agendada.</p>
         ) : (
           <ul className="space-y-1 text-sm text-gray-700">
-            {vaccinations.map((v) => (
-              <li key={v.id} className="flex items-center justify-between">
-                <span>
-                  {v.vaccineName} — {new Date(v.scheduledDate).toLocaleDateString('pt-BR')}
-                  {v.administeredAt ? ' (aplicada)' : ' (pendente)'}
-                </span>
-                {!v.administeredAt && (
+            {vaccinations.map((v) =>
+              editingVaccinationId === v.id ? (
+                <li key={v.id} className="flex flex-wrap items-center gap-2 py-1">
+                  <span className="font-medium">{v.vaccineName}</span>
+                  <label className="flex items-center gap-1 text-xs text-gray-500">
+                    Agendada para
+                    <input
+                      type="date"
+                      value={editVaccinationScheduledDate}
+                      onChange={(e) => setEditVaccinationScheduledDate(e.target.value)}
+                      className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+                    />
+                  </label>
+                  {v.administeredAt && (
+                    <label className="flex items-center gap-1 text-xs text-gray-500">
+                      Aplicada em
+                      <input
+                        type="date"
+                        value={editVaccinationAdministeredAt}
+                        onChange={(e) =>
+                          setEditVaccinationAdministeredAt(e.target.value)
+                        }
+                        className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+                      />
+                    </label>
+                  )}
                   <button
-                    onClick={() => handleApplyVaccination(v.id)}
-                    className="text-xs font-medium text-green-700 hover:underline"
+                    type="button"
+                    disabled={savingVaccinationEdit}
+                    onClick={() => handleSaveVaccinationEdit(v.id)}
+                    className="rounded bg-green-700 px-2 py-1 text-xs font-medium text-white hover:bg-green-800 disabled:opacity-50"
                   >
-                    Marcar como aplicada
+                    {savingVaccinationEdit ? 'Salvando...' : 'Salvar'}
                   </button>
-                )}
-              </li>
-            ))}
+                  <button
+                    type="button"
+                    onClick={() => setEditingVaccinationId(null)}
+                    className="rounded border border-gray-300 px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50"
+                  >
+                    Cancelar
+                  </button>
+                </li>
+              ) : (
+                <li key={v.id} className="flex items-center justify-between">
+                  <span>
+                    {v.vaccineName} — {new Date(v.scheduledDate).toLocaleDateString('pt-BR')}
+                    {v.administeredAt ? ' (aplicada)' : ' (pendente)'}
+                  </span>
+                  <span className="flex gap-2">
+                    {!v.administeredAt && (
+                      <button
+                        type="button"
+                        onClick={() => handleApplyVaccination(v.id)}
+                        className="text-xs font-medium text-green-700 hover:underline"
+                      >
+                        Marcar como aplicada
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => startEditVaccination(v)}
+                      className="text-xs font-medium text-green-700 hover:underline"
+                    >
+                      Editar
+                    </button>
+                  </span>
+                </li>
+              ),
+            )}
           </ul>
         )}
       </section>
@@ -331,13 +598,79 @@ export default function AnimalDetailPage() {
           <p className="text-sm text-gray-500">Nenhum evento reprodutivo registrado.</p>
         ) : (
           <ul className="space-y-1 text-sm text-gray-700">
-            {reproductiveEvents.map((e) => (
-              <li key={e.id}>
-                {new Date(e.eventDate).toLocaleDateString('pt-BR')} —{' '}
-                {REPRODUCTIVE_EVENT_OPTIONS.find((opt) => opt.value === e.type)?.label ?? e.type}
-                {e.result ? ` (${e.result === 'PRENHE' ? 'Prenhe' : 'Vazia'})` : ''}
-              </li>
-            ))}
+            {reproductiveEvents.map((e) =>
+              editingReproId === e.id ? (
+                <li key={e.id} className="flex flex-wrap items-center gap-2 py-1">
+                  <input
+                    type="date"
+                    value={editReproDate}
+                    onChange={(ev) => setEditReproDate(ev.target.value)}
+                    className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+                  />
+                  <select
+                    value={editReproType}
+                    onChange={(ev) => setEditReproType(ev.target.value as ReproductiveEventType)}
+                    className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+                  >
+                    {REPRODUCTIVE_EVENT_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                  {editReproType === 'DIAGNOSTICO_PRENHEZ' && (
+                    <select
+                      value={editReproResult}
+                      onChange={(ev) => setEditReproResult(ev.target.value as PregnancyDiagnosisResult | '')}
+                      className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+                    >
+                      <option value="">Resultado...</option>
+                      <option value="PRENHE">Prenhe</option>
+                      <option value="VAZIA">Vazia</option>
+                    </select>
+                  )}
+                  <button
+                    type="button"
+                    disabled={savingReproEdit}
+                    onClick={() => handleSaveReproEdit(e.id)}
+                    className="rounded bg-green-700 px-2 py-1 text-xs font-medium text-white hover:bg-green-800 disabled:opacity-50"
+                  >
+                    {savingReproEdit ? 'Salvando...' : 'Salvar'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingReproId(null)}
+                    className="rounded border border-gray-300 px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50"
+                  >
+                    Cancelar
+                  </button>
+                </li>
+              ) : (
+                <li key={e.id} className="flex items-center justify-between">
+                  <span>
+                    {new Date(e.eventDate).toLocaleDateString('pt-BR')} —{' '}
+                    {REPRODUCTIVE_EVENT_OPTIONS.find((opt) => opt.value === e.type)?.label ?? e.type}
+                    {e.result ? ` (${e.result === 'PRENHE' ? 'Prenhe' : 'Vazia'})` : ''}
+                  </span>
+                  <span className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => startEditReproEvent(e)}
+                      className="text-xs font-medium text-green-700 hover:underline"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteReproEvent(e.id)}
+                      className="text-xs font-medium text-red-600 hover:underline"
+                    >
+                      Excluir
+                    </button>
+                  </span>
+                </li>
+              ),
+            )}
           </ul>
         )}
       </section>
@@ -350,7 +683,8 @@ export default function AnimalDetailPage() {
           <ul className="space-y-1 text-sm text-gray-700">
             {history.map((e) => (
               <li key={e.id}>
-                {new Date(e.occurredAt).toLocaleDateString('pt-BR')} — {e.type}
+                {new Date(e.occurredAt).toLocaleDateString('pt-BR')} —{' '}
+                {ANIMAL_EVENT_TYPE_LABEL[e.type] ?? e.type}
                 {e.description ? `: ${e.description}` : ''}
               </li>
             ))}
@@ -367,5 +701,77 @@ function SummaryCard({ label, value }: { label: string; value: string }) {
       <p className="text-xs uppercase tracking-wide text-gray-500">{label}</p>
       <p className="mt-1 text-lg font-semibold text-gray-900">{value}</p>
     </div>
+  );
+}
+
+function WeightEvolutionChart({ weighings }: { weighings: WeighingRecord[] }) {
+  if (weighings.length < 2) {
+    return (
+      <p className="mb-4 text-sm text-gray-500">
+        É preciso de pelo menos 2 pesagens para o gráfico de evolução.
+      </p>
+    );
+  }
+
+  const points = weighings
+    .slice()
+    .sort((a, b) => new Date(a.weighedAt).getTime() - new Date(b.weighedAt).getTime());
+
+  const width = 600;
+  const height = 160;
+  const padding = 28;
+  const weights = points.map((p) => p.weightKg);
+  const minWeight = Math.min(...weights);
+  const maxWeight = Math.max(...weights);
+  const range = maxWeight - minWeight || 1;
+
+  const coords = points.map((p, i) => {
+    const x = padding + (i / (points.length - 1)) * (width - padding * 2);
+    const y =
+      height - padding - ((p.weightKg - minWeight) / range) * (height - padding * 2);
+    return { x, y, ...p };
+  });
+
+  const path = coords
+    .map((c, i) => `${i === 0 ? 'M' : 'L'} ${c.x.toFixed(1)} ${c.y.toFixed(1)}`)
+    .join(' ');
+
+  return (
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      className="mb-4 w-full"
+      role="img"
+      aria-label="Evolução de peso"
+    >
+      <line
+        x1={padding}
+        y1={height - padding}
+        x2={width - padding}
+        y2={height - padding}
+        stroke="#e5e7eb"
+      />
+      <path d={path} fill="none" stroke="#15803d" strokeWidth={2} />
+      {coords.map((c) => (
+        <circle key={c.id} cx={c.x} cy={c.y} r={3} fill="#15803d" />
+      ))}
+      <text x={padding} y={14} fontSize={11} fill="#6b7280">
+        {maxWeight.toFixed(1)} kg
+      </text>
+      <text x={padding} y={height - padding + 14} fontSize={11} fill="#6b7280">
+        {minWeight.toFixed(1)} kg
+      </text>
+      <text x={coords[0].x} y={height - 6} fontSize={10} fill="#9ca3af">
+        {new Date(coords[0].weighedAt).toLocaleDateString('pt-BR')}
+      </text>
+      <text
+        x={coords[coords.length - 1].x}
+        y={height - 6}
+        fontSize={10}
+        fill="#9ca3af"
+        textAnchor="end"
+      >
+        {new Date(coords[coords.length - 1].weighedAt).toLocaleDateString('pt-BR')}
+      </text>
+    </svg>
   );
 }

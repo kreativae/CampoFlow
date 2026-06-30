@@ -17,7 +17,9 @@ import { MachinesService } from './machines.service';
 import { CreateMachineDto } from './dto/create-machine.dto';
 import { UpdateMachineDto } from './dto/update-machine.dto';
 import { CreateMaintenanceDto } from './dto/create-maintenance.dto';
+import { UpdateMaintenanceDto } from './dto/update-maintenance.dto';
 import { CreateFuelRecordDto } from './dto/create-fuel-record.dto';
+import { UpdateFuelRecordDto } from './dto/update-fuel-record.dto';
 
 @Controller('fazendas/:farmId/maquinas')
 @UseGuards(JwtAuthGuard)
@@ -84,6 +86,38 @@ export class MachinesController {
     return this.machinesService.addMaintenance(farmId, machineId, dto);
   }
 
+  @Patch(':machineId/manutencoes/:maintenanceId')
+  @UseGuards(RolesGuard)
+  @Roles(Role.OWNER, Role.MANAGER, Role.EMPLOYEE)
+  updateMaintenance(
+    @Param('farmId') farmId: string,
+    @Param('machineId') machineId: string,
+    @Param('maintenanceId') maintenanceId: string,
+    @Body() dto: UpdateMaintenanceDto,
+  ) {
+    return this.machinesService.updateMaintenance(
+      farmId,
+      machineId,
+      maintenanceId,
+      dto,
+    );
+  }
+
+  @Delete(':machineId/manutencoes/:maintenanceId')
+  @UseGuards(RolesGuard)
+  @Roles(Role.OWNER, Role.MANAGER, Role.EMPLOYEE)
+  removeMaintenance(
+    @Param('farmId') farmId: string,
+    @Param('machineId') machineId: string,
+    @Param('maintenanceId') maintenanceId: string,
+  ) {
+    return this.machinesService.removeMaintenance(
+      farmId,
+      machineId,
+      maintenanceId,
+    );
+  }
+
   @Post(':machineId/registros-combustivel')
   @UseGuards(RolesGuard)
   @Roles(Role.OWNER, Role.MANAGER, Role.EMPLOYEE)
@@ -93,5 +127,37 @@ export class MachinesController {
     @Body() dto: CreateFuelRecordDto,
   ) {
     return this.machinesService.addFuelRecord(farmId, machineId, dto);
+  }
+
+  @Patch(':machineId/registros-combustivel/:fuelRecordId')
+  @UseGuards(RolesGuard)
+  @Roles(Role.OWNER, Role.MANAGER, Role.EMPLOYEE)
+  updateFuelRecord(
+    @Param('farmId') farmId: string,
+    @Param('machineId') machineId: string,
+    @Param('fuelRecordId') fuelRecordId: string,
+    @Body() dto: UpdateFuelRecordDto,
+  ) {
+    return this.machinesService.updateFuelRecord(
+      farmId,
+      machineId,
+      fuelRecordId,
+      dto,
+    );
+  }
+
+  @Delete(':machineId/registros-combustivel/:fuelRecordId')
+  @UseGuards(RolesGuard)
+  @Roles(Role.OWNER, Role.MANAGER, Role.EMPLOYEE)
+  removeFuelRecord(
+    @Param('farmId') farmId: string,
+    @Param('machineId') machineId: string,
+    @Param('fuelRecordId') fuelRecordId: string,
+  ) {
+    return this.machinesService.removeFuelRecord(
+      farmId,
+      machineId,
+      fuelRecordId,
+    );
   }
 }

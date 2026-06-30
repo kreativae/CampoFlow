@@ -1,0 +1,138 @@
+'use client';
+
+import { Suspense, useState, type FormEvent } from 'react';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { apiFetch, ApiError } from '@/lib/api';
+
+function ResetPasswordContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const token = searchParams.get('token') ?? '';
+
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    setError(null);
+
+    if (newPassword !== confirmPassword) {
+      setError('As senhas não coincidem');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await apiFetch('/auth/redefinir-senha', {
+        method: 'POST',
+        body: { token, newPassword },
+      });
+      setDone(true);
+      setTimeout(() => router.replace('/entrar'), 2000);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao redefinir senha');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <main className="flex flex-1 items-center justify-center px-4">
+      <div className="w-full max-w-sm space-y-4 rounded-lg border border-gray-200 bg-white p-8 shadow-sm">
+        <div>
+          <h1 className="text-2xl font-semibold text-green-800">CampoFlow</h1>
+          <p className="text-sm text-gray-500">Criar nova senha</p>
+        </div>
+
+        {!token ? (
+          <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+            Link inválido. Solicite um novo link em{' '}
+            <Link href="/esqueci-senha" className="font-medium underline">
+              Esqueci minha senha
+            </Link>
+            .
+          </p>
+        ) : done ? (
+          <p className="rounded bg-green-50 px-3 py-2 text-sm text-green-800" role="status">
+            Senha redefinida com sucesso. Redirecionando para o login...
+          </p>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+                {error}
+              </p>
+            )}
+
+            <div className="space-y-1">
+              <label htmlFor="newPassword" className="text-sm font-medium text-gray-700">
+                Nova senha
+              </label>
+              <input
+                id="newPassword"
+                type="password"
+                required
+                minLength={8}
+                pattern="(?=.*[A-Za-z])(?=.*\d).+"
+                title="Pelo menos 8 caracteres, incluindo letras e números"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-green-600 focus:outline-none"
+              />
+              <p className="text-xs text-gray-400">
+                Pelo menos 8 caracteres, incluindo letras e números.
+              </p>
+            </div>
+
+            <div className="space-y-1">
+              <label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700">
+                Confirmar nova senha
+              </label>
+              <input
+                id="confirmPassword"
+                type="password"
+                required
+                minLength={8}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-green-600 focus:outline-none"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className="w-full rounded bg-green-700 px-3 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+            >
+              {submitting ? 'Salvando...' : 'Redefinir senha'}
+            </button>
+          </form>
+        )}
+
+        <p className="text-center text-sm text-gray-500">
+          <Link href="/entrar" className="font-medium text-green-700 hover:underline">
+            Voltar para o login
+          </Link>
+        </p>
+      </div>
+    </main>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex flex-1 items-center justify-center">
+          <p className="text-gray-500">Carregando...</p>
+        </main>
+      }
+    >
+      <ResetPasswordContent />
+    </Suspense>
+  );
+}

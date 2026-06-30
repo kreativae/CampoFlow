@@ -8,6 +8,10 @@ import { SuppliesService } from '../supplies/supplies.service';
 import { AgendaService } from '../agenda/agenda.service';
 import { HealthRecordsService } from '../health-records/health-records.service';
 import { WeatherService } from '../weather/weather.service';
+import { QuotationsService } from '../quotations/quotations.service';
+import { MachinesService } from '../machines/machines.service';
+import { SoilAnalysisService } from '../soil-analysis/soil-analysis.service';
+import { DocumentsService } from '../documents/documents.service';
 
 const KG_PER_ARROBA = 15;
 const FORECAST_WINDOW_DAYS = 30;
@@ -27,6 +31,10 @@ export class BiService {
     private readonly agendaService: AgendaService,
     private readonly healthRecordsService: HealthRecordsService,
     private readonly weatherService: WeatherService,
+    private readonly quotationsService: QuotationsService,
+    private readonly machinesService: MachinesService,
+    private readonly soilAnalysisService: SoilAnalysisService,
+    private readonly documentsService: DocumentsService,
   ) {}
 
   // Real, deterministic financial/herd KPIs — no estimation involved.
@@ -135,19 +143,72 @@ export class BiService {
     };
   }
 
+  // Real data pulled from modules not otherwise covered by kpis()/forecast*(): national
+  // commodity quotations (to value the herd), per-machine maintenance/fuel costs, soil
+  // analyses pending correction, and the farm's document count. All real numbers from
+  // the database — no estimation beyond the herd-value multiplication itself.
+  async additionalData(farmId: string, arrobasProduzidas: number) {
+    const [latestQuotations, machineCosts, soilAnalyses, documents] =
+      await Promise.all([
+        this.quotationsService.latest(),
+        this.machinesService.costsSummary(farmId),
+        this.soilAnalysisService.findAll(farmId),
+        this.documentsService.findAll(farmId),
+      ]);
+
+    const boiGordo = latestQuotations.find(
+      (q) => q.commodity === 'BOI_GORDO' && q.state == null,
+    );
+    const valorEstimadoRebanho = boiGordo
+      ? Number((arrobasProduzidas * boiGordo.price).toFixed(2))
+      : null;
+
+    const custosMaquinas = machineCosts.reduce(
+      (sum, m) => sum + m.totalCost,
+      0,
+    );
+
+    const areasComCalagemPendente = soilAnalyses.filter(
+      (a) => this.soilAnalysisService.recommendation(a).limingNeeded,
+    ).length;
+
+    return {
+      cotacaoBoiGordo: boiGordo
+        ? {
+            price: boiGordo.price,
+            unit: boiGordo.unit,
+            recordedAt: boiGordo.recordedAt,
+          }
+        : null,
+      valorEstimadoRebanho,
+      custosMaquinas: Number(custosMaquinas.toFixed(2)),
+      maquinasCount: machineCosts.length,
+      analisesSoloCount: soilAnalyses.length,
+      areasComCalagemPendente,
+      documentosCount: documents.length,
+    };
+  }
+
   // Rule-based management suggestions composed from alerts already surfaced by other
-  // modules (pasture occupancy, supplies, agenda, vaccination, weather). This is a
+  // modules (pasture occupancy, supplies, agenda, vaccination, weather, soil). This is a
   // transparent rules engine, not generative AI — there is no LLM API key configured in
   // this environment to power real natural-language suggestions.
   async managementSuggestions(farmId: string): Promise<string[]> {
-    const [occupancy, supplyAlerts, agendaAlerts, healthAlerts, weatherAlerts] =
-      await Promise.all([
-        this.pasturesService.occupancyStats(farmId),
-        this.suppliesService.alerts(farmId),
-        this.agendaService.alerts(farmId),
-        this.healthRecordsService.pendingAlerts(farmId),
-        this.weatherService.activeAlerts(farmId),
-      ]);
+    const [
+      occupancy,
+      supplyAlerts,
+      agendaAlerts,
+      healthAlerts,
+      weatherAlerts,
+      soilAnalyses,
+    ] = await Promise.all([
+      this.pasturesService.occupancyStats(farmId),
+      this.suppliesService.alerts(farmId),
+      this.agendaService.alerts(farmId),
+      this.healthRecordsService.pendingAlerts(farmId),
+      this.weatherService.activeAlerts(farmId),
+      this.soilAnalysisService.findAll(farmId),
+    ]);
 
     const suggestions: string[] = [];
 
@@ -199,6 +260,15 @@ export class BiService {
       );
     }
 
+    for (const analysis of soilAnalyses) {
+      const rec = this.soilAnalysisService.recommendation(analysis);
+      if (rec.limingNeeded) {
+        suggestions.push(
+          `Análise de solo${analysis.areaLabel ? ` (${analysis.areaLabel})` : ''} indica necessidade de calagem (~${rec.limestoneTonPerHa} t/ha).`,
+        );
+      }
+    }
+
     if (suggestions.length === 0) {
       suggestions.push('Nenhuma pendência crítica identificada no momento.');
     }
@@ -207,14 +277,25 @@ export class BiService {
   }
 
   async overview(farmId: string) {
-    const [kpis, forecastWeightGain, forecastSales, managementSuggestions] =
-      await Promise.all([
-        this.kpis(farmId),
-        this.forecastWeightGain(farmId),
-        this.forecastSales(farmId),
-        this.managementSuggestions(farmId),
-      ]);
+    const kpis = await this.kpis(farmId);
+    const [
+      forecastWeightGain,
+      forecastSales,
+      managementSuggestions,
+      additionalData,
+    ] = await Promise.all([
+      this.forecastWeightGain(farmId),
+      this.forecastSales(farmId),
+      this.managementSuggestions(farmId),
+      this.additionalData(farmId, kpis.arrobasProduzidas),
+    ]);
 
-    return { kpis, forecastWeightGain, forecastSales, managementSuggestions };
+    return {
+      kpis,
+      forecastWeightGain,
+      forecastSales,
+      managementSuggestions,
+      additionalData,
+    };
   }
 }

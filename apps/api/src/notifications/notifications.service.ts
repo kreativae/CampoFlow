@@ -1,4 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import {
   NotificationChannel,
   NotificationSource,
@@ -6,6 +8,8 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../common/email/email.service';
+import { EMAIL_DIGEST_QUEUE } from '../common/queue/queue.constants';
+import type { EmailDigestJobData } from './email-digest.processor';
 import { HealthRecordsService } from '../health-records/health-records.service';
 import { AgendaService } from '../agenda/agenda.service';
 import { SuppliesService } from '../supplies/supplies.service';
@@ -22,6 +26,8 @@ export class NotificationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
+    @InjectQueue(EMAIL_DIGEST_QUEUE)
+    private readonly emailDigestQueue: Queue<EmailDigestJobData>,
     private readonly healthRecordsService: HealthRecordsService,
     private readonly agendaService: AgendaService,
     private readonly suppliesService: SuppliesService,
@@ -155,6 +161,12 @@ export class NotificationsService {
     });
   }
 
+  // Without RESEND_API_KEY there's no network call to make, so the SIMULATED row is
+  // created synchronously. With it configured, the actual send is enqueued
+  // (EmailDigestProcessor) instead of awaited here — a slow/down Resend would
+  // otherwise block whatever request triggered generateFromAlerts() (e.g. a
+  // dashboard load). The row starts PENDING and the processor flips it to
+  // SENT/FAILED once the job actually runs.
   private async dispatchEmailDigest(
     farmId: string,
     userId: string,
@@ -166,18 +178,9 @@ export class NotificationsService {
       .map((c) => `<li><strong>${c.title}</strong>: ${c.message}</li>`)
       .join('');
     const html = `<p>Olá, ${user.name}.</p><p>Você tem ${candidates.length} novo(s) alerta(s) no CampoFlow:</p><ul>${itemsHtml}</ul>`;
-
     const configured = this.emailService.isConfigured();
-    const sent = configured
-      ? await this.emailService.send(user.email, subject, html)
-      : false;
-    const status = !configured
-      ? NotificationStatus.SIMULATED
-      : sent
-        ? NotificationStatus.SENT
-        : NotificationStatus.FAILED;
 
-    await this.prisma.notification.create({
+    const notification = await this.prisma.notification.create({
       data: {
         farmId,
         userId,
@@ -185,9 +188,20 @@ export class NotificationsService {
         message: `${candidates.length} alerta(s) resumidos em e-mail para ${user.email}`,
         source: NotificationSource.OUTRO,
         channel: NotificationChannel.EMAIL,
-        status,
+        status: configured
+          ? NotificationStatus.PENDING
+          : NotificationStatus.SIMULATED,
       },
     });
+
+    if (configured) {
+      await this.emailDigestQueue.add('send', {
+        notificationId: notification.id,
+        to: user.email,
+        subject,
+        html,
+      });
+    }
   }
 
   findAll(farmId: string, userId: string, unreadOnly?: boolean) {

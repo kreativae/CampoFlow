@@ -1,0 +1,325 @@
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { MercadoPagoConfig, PreApproval } from 'mercadopago';
+import { PrismaService } from '../prisma/prisma.service';
+import { EncryptionService } from '../common/crypto/encryption.service';
+import { MercadoPagoLogEvent } from '@prisma/client';
+
+export interface CreatePreapprovalInput {
+  reason: string;
+  payerEmail: string;
+  transactionAmount: number;
+  externalReference: string;
+  backUrl: string;
+}
+
+export interface PaymentHistoryEntry {
+  id: number;
+  status: string;
+  transactionAmount: number;
+  currencyId: string;
+  dateApproved: string | null;
+  dateCreated: string;
+}
+
+export interface MercadoPagoConfigStatus {
+  configured: boolean;
+  source: 'banco' | 'variavel_de_ambiente' | 'nenhum';
+  accessTokenMasked: string | null;
+  publicKey: string | null;
+  webhookSecretSet: boolean;
+}
+
+export interface UpdateMercadoPagoConfigInput {
+  accessToken?: string;
+  publicKey?: string;
+  webhookSecret?: string;
+}
+
+const SETTING_ID = 'mercadopago';
+
+function maskToken(token: string): string {
+  if (token.length <= 8) return '••••';
+  return `${token.slice(0, 4)}••••${token.slice(-4)}`;
+}
+
+// Thin wrapper around the Mercado Pago SDK, mirroring EmailService/StorageService:
+// without a configured access token, isConfigured() returns false and BillingService
+// is expected to fall back to a "fale com vendas" response instead of attempting
+// checkout. Credentials can come from the admin UI (PlatformSetting row, access
+// token encrypted at rest) or from MERCADOPAGO_ACCESS_TOKEN — the DB value takes
+// precedence so staff can rotate tokens without redeploying.
+@Injectable()
+export class MercadoPagoService implements OnModuleInit {
+  private readonly logger = new Logger(MercadoPagoService.name);
+  private preApproval: PreApproval | null = null;
+  private accessToken: string | undefined;
+  private publicKey: string | null = null;
+  private webhookSecretSet = false;
+  private source: MercadoPagoConfigStatus['source'] = 'nenhum';
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly encryptionService: EncryptionService,
+  ) {}
+
+  async onModuleInit() {
+    await this.loadConfig();
+  }
+
+  private async loadConfig() {
+    const setting = await this.prisma.platformSetting.findUnique({
+      where: { id: SETTING_ID },
+    });
+
+    if (setting?.accessToken) {
+      this.accessToken = this.encryptionService.decrypt(setting.accessToken);
+      this.publicKey = setting.publicKey ?? null;
+      this.webhookSecretSet = Boolean(setting.webhookSecret);
+      this.source = 'banco';
+    } else {
+      this.accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
+      this.publicKey = process.env.MERCADOPAGO_PUBLIC_KEY ?? null;
+      this.webhookSecretSet = Boolean(process.env.MERCADOPAGO_WEBHOOK_SECRET);
+      this.source = this.accessToken ? 'variavel_de_ambiente' : 'nenhum';
+    }
+
+    this.preApproval = this.accessToken
+      ? new PreApproval(
+          new MercadoPagoConfig({ accessToken: this.accessToken }),
+        )
+      : null;
+  }
+
+  isConfigured(): boolean {
+    return this.preApproval !== null;
+  }
+
+  getConfigStatus(): MercadoPagoConfigStatus {
+    return {
+      configured: this.isConfigured(),
+      source: this.source,
+      accessTokenMasked: this.accessToken ? maskToken(this.accessToken) : null,
+      publicKey: this.publicKey,
+      webhookSecretSet: this.webhookSecretSet,
+    };
+  }
+
+  // Saves whichever fields were provided (omitting a field leaves it unchanged),
+  // re-derives the live PreApproval client from the new token, and logs the change
+  // for the audit trail shown in /admin/mercadopago.
+  async updateConfig(
+    dto: UpdateMercadoPagoConfigInput,
+  ): Promise<MercadoPagoConfigStatus> {
+    await this.prisma.platformSetting.upsert({
+      where: { id: SETTING_ID },
+      create: {
+        id: SETTING_ID,
+        accessToken: dto.accessToken
+          ? this.encryptionService.encrypt(dto.accessToken)
+          : null,
+        publicKey: dto.publicKey ?? null,
+        webhookSecret: dto.webhookSecret
+          ? this.encryptionService.encrypt(dto.webhookSecret)
+          : null,
+      },
+      update: {
+        ...(dto.accessToken !== undefined
+          ? { accessToken: this.encryptionService.encrypt(dto.accessToken) }
+          : {}),
+        ...(dto.publicKey !== undefined ? { publicKey: dto.publicKey } : {}),
+        ...(dto.webhookSecret !== undefined
+          ? { webhookSecret: this.encryptionService.encrypt(dto.webhookSecret) }
+          : {}),
+      },
+    });
+
+    await this.loadConfig();
+    await this.log(
+      MercadoPagoLogEvent.CONFIG_UPDATED,
+      true,
+      'Configuração do Mercado Pago atualizada pela equipe da plataforma',
+    );
+
+    return this.getConfigStatus();
+  }
+
+  private async log(
+    event: MercadoPagoLogEvent,
+    success: boolean,
+    message: string,
+    preapprovalId?: string,
+  ) {
+    try {
+      await this.prisma.mercadoPagoLog.create({
+        data: { event, success, message, preapprovalId },
+      });
+    } catch (err) {
+      this.logger.warn(
+        `Falha ao registrar log do Mercado Pago: ${(err as Error).message}`,
+      );
+    }
+  }
+
+  getLogs(limit = 50) {
+    return this.prisma.mercadoPagoLog.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    });
+  }
+
+  // Creates a recurring subscription (PreApproval) and returns the checkout URL the
+  // payer must be redirected to in order to authorize the monthly charge.
+  async createSubscription(input: CreatePreapprovalInput): Promise<{
+    id: string;
+    initPoint: string;
+  }> {
+    if (!this.preApproval) {
+      await this.log(
+        MercadoPagoLogEvent.CREATE_SUBSCRIPTION,
+        false,
+        'Tentativa de criar assinatura sem Mercado Pago configurado',
+      );
+      throw new Error(
+        'Mercado Pago não está configurado (defina o token em /admin/mercadopago)',
+      );
+    }
+
+    try {
+      const result = await this.preApproval.create({
+        body: {
+          reason: input.reason,
+          payer_email: input.payerEmail,
+          external_reference: input.externalReference,
+          back_url: input.backUrl,
+          auto_recurring: {
+            frequency: 1,
+            frequency_type: 'months',
+            transaction_amount: input.transactionAmount,
+            currency_id: 'BRL',
+          },
+        },
+      });
+
+      if (!result.id || !result.init_point) {
+        throw new Error(
+          'Resposta inesperada do Mercado Pago ao criar assinatura',
+        );
+      }
+
+      await this.log(
+        MercadoPagoLogEvent.CREATE_SUBSCRIPTION,
+        true,
+        `Assinatura criada para ${input.payerEmail}`,
+        result.id,
+      );
+      return { id: result.id, initPoint: result.init_point };
+    } catch (err) {
+      await this.log(
+        MercadoPagoLogEvent.CREATE_SUBSCRIPTION,
+        false,
+        `Falha ao criar assinatura para ${input.payerEmail}: ${(err as Error).message}`,
+      );
+      throw err;
+    }
+  }
+
+  async cancelSubscription(preapprovalId: string): Promise<void> {
+    if (!this.preApproval) return;
+    try {
+      await this.preApproval.update({
+        id: preapprovalId,
+        body: { status: 'cancelled' },
+      });
+      await this.log(
+        MercadoPagoLogEvent.CANCEL_SUBSCRIPTION,
+        true,
+        'Assinatura cancelada',
+        preapprovalId,
+      );
+    } catch (err) {
+      this.logger.warn(
+        `Falha ao cancelar assinatura ${preapprovalId} no Mercado Pago: ${(err as Error).message}`,
+      );
+      await this.log(
+        MercadoPagoLogEvent.CANCEL_SUBSCRIPTION,
+        false,
+        `Falha ao cancelar: ${(err as Error).message}`,
+        preapprovalId,
+      );
+    }
+  }
+
+  async getSubscription(preapprovalId: string) {
+    if (!this.preApproval) return null;
+    return this.preApproval.get({ id: preapprovalId });
+  }
+
+  // The SDK has no dedicated client for this resource, so we hit the REST API
+  // directly: GET /authorized_payments/search?preapproval_id=... lists every
+  // individual charge generated by a recurring PreApproval subscription.
+  async getPaymentHistory(
+    preapprovalId: string,
+  ): Promise<PaymentHistoryEntry[]> {
+    if (!this.accessToken) return [];
+    try {
+      const res = await fetch(
+        `https://api.mercadopago.com/authorized_payments/search?preapproval_id=${encodeURIComponent(preapprovalId)}`,
+        { headers: { Authorization: `Bearer ${this.accessToken}` } },
+      );
+      if (!res.ok) {
+        this.logger.warn(
+          `Mercado Pago respondeu ${res.status} ao buscar histórico de pagamentos de ${preapprovalId}`,
+        );
+        await this.log(
+          MercadoPagoLogEvent.PAYMENT_HISTORY_FETCH,
+          false,
+          `Mercado Pago respondeu ${res.status}`,
+          preapprovalId,
+        );
+        return [];
+      }
+      const data = (await res.json()) as {
+        results?: {
+          id: number;
+          status: string;
+          transaction_amount: number;
+          currency_id: string;
+          date_approved: string | null;
+          date_created: string;
+        }[];
+      };
+      return (data.results ?? []).map((p) => ({
+        id: p.id,
+        status: p.status,
+        transactionAmount: p.transaction_amount,
+        currencyId: p.currency_id,
+        dateApproved: p.date_approved,
+        dateCreated: p.date_created,
+      }));
+    } catch (err) {
+      this.logger.warn(
+        `Falha ao buscar histórico de pagamentos de ${preapprovalId}: ${(err as Error).message}`,
+      );
+      await this.log(
+        MercadoPagoLogEvent.PAYMENT_HISTORY_FETCH,
+        false,
+        (err as Error).message,
+        preapprovalId,
+      );
+      return [];
+    }
+  }
+
+  async recordWebhook(
+    preapprovalId: string,
+    success: boolean,
+    message: string,
+  ) {
+    await this.log(
+      MercadoPagoLogEvent.WEBHOOK,
+      success,
+      message,
+      preapprovalId,
+    );
+  }
+}

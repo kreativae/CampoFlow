@@ -37,6 +37,10 @@ export class QuotationsController {
 
   @Get()
   history(@Query() query: HistoryQueryDto) {
-    return this.quotationsService.history(query.commodity, query.limit);
+    return this.quotationsService.history(
+      query.commodity,
+      query.state,
+      query.limit,
+    );
   }
 }

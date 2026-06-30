@@ -17,6 +17,8 @@ import { PasturesService } from './pastures.service';
 import { CreatePastureDto } from './dto/create-pasture.dto';
 import { UpdatePastureDto } from './dto/update-pasture.dto';
 import { CreateOccupationDto } from './dto/create-occupation.dto';
+import { RegisterExitDto } from './dto/register-exit.dto';
+import { UpdateOccupationDto } from './dto/update-occupation.dto';
 
 @Controller('fazendas/:farmId/pastagens')
 @UseGuards(JwtAuthGuard)
@@ -84,7 +86,30 @@ export class PasturesController {
     @Param('farmId') farmId: string,
     @Param('pastureId') pastureId: string,
     @Param('occupationId') occupationId: string,
+    @Body() dto: RegisterExitDto,
   ) {
-    return this.pasturesService.exitOccupation(farmId, pastureId, occupationId);
+    return this.pasturesService.exitOccupation(
+      farmId,
+      pastureId,
+      occupationId,
+      dto,
+    );
+  }
+
+  @Patch(':pastureId/ocupacoes/:occupationId')
+  @UseGuards(RolesGuard)
+  @Roles(Role.OWNER, Role.MANAGER, Role.EMPLOYEE)
+  updateOccupation(
+    @Param('farmId') farmId: string,
+    @Param('pastureId') pastureId: string,
+    @Param('occupationId') occupationId: string,
+    @Body() dto: UpdateOccupationDto,
+  ) {
+    return this.pasturesService.updateOccupation(
+      farmId,
+      pastureId,
+      occupationId,
+      dto,
+    );
   }
 }

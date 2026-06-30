@@ -5,6 +5,76 @@ export interface User {
   email: string;
   name: string;
   mfaEnabled: boolean;
+  isAccountAdmin?: boolean;
+  isPlatformAdmin?: boolean;
+}
+
+export type PlanTier = 'TRIAL' | 'BASICO' | 'PROFISSIONAL' | 'ENTERPRISE';
+export type SubscriptionStatus = 'TRIALING' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED' | 'SUSPENDED';
+
+export const SUBSCRIPTION_STATUS_LABEL: Record<SubscriptionStatus, string> = {
+  TRIALING: 'Em teste',
+  ACTIVE: 'Ativa',
+  PAST_DUE: 'Pagamento atrasado',
+  CANCELED: 'Cancelada',
+  SUSPENDED: 'Suspensa',
+};
+
+// Mercado Pago's own payment status field comes back in English from their API —
+// translate the common values for display; fall back to the raw value for any
+// status MP introduces later that we haven't mapped yet.
+const PAYMENT_STATUS_LABEL: Record<string, string> = {
+  approved: 'Aprovado',
+  authorized: 'Autorizado',
+  pending: 'Pendente',
+  in_process: 'Em processamento',
+  rejected: 'Rejeitado',
+  cancelled: 'Cancelado',
+  refunded: 'Reembolsado',
+  charged_back: 'Contestado',
+};
+
+export function paymentStatusLabel(status: string): string {
+  return PAYMENT_STATUS_LABEL[status] ?? status;
+}
+
+export interface AccountSummary {
+  id: string;
+  name: string;
+  billingEmail: string;
+  owner: { email: string; name: string } | null;
+  farmsUsed: number;
+  planTier: PlanTier | null;
+  status: SubscriptionStatus | null;
+  trialEndsAt: string | null;
+  currentPeriodEnd: string | null;
+  createdAt: string;
+}
+
+export interface PaymentHistoryEntry {
+  id: number;
+  status: string;
+  transactionAmount: number;
+  currencyId: string;
+  dateApproved: string | null;
+  dateCreated: string;
+}
+
+export interface AccountDetail {
+  id: string;
+  name: string;
+  billingEmail: string;
+  document: string | null;
+  farms: { id: string; name: string; createdAt: string }[];
+  users: { id: string; email: string; name: string; isAccountAdmin: boolean }[];
+  subscription: {
+    planTier: PlanTier;
+    status: SubscriptionStatus;
+    trialEndsAt: string | null;
+    currentPeriodEnd: string | null;
+  } | null;
+  plan: { label: string; maxFarms: number | null; priceBRL: number | null } | null;
+  paymentHistory: PaymentHistoryEntry[];
 }
 
 export interface AuthResponse {
@@ -19,6 +89,55 @@ export interface MfaSetupResponse {
   qrCodeDataUrl: string;
 }
 
+export type MercadoPagoConfigSource = 'banco' | 'variavel_de_ambiente' | 'nenhum';
+
+export interface MercadoPagoConfigStatus {
+  configured: boolean;
+  source: MercadoPagoConfigSource;
+  accessTokenMasked: string | null;
+  publicKey: string | null;
+  webhookSecretSet: boolean;
+}
+
+export type MercadoPagoLogEvent =
+  | 'CREATE_SUBSCRIPTION'
+  | 'CANCEL_SUBSCRIPTION'
+  | 'WEBHOOK'
+  | 'PAYMENT_HISTORY_FETCH'
+  | 'CONFIG_UPDATED';
+
+export interface MercadoPagoLog {
+  id: string;
+  event: MercadoPagoLogEvent;
+  preapprovalId: string | null;
+  success: boolean;
+  message: string;
+  createdAt: string;
+}
+
+export type TicketStatus = 'ABERTO' | 'EM_ANDAMENTO' | 'RESOLVIDO' | 'FECHADO';
+export type TicketPriority = 'BAIXA' | 'MEDIA' | 'ALTA';
+
+export interface TicketMessage {
+  id: string;
+  message: string;
+  fromStaff: boolean;
+  createdAt: string;
+  author: { id: string; name: string; email: string };
+}
+
+export interface Ticket {
+  id: string;
+  subject: string;
+  status: TicketStatus;
+  priority: TicketPriority;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: { id: string; name: string; email: string };
+  account: { id: string; name: string; billingEmail: string };
+  messages: TicketMessage[];
+}
+
 export type Commodity =
   | 'BOI_GORDO'
   | 'VACA_GORDA'
@@ -31,11 +150,45 @@ export type Commodity =
   | 'MILHO'
   | 'SOJA'
   | 'SORGO'
-  | 'FARELO_SOJA';
+  | 'FARELO_SOJA'
+  | 'MERCADO_FUTURO'
+  | 'BOI_MUNDO'
+  | 'ATACADO'
+  | 'EQUIVALENTES';
+
+export type BrazilianState =
+  | 'AC'
+  | 'AL'
+  | 'AP'
+  | 'AM'
+  | 'BA'
+  | 'CE'
+  | 'DF'
+  | 'ES'
+  | 'GO'
+  | 'MA'
+  | 'MT'
+  | 'MS'
+  | 'MG'
+  | 'PA'
+  | 'PB'
+  | 'PR'
+  | 'PE'
+  | 'PI'
+  | 'RJ'
+  | 'RN'
+  | 'RS'
+  | 'RO'
+  | 'RR'
+  | 'SC'
+  | 'SP'
+  | 'SE'
+  | 'TO';
 
 export interface Quotation {
   id: string;
   commodity: Commodity;
+  state: BrazilianState | null;
   price: number;
   unit: string;
   source: string | null;
@@ -44,6 +197,7 @@ export interface Quotation {
 
 export interface LatestQuotation {
   commodity: Commodity;
+  state: BrazilianState | null;
   price: number;
   unit: string;
   source: string | null;
@@ -68,6 +222,14 @@ export interface Member {
   email: string;
   name: string;
   role: Role;
+}
+
+export interface FarmInvite {
+  id: string;
+  email: string;
+  role: Role;
+  expiresAt: string;
+  createdAt: string;
 }
 
 export type AnimalSex = 'MALE' | 'FEMALE';
@@ -104,6 +266,18 @@ export interface AnimalEvent {
   occurredAt: string;
   description: string | null;
 }
+
+// AnimalEvent.type comes from the API as the raw Prisma enum value (English) —
+// translate for display in the animal's "Histórico" timeline.
+export const ANIMAL_EVENT_TYPE_LABEL: Record<string, string> = {
+  TRANSFER: 'Transferência',
+  WEIGHING: 'Pesagem',
+  VACCINATION: 'Vacinação',
+  TREATMENT: 'Tratamento',
+  REPRODUCTIVE: 'Reprodução',
+  SALE: 'Venda',
+  DEATH: 'Óbito',
+};
 
 export interface WeighingRecord {
   id: string;
@@ -261,6 +435,10 @@ export interface DashboardFullOverview {
     featuresCount: number;
     soilAnalysesCount: number;
   };
+  crops: {
+    total: number;
+    activeCount: number;
+  };
   documents: { total: number };
   notifications: { unreadCount: number };
   quotations: { commodity: string; price: number; unit: string }[];
@@ -303,6 +481,7 @@ export interface Supply {
   id: string;
   name: string;
   category: SupplyCategory;
+  customCategory: string | null;
   unit: string;
   currentQuantity: number;
   minimumQuantity: number;
@@ -461,6 +640,15 @@ export interface BiOverview {
     projectedNextMonthReceita: number;
   };
   managementSuggestions: string[];
+  additionalData: {
+    cotacaoBoiGordo: { price: number; unit: string; recordedAt: string } | null;
+    valorEstimadoRebanho: number | null;
+    custosMaquinas: number;
+    maquinasCount: number;
+    analisesSoloCount: number;
+    areasComCalagemPendente: number;
+    documentosCount: number;
+  };
 }
 
 export type NotificationChannel = 'IN_APP' | 'EMAIL' | 'SMS' | 'PUSH';
@@ -504,4 +692,22 @@ export interface SoilAnalysisRecommendation {
   limestoneTonPerHa: number | null;
   targetBaseSaturationPercent: number;
   notes: string[];
+}
+
+export type CropCycleStatus = 'PLANEJADA' | 'PLANTADA' | 'COLHIDA';
+
+export interface CropCycle {
+  id: string;
+  farmId: string;
+  mapFeatureId: string | null;
+  cropName: string;
+  variety: string | null;
+  areaHectares: number | null;
+  plantedAt: string;
+  expectedHarvestAt: string | null;
+  harvestedAt: string | null;
+  yieldKg: number | null;
+  notes: string | null;
+  status: CropCycleStatus;
+  createdAt: string;
 }

@@ -9,12 +9,15 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { Throttle } from '@nestjs/throttler';
 import type { Response } from 'express';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { VerifyMfaDto } from './dto/verify-mfa.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { GoogleAuthEnabledGuard } from './guards/google-auth-enabled.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
@@ -25,12 +28,20 @@ import type { GoogleProfile } from './strategies/google.strategy';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  // Tighter-than-global limits on the routes most attractive to brute-force/abuse
+  // (credential stuffing on login, spam registrations, password-reset flooding).
+  // The global ThrottlerModule default (100 req/min) still applies everywhere else.
   @Post('register')
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
   }
 
+  // Limit set above LOGIN_LOCKOUT_THRESHOLD so the account-lockout check (which is
+  // per-account, not per-IP) is what kicks in first for a slow/targeted attack —
+  // this throttle exists to cap raw request volume, not replace the lockout.
   @Post('login')
+  @Throttle({ default: { limit: 8, ttl: 60_000 } })
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
   }
@@ -38,6 +49,18 @@ export class AuthController {
   @Post('refresh')
   refresh(@Body() dto: RefreshDto) {
     return this.authService.refresh(dto.refreshToken);
+  }
+
+  @Post('esqueci-senha')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto);
+  }
+
+  @Post('redefinir-senha')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto);
   }
 
   @Post('logout')
