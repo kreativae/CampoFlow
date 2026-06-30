@@ -711,3 +711,34 @@ export interface CropCycle {
   status: CropCycleStatus;
   createdAt: string;
 }
+
+export type ContactType = 'PESSOA_FISICA' | 'PESSOA_JURIDICA';
+
+export type ContactCategory =
+  | 'FORNECEDOR'
+  | 'CLIENTE'
+  | 'VETERINARIO'
+  | 'TRANSPORTADOR'
+  | 'COMPRADOR'
+  | 'PRESTADOR_SERVICO'
+  | 'OUTRO';
+
+export interface Contact {
+  id: string;
+  farmId: string;
+  type: ContactType;
+  category: ContactCategory;
+  name: string;
+  tradeName: string | null;
+  document: string | null;
+  email: string | null;
+  phone: string | null;
+  whatsapp: string | null;
+  addressStreet: string | null;
+  addressCity: string | null;
+  addressState: string | null;
+  addressZip: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}

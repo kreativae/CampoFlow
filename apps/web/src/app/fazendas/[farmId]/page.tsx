@@ -129,6 +129,9 @@ export default function FarmDashboardPage() {
         <Link href={`/fazendas/${farmId}/membros`} className="font-medium text-green-700 hover:underline">
           Membros
         </Link>
+        <Link href={`/fazendas/${farmId}/contatos`} className="font-medium text-green-700 hover:underline">
+          Contatos
+        </Link>
       </nav>
 
       {error && (

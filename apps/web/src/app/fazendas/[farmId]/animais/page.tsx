@@ -36,7 +36,12 @@ const REPRODUCTIVE_EVENT_OPTIONS: { value: ReproductiveEventType; label: string 
   { value: 'ABORTO', label: 'Aborto' },
 ];
 
-type VaccinationStatusFilter = '' | 'APLICADA' | 'AGENDADA';
+type VaccinationStatus = 'APLICADA' | 'AGENDADA';
+
+const VACCINATION_STATUS_OPTIONS: { value: VaccinationStatus; label: string }[] = [
+  { value: 'APLICADA', label: 'Aplicadas' },
+  { value: 'AGENDADA', label: 'Agendadas' },
+];
 
 interface VaccinationRecordSummary {
   animalId: string;
@@ -86,13 +91,22 @@ export default function AnimalsPage() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-  const [filterCategory, setFilterCategory] = useState<AnimalCategory | ''>('');
-  const [filterSex, setFilterSex] = useState<AnimalSex | ''>('');
-  const [filterPastureId, setFilterPastureId] = useState('');
-  const [filterVaccination, setFilterVaccination] = useState<VaccinationStatusFilter>('');
-  const [filterReproductionType, setFilterReproductionType] = useState<
-    ReproductiveEventType | ''
-  >('');
+  const [filterCategories, setFilterCategories] = useState<Set<AnimalCategory>>(new Set());
+  const [filterSexes, setFilterSexes] = useState<Set<AnimalSex>>(new Set());
+  const [filterPastureIds, setFilterPastureIds] = useState<Set<string>>(new Set());
+  const [filterVaccinationStatuses, setFilterVaccinationStatuses] = useState<
+    Set<VaccinationStatus>
+  >(new Set());
+  const [filterReproductionTypes, setFilterReproductionTypes] = useState<
+    Set<ReproductiveEventType>
+  >(new Set());
+
+  function toggleInSet<T>(set: Set<T>, value: T, setter: (next: Set<T>) => void) {
+    const next = new Set(set);
+    if (next.has(value)) next.delete(value);
+    else next.add(value);
+    setter(next);
+  }
 
   const loadData = useCallback(async () => {
     setFetching(true);
@@ -239,20 +253,26 @@ export default function AnimalsPage() {
     ) {
       return false;
     }
-    if (filterCategory && a.category !== filterCategory) return false;
-    if (filterSex && a.sex !== filterSex) return false;
-    if (filterPastureId && a.pastureId !== filterPastureId) return false;
-    if (filterVaccination) {
-      const animalVaccinations = vaccinations.filter((v) => v.animalId === a.id);
-      if (filterVaccination === 'APLICADA') {
-        if (!animalVaccinations.some((v) => v.administeredAt !== null)) return false;
-      } else if (filterVaccination === 'AGENDADA') {
-        if (!animalVaccinations.some((v) => v.administeredAt === null)) return false;
-      }
+    if (filterCategories.size > 0 && !filterCategories.has(a.category)) return false;
+    if (filterSexes.size > 0 && !filterSexes.has(a.sex)) return false;
+    if (
+      filterPastureIds.size > 0 &&
+      !(a.pastureId && filterPastureIds.has(a.pastureId))
+    ) {
+      return false;
     }
-    if (filterReproductionType) {
+    if (filterVaccinationStatuses.size > 0) {
+      const animalVaccinations = vaccinations.filter((v) => v.animalId === a.id);
+      const matches =
+        (filterVaccinationStatuses.has('APLICADA') &&
+          animalVaccinations.some((v) => v.administeredAt !== null)) ||
+        (filterVaccinationStatuses.has('AGENDADA') &&
+          animalVaccinations.some((v) => v.administeredAt === null));
+      if (!matches) return false;
+    }
+    if (filterReproductionTypes.size > 0) {
       const hasType = reproductiveEvents.some(
-        (e) => e.animalId === a.id && e.type === filterReproductionType,
+        (e) => e.animalId === a.id && filterReproductionTypes.has(e.type),
       );
       if (!hasType) return false;
     }
@@ -260,19 +280,26 @@ export default function AnimalsPage() {
   });
 
   const hasActiveFilters = Boolean(
-    filterCategory ||
-      filterSex ||
-      filterPastureId ||
-      filterVaccination ||
-      filterReproductionType,
+    filterCategories.size ||
+      filterSexes.size ||
+      filterPastureIds.size ||
+      filterVaccinationStatuses.size ||
+      filterReproductionTypes.size,
   );
 
+  const activeFilterCount =
+    filterCategories.size +
+    filterSexes.size +
+    filterPastureIds.size +
+    filterVaccinationStatuses.size +
+    filterReproductionTypes.size;
+
   function clearFilters() {
-    setFilterCategory('');
-    setFilterSex('');
-    setFilterPastureId('');
-    setFilterVaccination('');
-    setFilterReproductionType('');
+    setFilterCategories(new Set());
+    setFilterSexes(new Set());
+    setFilterPastureIds(new Set());
+    setFilterVaccinationStatuses(new Set());
+    setFilterReproductionTypes(new Set());
   }
 
   function toggleSelectAll(checked: boolean) {
@@ -431,108 +458,124 @@ export default function AnimalsPage() {
                     : 'border-gray-300 text-gray-600 hover:bg-gray-100'
                 }`}
               >
-                Filtros
-                {hasActiveFilters
-                  ? ` (${[
-                      filterCategory,
-                      filterSex,
-                      filterPastureId,
-                      filterVaccination,
-                      filterReproductionType,
-                    ].filter(Boolean).length})`
-                  : ''}
+                Filtros{hasActiveFilters ? ` (${activeFilterCount})` : ''}
               </button>
             </div>
           </div>
 
           {showFilters && (
-            <div className="mb-3 grid grid-cols-2 gap-3 rounded border border-gray-200 bg-white p-3 sm:grid-cols-4">
-              <div>
-                <label className="text-xs font-medium text-gray-600">Categoria</label>
-                <select
-                  value={filterCategory}
-                  onChange={(e) => setFilterCategory(e.target.value as AnimalCategory | '')}
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
-                >
-                  <option value="">Todas</option>
-                  {CATEGORY_OPTIONS.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt}
-                    </option>
-                  ))}
-                </select>
+            <div className="mb-3 space-y-4 rounded border border-gray-200 bg-white p-3">
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                <div>
+                  <p className="mb-1 text-xs font-medium text-gray-600">Categoria</p>
+                  <div className="flex flex-col gap-1">
+                    {CATEGORY_OPTIONS.map((opt) => (
+                      <label key={opt} className="flex items-center gap-1.5 text-sm text-gray-700">
+                        <input
+                          type="checkbox"
+                          checked={filterCategories.has(opt)}
+                          onChange={() =>
+                            toggleInSet(filterCategories, opt, setFilterCategories)
+                          }
+                        />
+                        {opt}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="mb-1 text-xs font-medium text-gray-600">Sexo</p>
+                  <div className="flex flex-col gap-1">
+                    {SEX_OPTIONS.map((opt) => (
+                      <label key={opt} className="flex items-center gap-1.5 text-sm text-gray-700">
+                        <input
+                          type="checkbox"
+                          checked={filterSexes.has(opt)}
+                          onChange={() => toggleInSet(filterSexes, opt, setFilterSexes)}
+                        />
+                        {opt === 'FEMALE' ? 'Fêmea' : 'Macho'}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="mb-1 text-xs font-medium text-gray-600">Pasto</p>
+                  <div className="flex max-h-32 flex-col gap-1 overflow-y-auto">
+                    {pastures.length === 0 ? (
+                      <p className="text-sm text-gray-400">Nenhum pasto cadastrado.</p>
+                    ) : (
+                      pastures.map((p) => (
+                        <label key={p.id} className="flex items-center gap-1.5 text-sm text-gray-700">
+                          <input
+                            type="checkbox"
+                            checked={filterPastureIds.has(p.id)}
+                            onChange={() =>
+                              toggleInSet(filterPastureIds, p.id, setFilterPastureIds)
+                            }
+                          />
+                          {p.name}
+                        </label>
+                      ))
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <p className="mb-1 text-xs font-medium text-gray-600">Vacinação</p>
+                  <div className="flex flex-col gap-1">
+                    {VACCINATION_STATUS_OPTIONS.map((opt) => (
+                      <label
+                        key={opt.value}
+                        className="flex items-center gap-1.5 text-sm text-gray-700"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={filterVaccinationStatuses.has(opt.value)}
+                          onChange={() =>
+                            toggleInSet(
+                              filterVaccinationStatuses,
+                              opt.value,
+                              setFilterVaccinationStatuses,
+                            )
+                          }
+                        />
+                        {opt.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="mb-1 text-xs font-medium text-gray-600">Reprodução</p>
+                  <div className="flex flex-col gap-1">
+                    {REPRODUCTIVE_EVENT_OPTIONS.map((opt) => (
+                      <label
+                        key={opt.value}
+                        className="flex items-center gap-1.5 text-sm text-gray-700"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={filterReproductionTypes.has(opt.value)}
+                          onChange={() =>
+                            toggleInSet(
+                              filterReproductionTypes,
+                              opt.value,
+                              setFilterReproductionTypes,
+                            )
+                          }
+                        />
+                        {opt.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
               </div>
-              <div>
-                <label className="text-xs font-medium text-gray-600">Sexo</label>
-                <select
-                  value={filterSex}
-                  onChange={(e) => setFilterSex(e.target.value as AnimalSex | '')}
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
-                >
-                  <option value="">Todos</option>
-                  {SEX_OPTIONS.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt === 'FEMALE' ? 'Fêmea' : 'Macho'}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray-600">Pasto</label>
-                <select
-                  value={filterPastureId}
-                  onChange={(e) => setFilterPastureId(e.target.value)}
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
-                >
-                  <option value="">Todos</option>
-                  {pastures.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray-600">Vacinação</label>
-                <select
-                  value={filterVaccination}
-                  onChange={(e) =>
-                    setFilterVaccination(e.target.value as VaccinationStatusFilter)
-                  }
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
-                >
-                  <option value="">Todas</option>
-                  <option value="APLICADA">Aplicadas</option>
-                  <option value="AGENDADA">Agendadas</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray-600">Reprodução</label>
-                <select
-                  value={filterReproductionType}
-                  onChange={(e) =>
-                    setFilterReproductionType(e.target.value as ReproductiveEventType | '')
-                  }
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
-                >
-                  <option value="">Todos os tipos</option>
-                  {REPRODUCTIVE_EVENT_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex items-end">
-                <button
-                  type="button"
-                  onClick={clearFilters}
-                  disabled={!hasActiveFilters}
-                  className="text-sm font-medium text-gray-500 hover:text-gray-700 disabled:opacity-40"
-                >
-                  Limpar filtros
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={clearFilters}
+                disabled={!hasActiveFilters}
+                className="text-sm font-medium text-gray-500 hover:text-gray-700 disabled:opacity-40"
+              >
+                Limpar filtros
+              </button>
             </div>
           )}
 

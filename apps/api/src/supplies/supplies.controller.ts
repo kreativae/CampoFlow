@@ -17,6 +17,7 @@ import { SuppliesService } from './supplies.service';
 import { CreateSupplyDto } from './dto/create-supply.dto';
 import { UpdateSupplyDto } from './dto/update-supply.dto';
 import { CreateMovementDto } from './dto/create-movement.dto';
+import { UpdateMovementDto } from './dto/update-movement.dto';
 
 @Controller('fazendas/:farmId/insumos')
 @UseGuards(JwtAuthGuard)
@@ -78,5 +79,33 @@ export class SuppliesController {
     @Body() dto: CreateMovementDto,
   ) {
     return this.suppliesService.addMovement(farmId, supplyId, dto);
+  }
+
+  @Patch(':supplyId/movimentacoes/:movementId')
+  @UseGuards(RolesGuard)
+  @Roles(Role.OWNER, Role.MANAGER, Role.EMPLOYEE)
+  updateMovement(
+    @Param('farmId') farmId: string,
+    @Param('supplyId') supplyId: string,
+    @Param('movementId') movementId: string,
+    @Body() dto: UpdateMovementDto,
+  ) {
+    return this.suppliesService.updateMovement(
+      farmId,
+      supplyId,
+      movementId,
+      dto,
+    );
+  }
+
+  @Delete(':supplyId/movimentacoes/:movementId')
+  @UseGuards(RolesGuard)
+  @Roles(Role.OWNER, Role.MANAGER)
+  removeMovement(
+    @Param('farmId') farmId: string,
+    @Param('supplyId') supplyId: string,
+    @Param('movementId') movementId: string,
+  ) {
+    return this.suppliesService.removeMovement(farmId, supplyId, movementId);
   }
 }

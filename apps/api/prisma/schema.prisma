@@ -152,6 +152,7 @@ model Farm {
   documents          Document[]
   soilAnalyses       SoilAnalysis[]
   cropCycles         CropCycle[]
+  contacts           Contact[]
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
 }
@@ -698,6 +699,45 @@ model CropCycle {
   createdById       String?
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
+}
+
+enum ContactType {
+  PESSOA_FISICA
+  PESSOA_JURIDICA
+}
+
+enum ContactCategory {
+  FORNECEDOR
+  CLIENTE
+  VETERINARIO
+  TRANSPORTADOR
+  COMPRADOR
+  PRESTADOR_SERVICO
+  OUTRO
+}
+
+// Contact book (suppliers, clients, vets, etc.), covering both pessoa física (CPF) and
+// pessoa jurídica (CNPJ) — document is a free-text field validated client-side only,
+// since CPF/CNPJ format differs and the value is informational, not used for lookups.
+model Contact {
+  id            String           @id @default(uuid())
+  farm          Farm             @relation(fields: [farmId], references: [id])
+  farmId        String
+  type          ContactType
+  category      ContactCategory  @default(OUTRO)
+  name          String
+  tradeName     String?
+  document      String?
+  email         String?
+  phone         String?
+  whatsapp      String?
+  addressStreet String?
+  addressCity   String?
+  addressState  String?
+  addressZip    String?
+  notes         String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
 }
 
 enum DocumentCategory {

@@ -194,6 +194,84 @@ describe('Supplies (e2e)', () => {
     expect(alert?.lowStock).toBe(true);
   });
 
+  it('lets the owner edit a movement, adjusting the current quantity by the delta', async () => {
+    const createRes = await request(app.getHttpServer())
+      .post(`/fazendas/${farmId}/insumos/${supplyId}/movimentacoes`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ type: 'ENTRADA', quantity: 50 })
+      .expect(201);
+    const movementId = (createRes.body as { id: string }).id;
+
+    // current quantity was 15, +50 entrada -> 65
+    const afterCreate = await request(app.getHttpServer())
+      .get(`/fazendas/${farmId}/insumos/${supplyId}`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+    expect((afterCreate.body as SupplyResponseBody).currentQuantity).toBe(65);
+
+    await request(app.getHttpServer())
+      .patch(
+        `/fazendas/${farmId}/insumos/${supplyId}/movimentacoes/${movementId}`,
+      )
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ quantity: 30 })
+      .expect(200);
+
+    // 65 - (50 - 30) = 45
+    const afterEdit = await request(app.getHttpServer())
+      .get(`/fazendas/${farmId}/insumos/${supplyId}`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+    expect((afterEdit.body as SupplyResponseBody).currentQuantity).toBe(45);
+
+    await request(app.getHttpServer())
+      .delete(
+        `/fazendas/${farmId}/insumos/${supplyId}/movimentacoes/${movementId}`,
+      )
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+
+    // 45 - 30 = 15, back to where it was before this test
+    const afterDelete = await request(app.getHttpServer())
+      .get(`/fazendas/${farmId}/insumos/${supplyId}`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+    expect((afterDelete.body as SupplyResponseBody).currentQuantity).toBe(15);
+  });
+
+  it('rejects deleting a movement when it would leave the stock negative', async () => {
+    const createRes = await request(app.getHttpServer())
+      .post(`/fazendas/${farmId}/insumos/${supplyId}/movimentacoes`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ type: 'SAIDA', quantity: 10 })
+      .expect(201);
+    const movementId = (createRes.body as { id: string }).id;
+
+    // current quantity is now 5; editing this SAIDA movement up to 20 would require
+    // currentQuantity to go to -10 — implementation should reject before persisting.
+    await request(app.getHttpServer())
+      .patch(
+        `/fazendas/${farmId}/insumos/${supplyId}/movimentacoes/${movementId}`,
+      )
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ quantity: 20 })
+      .expect(400);
+
+    // restore: delete the SAIDA movement to bring quantity back to 15
+    await request(app.getHttpServer())
+      .delete(
+        `/fazendas/${farmId}/insumos/${supplyId}/movimentacoes/${movementId}`,
+      )
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+
+    const res = await request(app.getHttpServer())
+      .get(`/fazendas/${farmId}/insumos/${supplyId}`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+    expect((res.body as SupplyResponseBody).currentQuantity).toBe(15);
+  });
+
   it('flags a supply expiring soon as an alert', async () => {
     const soon = new Date();
     soon.setDate(soon.getDate() + 5);

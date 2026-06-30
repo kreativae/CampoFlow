@@ -5,12 +5,14 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, ApiError } from '@/lib/api';
-import type { Supply, SupplyMovementType } from '@/lib/types';
+import { useConfirm } from '@/lib/confirm-context';
+import type { Supply, SupplyMovement, SupplyMovementType } from '@/lib/types';
 
 export default function SupplyDetailPage() {
   const { farmId, supplyId } = useParams<{ farmId: string; supplyId: string }>();
   const { user, accessToken, loading } = useAuth();
   const router = useRouter();
+  const confirm = useConfirm();
 
   const [supply, setSupply] = useState<Supply | null>(null);
   const [fetching, setFetching] = useState(true);
@@ -20,6 +22,13 @@ export default function SupplyDetailPage() {
   const [quantity, setQuantity] = useState('');
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  const [editingMovementId, setEditingMovementId] = useState<string | null>(null);
+  const [editMovementType, setEditMovementType] = useState<SupplyMovementType>('ENTRADA');
+  const [editQuantity, setEditQuantity] = useState('');
+  const [editOccurredAt, setEditOccurredAt] = useState('');
+  const [editNotes, setEditNotes] = useState('');
+  const [savingMovement, setSavingMovement] = useState(false);
 
   const loadData = useCallback(async () => {
     setFetching(true);
@@ -64,6 +73,60 @@ export default function SupplyDetailPage() {
       setError(err instanceof ApiError ? err.message : 'Erro ao registrar movimento');
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  function startEditMovement(movement: SupplyMovement) {
+    setEditingMovementId(movement.id);
+    setEditMovementType(movement.type);
+    setEditQuantity(String(movement.quantity));
+    setEditOccurredAt(movement.occurredAt.slice(0, 10));
+    setEditNotes(movement.notes ?? '');
+  }
+
+  async function handleSaveMovement(movementId: string) {
+    setSavingMovement(true);
+    setError(null);
+    try {
+      await apiFetch(
+        `/fazendas/${farmId}/insumos/${supplyId}/movimentacoes/${movementId}`,
+        {
+          method: 'PATCH',
+          token: accessToken,
+          body: {
+            type: editMovementType,
+            quantity: Number(editQuantity),
+            occurredAt: editOccurredAt || undefined,
+            notes: editNotes || undefined,
+          },
+        },
+      );
+      setEditingMovementId(null);
+      await loadData();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao atualizar movimento');
+    } finally {
+      setSavingMovement(false);
+    }
+  }
+
+  async function handleDeleteMovement(movement: SupplyMovement) {
+    const ok = await confirm({
+      title: 'Excluir movimento',
+      message: 'Excluir este movimento? O estoque atual será ajustado de volta.',
+      confirmLabel: 'Excluir',
+      danger: true,
+    });
+    if (!ok) return;
+    setError(null);
+    try {
+      await apiFetch(
+        `/fazendas/${farmId}/insumos/${supplyId}/movimentacoes/${movement.id}`,
+        { method: 'DELETE', token: accessToken },
+      );
+      await loadData();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao excluir movimento');
     }
   }
 
@@ -136,15 +199,86 @@ export default function SupplyDetailPage() {
         {!supply?.movements || supply.movements.length === 0 ? (
           <p className="text-sm text-gray-500">Nenhum movimento registrado.</p>
         ) : (
-          <ul className="space-y-1 text-sm text-gray-700">
-            {supply.movements.map((m) => (
-              <li key={m.id}>
-                {new Date(m.occurredAt).toLocaleDateString('pt-BR')} —{' '}
-                {m.type === 'ENTRADA' ? '+' : '-'}
-                {m.quantity} {supply.unit}
-                {m.notes ? ` (${m.notes})` : ''}
-              </li>
-            ))}
+          <ul className="space-y-2 text-sm text-gray-700">
+            {supply.movements.map((m) =>
+              editingMovementId === m.id ? (
+                <li
+                  key={m.id}
+                  className="flex flex-wrap items-center gap-2 rounded border border-green-600 p-2"
+                >
+                  <select
+                    value={editMovementType}
+                    onChange={(e) =>
+                      setEditMovementType(e.target.value as SupplyMovementType)
+                    }
+                    className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+                  >
+                    <option value="ENTRADA">Entrada</option>
+                    <option value="SAIDA">Saída</option>
+                  </select>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={editQuantity}
+                    onChange={(e) => setEditQuantity(e.target.value)}
+                    className="w-24 rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+                  />
+                  <input
+                    type="date"
+                    value={editOccurredAt}
+                    onChange={(e) => setEditOccurredAt(e.target.value)}
+                    className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Observações"
+                    value={editNotes}
+                    onChange={(e) => setEditNotes(e.target.value)}
+                    className="flex-1 rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    disabled={savingMovement}
+                    onClick={() => handleSaveMovement(m.id)}
+                    className="rounded bg-green-700 px-2 py-1 text-xs font-medium text-white hover:bg-green-800 disabled:opacity-50"
+                  >
+                    {savingMovement ? 'Salvando...' : 'Salvar'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingMovementId(null)}
+                    className="rounded border border-gray-300 px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50"
+                  >
+                    Cancelar
+                  </button>
+                </li>
+              ) : (
+                <li key={m.id} className="flex items-center justify-between">
+                  <span>
+                    {new Date(m.occurredAt).toLocaleDateString('pt-BR')} —{' '}
+                    {m.type === 'ENTRADA' ? '+' : '-'}
+                    {m.quantity} {supply.unit}
+                    {m.notes ? ` (${m.notes})` : ''}
+                  </span>
+                  <span className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => startEditMovement(m)}
+                      className="text-xs font-medium text-green-700 hover:underline"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteMovement(m)}
+                      className="text-xs font-medium text-red-600 hover:underline"
+                    >
+                      Excluir
+                    </button>
+                  </span>
+                </li>
+              ),
+            )}
           </ul>
         )}
       </section>

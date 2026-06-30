@@ -8,6 +8,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateSupplyDto } from './dto/create-supply.dto';
 import { UpdateSupplyDto } from './dto/update-supply.dto';
 import { CreateMovementDto } from './dto/create-movement.dto';
+import { UpdateMovementDto } from './dto/update-movement.dto';
 
 const EXPIRATION_WINDOW_DAYS = 30;
 
@@ -102,6 +103,99 @@ export class SuppliesService {
     ]);
 
     return movement;
+  }
+
+  private movementDelta(type: SupplyMovementType, quantity: number) {
+    return type === SupplyMovementType.ENTRADA ? quantity : -quantity;
+  }
+
+  private async assertMovementBelongsToSupply(
+    supplyId: string,
+    movementId: string,
+  ) {
+    const movement = await this.prisma.supplyMovement.findUnique({
+      where: { id: movementId },
+    });
+    if (!movement || movement.supplyId !== supplyId) {
+      throw new NotFoundException('Movimentação não encontrada');
+    }
+    return movement;
+  }
+
+  // Edits a movement and adjusts Supply.currentQuantity by the difference between the
+  // old and new effect on stock — not a full recompute, since the supply's starting
+  // currentQuantity (initialQuantity at creation) has no corresponding movement row.
+  async updateMovement(
+    farmId: string,
+    supplyId: string,
+    movementId: string,
+    dto: UpdateMovementDto,
+  ) {
+    const supply = await this.findOne(farmId, supplyId);
+    const existing = await this.assertMovementBelongsToSupply(
+      supplyId,
+      movementId,
+    );
+
+    const newType = dto.type ?? existing.type;
+    const newQuantity = dto.quantity ?? existing.quantity;
+    const oldDelta = this.movementDelta(existing.type, existing.quantity);
+    const newDelta = this.movementDelta(newType, newQuantity);
+    const adjustment = newDelta - oldDelta;
+    const prospectiveQuantity = supply.currentQuantity + adjustment;
+
+    if (prospectiveQuantity < 0) {
+      throw new BadRequestException(
+        `Estoque insuficiente para essa alteração: resultaria em ${prospectiveQuantity} ${supply.unit}`,
+      );
+    }
+
+    const [, movement] = await this.prisma.$transaction([
+      this.prisma.supply.update({
+        where: { id: supplyId },
+        data: { currentQuantity: { increment: adjustment } },
+      }),
+      this.prisma.supplyMovement.update({
+        where: { id: movementId },
+        data: {
+          ...(dto.type !== undefined ? { type: dto.type } : {}),
+          ...(dto.quantity !== undefined ? { quantity: dto.quantity } : {}),
+          ...(dto.occurredAt !== undefined
+            ? { occurredAt: new Date(dto.occurredAt) }
+            : {}),
+          ...(dto.notes !== undefined ? { notes: dto.notes } : {}),
+        },
+      }),
+    ]);
+
+    return movement;
+  }
+
+  async removeMovement(farmId: string, supplyId: string, movementId: string) {
+    const supply = await this.findOne(farmId, supplyId);
+    const existing = await this.assertMovementBelongsToSupply(
+      supplyId,
+      movementId,
+    );
+
+    const adjustment = -this.movementDelta(existing.type, existing.quantity);
+    const prospectiveQuantity = supply.currentQuantity + adjustment;
+
+    if (prospectiveQuantity < 0) {
+      throw new BadRequestException(
+        `Não é possível excluir: resultaria em estoque negativo (${prospectiveQuantity} ${supply.unit})`,
+      );
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.supply.update({
+        where: { id: supplyId },
+        data: { currentQuantity: { increment: adjustment } },
+      }),
+      this.prisma.supplyMovement.delete({ where: { id: movementId } }),
+    ]);
+
+    return { success: true };
   }
 
   // Low-stock and near-expiration/expired supplies for the farm.
