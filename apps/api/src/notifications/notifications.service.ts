@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import {
@@ -22,6 +23,8 @@ interface AlertCandidate {
 
 @Injectable()
 export class NotificationsService {
+  private readonly logger = new Logger(NotificationsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
@@ -75,6 +78,30 @@ export class NotificationsService {
     }
 
     return candidates;
+  }
+
+  // Varre todas as fazendas de hora em hora e gera as notificações pendentes de cada
+  // uma, para que o produtor seja avisado sem precisar abrir a tela e clicar em
+  // "gerar". generateFromAlerts é idempotente (deduplica por título+mensagem não
+  // lida), então rodar de hora em hora não gera spam. Cada fazenda é isolada num
+  // try/catch para que uma falha não interrompa as demais.
+  @Cron('0 * * * *')
+  async scheduledGenerateForAllFarms() {
+    const farms = await this.prisma.farm.findMany({ select: { id: true } });
+    let total = 0;
+    for (const farm of farms) {
+      try {
+        const { created } = await this.generateFromAlerts(farm.id);
+        total += created;
+      } catch (err) {
+        this.logger.warn(
+          `Falha ao gerar notificações da fazenda ${farm.id}: ${(err as Error).message}`,
+        );
+      }
+    }
+    if (total > 0) {
+      this.logger.log(`Notificações automáticas geradas: ${total}`);
+    }
   }
 
   // Generates notifications for every member of the farm based on current pending
