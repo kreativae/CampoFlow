@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { Commodity } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -34,10 +34,25 @@ interface RedacaoAgroResponse {
 // built so swapping to a paid/official source later only means rewriting fetchLatest()
 // and COMMODITY_KEY_MAP, not anything that depends on QuotationsService.
 @Injectable()
-export class ExternalQuotationsService {
+export class ExternalQuotationsService implements OnModuleInit {
   private readonly logger = new Logger(ExternalQuotationsService.name);
 
   constructor(private readonly prisma: PrismaService) {}
+
+  // The @Cron below only fires at fixed 3h marks, so on a fresh deploy (empty DB) the
+  // quotation-dependent screens — e.g. the "valor estimado do rebanho" in BI — would show
+  // a dash until the first tick. Fetch once on boot to close that gap. Skipped under test
+  // to keep e2e from hitting the real endpoint before each suite mocks fetch.
+  async onModuleInit() {
+    if (process.env.NODE_ENV === 'test') return;
+    try {
+      await this.refresh();
+    } catch (err) {
+      this.logger.warn(
+        `Falha ao buscar cotações no start: ${(err as Error).message}`,
+      );
+    }
+  }
 
   // Runs every 3 hours — frequent enough to track intraday moves without hammering a
   // free, unofficial endpoint that has no published rate limit.
