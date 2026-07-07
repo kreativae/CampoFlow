@@ -6,7 +6,13 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, ApiError } from '@/lib/api';
 import { useConfirm } from '@/lib/confirm-context';
-import type { FarmInvite, Member, Role } from '@/lib/types';
+import {
+  MODULE_OPTIONS,
+  type FarmInvite,
+  type Member,
+  type ModuleKey,
+  type Role,
+} from '@/lib/types';
 
 // OWNER não aparece nas opções: é atribuído na criação da fazenda e transferido
 // à parte; aqui só se concede papéis operacionais.
@@ -43,7 +49,18 @@ export default function MembersPage() {
 
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<Role>('EMPLOYEE');
+  const [restrict, setRestrict] = useState(false);
+  const [moduleAccess, setModuleAccess] = useState<ModuleKey[]>([]);
   const [saving, setSaving] = useState(false);
+
+  // Estado da edição de acesso de um membro já ativo.
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editModules, setEditModules] = useState<ModuleKey[]>([]);
+  const [editSaving, setEditSaving] = useState(false);
+
+  function toggle(list: ModuleKey[], key: ModuleKey): ModuleKey[] {
+    return list.includes(key) ? list.filter((k) => k !== key) : [...list, key];
+  }
 
   const loadData = useCallback(async () => {
     setFetching(true);
@@ -84,7 +101,16 @@ export default function MembersPage() {
     try {
       const res = await apiFetch<{ invited?: boolean } | Member>(
         `/fazendas/${farmId}/membros`,
-        { method: 'POST', token: accessToken, body: { email, role } },
+        {
+          method: 'POST',
+          token: accessToken,
+          body: {
+            email,
+            role,
+            // Lista vazia = acesso total; só enviamos restrições quando marcado.
+            moduleAccess: restrict ? moduleAccess : [],
+          },
+        },
       );
       setMessage(
         res && 'invited' in res && res.invited
@@ -93,11 +119,44 @@ export default function MembersPage() {
       );
       setEmail('');
       setRole('EMPLOYEE');
+      setRestrict(false);
+      setModuleAccess([]);
       await loadData();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao adicionar membro');
     } finally {
       setSaving(false);
+    }
+  }
+
+  function startEdit(member: Member) {
+    setEditingId(member.userId);
+    setEditModules(member.moduleAccess);
+    setMessage(null);
+    setError(null);
+  }
+
+  async function handleSaveAccess(member: Member) {
+    setEditSaving(true);
+    setError(null);
+    setMessage(null);
+    try {
+      await apiFetch(`/fazendas/${farmId}/membros/${member.userId}`, {
+        method: 'PATCH',
+        token: accessToken,
+        body: { moduleAccess: editModules },
+      });
+      setMessage(
+        editModules.length === 0
+          ? `${member.name} agora tem acesso a todos os módulos.`
+          : `Acesso de ${member.name} atualizado.`,
+      );
+      setEditingId(null);
+      await loadData();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao atualizar acesso');
+    } finally {
+      setEditSaving(false);
     }
   }
 
@@ -159,8 +218,8 @@ export default function MembersPage() {
         </Link>
         <h1 className="text-2xl font-semibold text-green-800">Membros da propriedade</h1>
         <p className="text-sm text-gray-500">
-          Convide pessoas e defina o papel de cada uma. O acesso a cada módulo é controlado pelo
-          papel.
+          Convide pessoas, defina o papel de cada uma e, se quiser, limite quais páginas cada
+          membro pode acessar.
         </p>
       </header>
 
@@ -222,7 +281,47 @@ export default function MembersPage() {
               </div>
             </div>
             <p className="mt-2 text-xs text-gray-400">{ROLE_HINT[role]}</p>
-            <p className="mt-1 text-xs text-gray-400">
+
+            {/* Limite de acesso por módulo (opcional) */}
+            <div className="mt-3 rounded border border-gray-100 bg-gray-50 p-3">
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={restrict}
+                  onChange={(e) => setRestrict(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-green-700 focus:ring-green-600"
+                />
+                Limitar as páginas que este membro pode acessar
+              </label>
+              {restrict && (
+                <>
+                  <p className="mt-2 text-xs text-gray-500">
+                    Marque apenas os módulos que o membro poderá abrir. Sem nenhum marcado, ele
+                    terá acesso total (conforme o papel).
+                  </p>
+                  <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-3">
+                    {MODULE_OPTIONS.map((opt) => (
+                      <label
+                        key={opt.key}
+                        className="flex items-center gap-2 text-sm text-gray-700"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={moduleAccess.includes(opt.key)}
+                          onChange={() =>
+                            setModuleAccess((prev) => toggle(prev, opt.key))
+                          }
+                          className="h-4 w-4 rounded border-gray-300 text-green-700 focus:ring-green-600"
+                        />
+                        {opt.label}
+                      </label>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
+            <p className="mt-3 text-xs text-gray-400">
               Se a pessoa já tem conta no CampoFlow, o acesso é concedido na hora. Caso contrário,
               ela recebe um convite por e-mail para criar a conta e aceitar.
             </p>
@@ -237,37 +336,109 @@ export default function MembersPage() {
               {members.map((m) => (
                 <li
                   key={m.userId}
-                  className="flex items-center justify-between rounded border border-gray-200 bg-white px-4 py-3"
+                  className="rounded border border-gray-200 bg-white px-4 py-3"
                 >
-                  <div>
-                    <p className="font-medium text-gray-900">
-                      {m.name}
-                      {m.userId === user.id && (
-                        <span className="ml-2 text-xs text-gray-400">(você)</span>
-                      )}
-                    </p>
-                    <p className="text-sm text-gray-500">{m.email}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={`rounded px-2 py-0.5 text-xs font-medium ${
-                        m.role === 'OWNER'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-gray-100 text-gray-700'
-                      }`}
-                    >
-                      {ROLE_LABEL[m.role]}
-                    </span>
-                    {m.userId !== user.id && m.role !== 'OWNER' && (
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveMember(m)}
-                        className="text-sm font-medium text-red-600 hover:underline"
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-gray-900">
+                        {m.name}
+                        {m.userId === user.id && (
+                          <span className="ml-2 text-xs text-gray-400">(você)</span>
+                        )}
+                      </p>
+                      <p className="text-sm text-gray-500">{m.email}</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={`rounded px-2 py-0.5 text-xs font-medium ${
+                          m.role === 'OWNER'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-gray-100 text-gray-700'
+                        }`}
                       >
-                        Remover
-                      </button>
-                    )}
+                        {ROLE_LABEL[m.role]}
+                      </span>
+                      {m.userId !== user.id && m.role !== 'OWNER' && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              editingId === m.userId ? setEditingId(null) : startEdit(m)
+                            }
+                            className="text-sm font-medium text-green-700 hover:underline"
+                          >
+                            {editingId === m.userId ? 'Cancelar' : 'Acesso'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveMember(m)}
+                            className="text-sm font-medium text-red-600 hover:underline"
+                          >
+                            Remover
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
+
+                  {/* Resumo do acesso (fora do modo edição) */}
+                  {m.role !== 'OWNER' && editingId !== m.userId && (
+                    <p className="mt-2 text-xs text-gray-400">
+                      {m.moduleAccess.length === 0
+                        ? 'Acesso a todos os módulos (conforme o papel).'
+                        : `Acesso limitado a: ${m.moduleAccess
+                            .map(
+                              (k) =>
+                                MODULE_OPTIONS.find((o) => o.key === k)?.label ?? k,
+                            )
+                            .join(', ')}.`}
+                    </p>
+                  )}
+
+                  {/* Edição de acesso por módulo */}
+                  {editingId === m.userId && (
+                    <div className="mt-3 rounded border border-gray-100 bg-gray-50 p-3">
+                      <p className="text-xs text-gray-500">
+                        Marque os módulos liberados. Sem nenhum marcado, o membro terá acesso
+                        total (conforme o papel).
+                      </p>
+                      <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-3">
+                        {MODULE_OPTIONS.map((opt) => (
+                          <label
+                            key={opt.key}
+                            className="flex items-center gap-2 text-sm text-gray-700"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={editModules.includes(opt.key)}
+                              onChange={() =>
+                                setEditModules((prev) => toggle(prev, opt.key))
+                              }
+                              className="h-4 w-4 rounded border-gray-300 text-green-700 focus:ring-green-600"
+                            />
+                            {opt.label}
+                          </label>
+                        ))}
+                      </div>
+                      <div className="mt-3 flex gap-2">
+                        <button
+                          type="button"
+                          disabled={editSaving}
+                          onClick={() => handleSaveAccess(m)}
+                          className="rounded bg-green-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+                        >
+                          {editSaving ? 'Salvando...' : 'Salvar acesso'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditModules([])}
+                          className="rounded border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100"
+                        >
+                          Liberar tudo
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>

@@ -5,31 +5,32 @@ import Link from 'next/link';
 import { useParams, usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch } from '@/lib/api';
-import type { Farm } from '@/lib/types';
+import type { Farm, ModuleKey } from '@/lib/types';
 
 interface NavItem {
   suffix: string; // caminho depois de /fazendas/:id
   label: string;
+  module?: ModuleKey; // módulo controlável; ausente = sempre visível (ex.: Painel)
 }
 
 const NAV: NavItem[] = [
   { suffix: '', label: 'Painel' },
-  { suffix: '/animais', label: 'Rebanho' },
-  { suffix: '/pastagens', label: 'Pastagens' },
-  { suffix: '/reproducao', label: 'Reprodução' },
-  { suffix: '/insumos', label: 'Insumos' },
-  { suffix: '/maquinas', label: 'Máquinas' },
-  { suffix: '/equipe', label: 'Equipe' },
-  { suffix: '/agenda', label: 'Agenda' },
-  { suffix: '/mapa', label: 'Solo' },
-  { suffix: '/safras', label: 'Safras' },
-  { suffix: '/documentos', label: 'Documentos' },
-  { suffix: '/contatos', label: 'Contatos' },
-  { suffix: '/membros', label: 'Membros' },
-  { suffix: '/financeiro', label: 'Financeiro' },
-  { suffix: '/relatorios', label: 'Relatórios' },
-  { suffix: '/inteligencia', label: 'IA' },
-  { suffix: '/notificacoes', label: 'Notificações' },
+  { suffix: '/animais', label: 'Rebanho', module: 'rebanho' },
+  { suffix: '/pastagens', label: 'Pastagens', module: 'pastagens' },
+  { suffix: '/reproducao', label: 'Reprodução', module: 'reproducao' },
+  { suffix: '/insumos', label: 'Insumos', module: 'insumos' },
+  { suffix: '/maquinas', label: 'Máquinas', module: 'maquinas' },
+  { suffix: '/equipe', label: 'Equipe', module: 'equipe' },
+  { suffix: '/agenda', label: 'Agenda', module: 'agenda' },
+  { suffix: '/mapa', label: 'Solo', module: 'mapa' },
+  { suffix: '/safras', label: 'Safras', module: 'safras' },
+  { suffix: '/documentos', label: 'Documentos', module: 'documentos' },
+  { suffix: '/contatos', label: 'Contatos', module: 'contatos' },
+  { suffix: '/membros', label: 'Membros', module: 'membros' },
+  { suffix: '/financeiro', label: 'Financeiro', module: 'financeiro' },
+  { suffix: '/relatorios', label: 'Relatórios', module: 'relatorios' },
+  { suffix: '/inteligencia', label: 'IA', module: 'inteligencia' },
+  { suffix: '/notificacoes', label: 'Notificações', module: 'notificacoes' },
 ];
 
 export default function FarmLayout({ children }: { children: React.ReactNode }) {
@@ -38,13 +39,23 @@ export default function FarmLayout({ children }: { children: React.ReactNode }) 
   const { user, accessToken, logout } = useAuth();
   const [farm, setFarm] = useState<Farm | null>(null);
   const [open, setOpen] = useState(false);
+  // Allowlist de módulos do usuário nesta propriedade. null = ainda carregando ou
+  // acesso total (mostra tudo).
+  const [allowed, setAllowed] = useState<ModuleKey[] | null>(null);
 
   const base = `/fazendas/${farmId}`;
 
   const loadFarm = useCallback(async () => {
     try {
-      const data = await apiFetch<Farm>(base, { token: accessToken });
+      const [data, access] = await Promise.all([
+        apiFetch<Farm>(base, { token: accessToken }),
+        apiFetch<{ role: string; moduleAccess: ModuleKey[] }>(`${base}/meu-acesso`, {
+          token: accessToken,
+        }).catch(() => null),
+      ]);
       setFarm(data);
+      // Lista vazia (ou falha) = acesso total: não filtramos a navegação.
+      setAllowed(access && access.moduleAccess.length > 0 ? access.moduleAccess : null);
     } catch {
       setFarm(null);
     }
@@ -55,6 +66,10 @@ export default function FarmLayout({ children }: { children: React.ReactNode }) 
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadFarm();
   }, [user, loadFarm]);
+
+  const visibleNav = allowed
+    ? NAV.filter((item) => !item.module || allowed.includes(item.module))
+    : NAV;
 
   // Fecha o menu mobile ao trocar de rota.
   useEffect(() => {
@@ -73,7 +88,7 @@ export default function FarmLayout({ children }: { children: React.ReactNode }) 
 
   const navLinks = (
     <nav className="flex flex-col gap-0.5">
-      {NAV.map((item) => (
+      {visibleNav.map((item) => (
         <Link
           key={item.suffix}
           href={base + item.suffix}

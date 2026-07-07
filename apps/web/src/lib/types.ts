@@ -234,7 +234,46 @@ export interface Member {
   email: string;
   name: string;
   role: Role;
+  moduleAccess: ModuleKey[];
 }
+
+// Módulos ("páginas") que o gestor pode liberar por membro. Vazio = acesso total.
+export type ModuleKey =
+  | 'rebanho'
+  | 'pastagens'
+  | 'reproducao'
+  | 'insumos'
+  | 'maquinas'
+  | 'equipe'
+  | 'agenda'
+  | 'mapa'
+  | 'safras'
+  | 'documentos'
+  | 'contatos'
+  | 'financeiro'
+  | 'relatorios'
+  | 'inteligencia'
+  | 'notificacoes'
+  | 'membros';
+
+export const MODULE_OPTIONS: { key: ModuleKey; label: string }[] = [
+  { key: 'rebanho', label: 'Rebanho' },
+  { key: 'pastagens', label: 'Pastagens' },
+  { key: 'reproducao', label: 'Reprodução' },
+  { key: 'insumos', label: 'Insumos' },
+  { key: 'maquinas', label: 'Máquinas' },
+  { key: 'equipe', label: 'Equipe' },
+  { key: 'agenda', label: 'Agenda' },
+  { key: 'mapa', label: 'Mapa e Solo' },
+  { key: 'safras', label: 'Safras' },
+  { key: 'documentos', label: 'Documentos' },
+  { key: 'contatos', label: 'Contatos' },
+  { key: 'financeiro', label: 'Financeiro' },
+  { key: 'relatorios', label: 'Relatórios' },
+  { key: 'inteligencia', label: 'Inteligência' },
+  { key: 'notificacoes', label: 'Notificações' },
+  { key: 'membros', label: 'Membros' },
+];
 
 export interface FarmInvite {
   id: string;

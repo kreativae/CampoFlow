@@ -173,6 +173,8 @@ model FarmInvite {
   role        Role
   tokenHash   String
   invitedById String?
+  // Módulos que o membro poderá acessar. Vazio = acesso total (conforme o papel).
+  moduleAccess String[] @default([])
   expiresAt   DateTime
   acceptedAt  DateTime?
   createdAt   DateTime  @default(now())
@@ -187,6 +189,8 @@ model Membership {
   farm      Farm     @relation(fields: [farmId], references: [id])
   farmId    String
   role      Role
+  // Módulos (páginas) que este membro pode acessar. Vazio = acesso total.
+  moduleAccess String[] @default([])
   createdAt DateTime @default(now())
 
   @@unique([userId, farmId])
