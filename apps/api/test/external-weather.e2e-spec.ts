@@ -54,6 +54,11 @@ describe('External weather (e2e)', () => {
   let farmId: string;
   let farmNoCoordsId: string;
 
+  // Data das leituras simuladas: hoje. A rota de alertas só considera registros
+  // dos últimos 7 dias, então datas fixas envelhecem e quebram o teste — usar a
+  // data corrente mantém os registros sempre dentro da janela.
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
@@ -123,7 +128,7 @@ describe('External weather (e2e)', () => {
       .spyOn(global, 'fetch')
       .mockResolvedValue(
         new Response(
-          JSON.stringify(fakeOpenMeteoResponse('2026-06-26T13:00', 22, 10, 1)),
+          JSON.stringify(fakeOpenMeteoResponse(`${today}T13:00`, 22, 10, 1)),
         ),
       );
 
@@ -149,7 +154,7 @@ describe('External weather (e2e)', () => {
       .spyOn(global, 'fetch')
       .mockResolvedValue(
         new Response(
-          JSON.stringify(fakeOpenMeteoResponse('2026-06-26T13:00', 22, 10, 1)),
+          JSON.stringify(fakeOpenMeteoResponse(`${today}T13:00`, 22, 10, 1)),
         ),
       );
 
@@ -165,7 +170,7 @@ describe('External weather (e2e)', () => {
       .spyOn(global, 'fetch')
       .mockResolvedValue(
         new Response(
-          JSON.stringify(fakeOpenMeteoResponse('2026-06-26T16:00', 2, 5, 0)),
+          JSON.stringify(fakeOpenMeteoResponse(`${today}T16:00`, 2, 5, 0)),
         ),
       );
 
@@ -189,7 +194,7 @@ describe('External weather (e2e)', () => {
       .spyOn(global, 'fetch')
       .mockResolvedValue(
         new Response(
-          JSON.stringify(fakeOpenMeteoResponse('2026-06-26T19:00', 25, 55, 2)),
+          JSON.stringify(fakeOpenMeteoResponse(`${today}T19:00`, 25, 55, 2)),
         ),
       );
 
@@ -211,7 +216,7 @@ describe('External weather (e2e)', () => {
       .spyOn(global, 'fetch')
       .mockResolvedValue(
         new Response(
-          JSON.stringify(fakeOpenMeteoResponse('2026-06-26T22:00', 25, 20, 96)),
+          JSON.stringify(fakeOpenMeteoResponse(`${today}T22:00`, 25, 20, 96)),
         ),
       );
 
