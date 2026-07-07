@@ -10,10 +10,17 @@ import type {
   CropCycle,
   CropCycleStatus,
   CropReferenceOption,
+  CropSaleUnit,
   MapFeature,
   SoilAnalysis,
 } from '@/lib/types';
-import { PlantingCalculator, CropRotation, CropPlanning } from './planning';
+import {
+  PlantingCalculator,
+  CropRotation,
+  CropPlanning,
+  CropClosing,
+  CropHistory,
+} from './planning';
 
 const STATUS_LABEL: Record<CropCycleStatus, string> = {
   PLANEJADA: 'Planejada',
@@ -36,6 +43,8 @@ interface FormState {
   expectedHarvestAt: string;
   harvestedAt: string;
   yieldKg: string;
+  saleUnit: CropSaleUnit;
+  salePricePerUnit: string;
   notes: string;
 }
 
@@ -48,6 +57,8 @@ const EMPTY_FORM: FormState = {
   expectedHarvestAt: '',
   harvestedAt: '',
   yieldKg: '',
+  saleUnit: 'SACA60',
+  salePricePerUnit: '',
   notes: '',
 };
 
@@ -61,6 +72,8 @@ function buildCreateBody(form: FormState) {
     expectedHarvestAt: form.expectedHarvestAt || undefined,
     harvestedAt: form.harvestedAt || undefined,
     yieldKg: form.yieldKg ? Number(form.yieldKg) : undefined,
+    saleUnit: form.saleUnit,
+    salePricePerUnit: form.salePricePerUnit ? Number(form.salePricePerUnit) : undefined,
     notes: form.notes || undefined,
   };
 }
@@ -75,6 +88,8 @@ function buildUpdateBody(form: FormState) {
     expectedHarvestAt: form.expectedHarvestAt || undefined,
     harvestedAt: form.harvestedAt || undefined,
     yieldKg: form.yieldKg ? Number(form.yieldKg) : undefined,
+    saleUnit: form.saleUnit,
+    salePricePerUnit: form.salePricePerUnit ? Number(form.salePricePerUnit) : undefined,
     notes: form.notes || undefined,
   };
 }
@@ -188,6 +203,8 @@ export default function CropsPage() {
       expectedHarvestAt: cycle.expectedHarvestAt ? cycle.expectedHarvestAt.slice(0, 10) : '',
       harvestedAt: cycle.harvestedAt ? cycle.harvestedAt.slice(0, 10) : '',
       yieldKg: cycle.yieldKg != null ? String(cycle.yieldKg) : '',
+      saleUnit: cycle.saleUnit ?? 'SACA60',
+      salePricePerUnit: cycle.salePricePerUnit != null ? String(cycle.salePricePerUnit) : '',
       notes: cycle.notes ?? '',
     });
   }
@@ -350,6 +367,7 @@ export default function CropsPage() {
       </form>
 
       <PlantingCalculator farmId={farmId} token={accessToken} references={references} />
+      <CropHistory farmId={farmId} token={accessToken} />
       <CropRotation farmId={farmId} token={accessToken} />
 
       {cycles.length === 0 ? (
@@ -546,6 +564,32 @@ export default function CropsPage() {
                   className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
                 />
               </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600">Unidade de venda</label>
+                <select
+                  value={editForm.saleUnit}
+                  onChange={(e) =>
+                    setEditForm((f) => ({ ...f, saleUnit: e.target.value as CropSaleUnit }))
+                  }
+                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                >
+                  <option value="SACA60">Saca (60kg)</option>
+                  <option value="KG">Quilo (kg)</option>
+                  <option value="ARROBA">Arroba (@)</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600">Preço de venda (R$/un.)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={editForm.salePricePerUnit}
+                  onChange={(e) =>
+                    setEditForm((f) => ({ ...f, salePricePerUnit: e.target.value }))
+                  }
+                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                />
+              </div>
               <div className="col-span-2">
                 <label className="text-xs font-medium text-gray-600">Observações</label>
                 <input
@@ -562,6 +606,16 @@ export default function CropsPage() {
                 Planejamento de plantio
               </h3>
               <CropPlanning farmId={farmId} token={accessToken} cycleId={editingId} />
+            </div>
+
+            <div className="mt-6 border-t border-gray-200 pt-4">
+              <h3 className="mb-3 text-sm font-semibold text-gray-800">
+                Fechamento da safra (custos e resultado)
+              </h3>
+              <p className="mb-3 text-xs text-gray-500">
+                Salve o preço e a produção acima para atualizar o resultado.
+              </p>
+              <CropClosing farmId={farmId} token={accessToken} cycleId={editingId} />
             </div>
 
             <div className="mt-6 flex justify-end gap-2">

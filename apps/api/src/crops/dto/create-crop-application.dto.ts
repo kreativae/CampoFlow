@@ -30,6 +30,12 @@ export class CreateCropApplicationDto {
   @Min(0)
   totalQuantity?: number;
 
+  // Preço unitário do produto (R$ por unidade da dose/quantidade) para custo.
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  unitPrice?: number;
+
   @IsOptional()
   @IsDateString()
   appliedAt?: string;

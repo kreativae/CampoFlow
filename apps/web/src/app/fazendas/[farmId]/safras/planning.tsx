@@ -5,12 +5,31 @@ import { apiFetch, ApiError } from '@/lib/api';
 import type {
   CropApplication,
   CropApplicationType,
+  CropClosing as CropClosingData,
+  CropCostCategory,
+  CropCostEntry,
   CropFertilizerRecommendation,
+  CropHistoryRow,
   CropReferenceOption,
   CropRotationGroup,
   PlantingCalcResult,
   PlantingWindow,
 } from '@/lib/types';
+
+const COST_CATEGORIES: { value: CropCostCategory; label: string }[] = [
+  { value: 'SEMENTE', label: 'Semente' },
+  { value: 'FERTILIZANTE', label: 'Fertilizante' },
+  { value: 'DEFENSIVO', label: 'Defensivo' },
+  { value: 'CALCARIO', label: 'Calcário' },
+  { value: 'OPERACAO', label: 'Operação' },
+  { value: 'MAO_DE_OBRA', label: 'Mão de obra' },
+  { value: 'ARRENDAMENTO', label: 'Arrendamento' },
+  { value: 'OUTRO', label: 'Outro' },
+];
+
+const COST_LABEL = Object.fromEntries(
+  COST_CATEGORIES.map((o) => [o.value, o.label]),
+) as Record<CropCostCategory, string>;
 
 const APPLICATION_TYPES: { value: CropApplicationType; label: string }[] = [
   { value: 'PLANTIO', label: 'Plantio' },
@@ -264,6 +283,7 @@ export function CropPlanning({
   const [product, setProduct] = useState('');
   const [dosePerHa, setDosePerHa] = useState('');
   const [doseUnit, setDoseUnit] = useState('');
+  const [unitPrice, setUnitPrice] = useState('');
   const [appliedAt, setAppliedAt] = useState('');
   const [carencia, setCarencia] = useState('');
   const [responsible, setResponsible] = useState('');
@@ -307,6 +327,7 @@ export function CropPlanning({
           product,
           dosePerHa: dosePerHa ? Number(dosePerHa) : undefined,
           doseUnit: doseUnit || undefined,
+          unitPrice: unitPrice ? Number(unitPrice) : undefined,
           appliedAt: appliedAt || undefined,
           preHarvestIntervalDays: carencia ? Number(carencia) : undefined,
           responsible: responsible || undefined,
@@ -315,6 +336,7 @@ export function CropPlanning({
       setProduct('');
       setDosePerHa('');
       setDoseUnit('');
+      setUnitPrice('');
       setAppliedAt('');
       setCarencia('');
       setResponsible('');
@@ -445,6 +467,14 @@ export function CropPlanning({
             className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
           />
           <input
+            type="number"
+            step="0.01"
+            placeholder="Preço unit. (R$)"
+            value={unitPrice}
+            onChange={(e) => setUnitPrice(e.target.value)}
+            className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+          />
+          <input
             type="date"
             value={appliedAt}
             onChange={(e) => setAppliedAt(e.target.value)}
@@ -503,5 +533,307 @@ export function CropPlanning({
         )}
       </div>
     </div>
+  );
+}
+
+// ---- Fechamento da safra (custos manuais + resumo financeiro) -----------
+export function CropClosing({
+  farmId,
+  token,
+  cycleId,
+}: {
+  farmId: string;
+  token: string | null;
+  cycleId: string;
+}) {
+  const [closing, setClosing] = useState<CropClosingData | null>(null);
+  const [entries, setEntries] = useState<CropCostEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [category, setCategory] = useState<CropCostCategory>('SEMENTE');
+  const [description, setDescription] = useState('');
+  const [amount, setAmount] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const base = `/fazendas/${farmId}/safras/${cycleId}`;
+      const [c, e] = await Promise.all([
+        apiFetch<CropClosingData>(`${base}/fechamento`, { token }),
+        apiFetch<CropCostEntry[]>(`${base}/custos`, { token }),
+      ]);
+      setClosing(c);
+      setEntries(e);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao carregar fechamento');
+    } finally {
+      setLoading(false);
+    }
+  }, [farmId, cycleId, token]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void load();
+  }, [load]);
+
+  async function handleAddCost(event: FormEvent) {
+    event.preventDefault();
+    setSaving(true);
+    setError(null);
+    try {
+      await apiFetch(`/fazendas/${farmId}/safras/${cycleId}/custos`, {
+        method: 'POST',
+        token,
+        body: { category, description, amount: Number(amount) },
+      });
+      setDescription('');
+      setAmount('');
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao registrar custo');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDeleteCost(id: string) {
+    setError(null);
+    try {
+      await apiFetch(`/fazendas/${farmId}/safras/${cycleId}/custos/${id}`, {
+        method: 'DELETE',
+        token,
+      });
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao excluir custo');
+    }
+  }
+
+  if (loading) {
+    return <p className="text-xs text-gray-400">Carregando fechamento...</p>;
+  }
+
+  return (
+    <div className="space-y-4">
+      {error && <p className="text-sm text-red-600">{error}</p>}
+
+      {closing && (
+        <div className="rounded border border-gray-200 bg-gray-50 p-3">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-xs font-semibold text-gray-600">Resultado da safra</p>
+            <button
+              type="button"
+              onClick={() => void load()}
+              className="text-xs font-medium text-green-700 hover:underline"
+            >
+              Atualizar
+            </button>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
+            <Metric
+              label="Produtividade"
+              value={
+                closing.production.productivityPerHa != null
+                  ? `${closing.production.productivityPerHa} ${closing.unitLabel}/ha`
+                  : '—'
+              }
+            />
+            <Metric label="Custo total" value={currency(closing.costs.total)} />
+            <Metric
+              label="Custo/ha"
+              value={closing.costs.perHectare != null ? currency(closing.costs.perHectare) : '—'}
+            />
+            <Metric
+              label="Receita"
+              value={closing.revenue.total != null ? currency(closing.revenue.total) : '—'}
+            />
+            <Metric
+              label="Lucro"
+              value={closing.result.profit != null ? currency(closing.result.profit) : '—'}
+              highlight
+            />
+            <Metric
+              label="Margem"
+              value={
+                closing.result.marginPercent != null
+                  ? `${closing.result.marginPercent}%`
+                  : '—'
+              }
+            />
+            <Metric
+              label={`Custo por ${closing.unitLabel}`}
+              value={closing.costs.perUnit != null ? currency(closing.costs.perUnit) : '—'}
+            />
+            <Metric
+              label="Preço de equilíbrio"
+              value={
+                closing.result.breakEvenPricePerUnit != null
+                  ? `${currency(closing.result.breakEvenPricePerUnit)}/${closing.unitLabel}`
+                  : '—'
+              }
+            />
+          </div>
+          <p className="mt-2 text-xs text-gray-500">
+            Custos: caderno {currency(closing.costs.fieldBook)} · manuais{' '}
+            {currency(closing.costs.manual)} · financeiro {currency(closing.costs.finance)}
+          </p>
+        </div>
+      )}
+
+      <div className="rounded border border-gray-200 p-3">
+        <p className="mb-2 text-xs font-semibold text-gray-600">Custos manuais da safra</p>
+        <form onSubmit={handleAddCost} className="grid grid-cols-2 gap-2">
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value as CropCostCategory)}
+            className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+          >
+            {COST_CATEGORIES.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+          <input
+            type="number"
+            step="0.01"
+            required
+            placeholder="Valor (R$)"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+          />
+          <input
+            type="text"
+            required
+            placeholder="Descrição"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            className="col-span-2 rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+          />
+          <button
+            type="submit"
+            disabled={saving}
+            className="col-span-2 rounded bg-green-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+          >
+            {saving ? 'Salvando...' : 'Adicionar custo'}
+          </button>
+        </form>
+        {entries.length === 0 ? (
+          <p className="mt-3 text-sm text-gray-500">Nenhum custo manual lançado.</p>
+        ) : (
+          <ul className="mt-3 space-y-2 text-sm text-gray-700">
+            {entries.map((e) => (
+              <li key={e.id} className="flex items-center justify-between border-b border-gray-100 pb-2 last:border-0">
+                <span>
+                  <span className="font-medium">{COST_LABEL[e.category]}</span>: {e.description}{' '}
+                  — {currency(e.amount)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteCost(e.id)}
+                  className="shrink-0 text-xs font-medium text-red-600 hover:underline"
+                >
+                  Excluir
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="mt-2 text-xs text-gray-400">
+          Custos do caderno de campo (com preço) e lançamentos do Financeiro vinculados a esta
+          safra entram automaticamente no total.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ---- Histórico comparativo de safras -----------------------------------
+export function CropHistory({ farmId, token }: { farmId: string; token: string | null }) {
+  const [rows, setRows] = useState<CropHistoryRow[] | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function load() {
+    setLoading(true);
+    try {
+      const data = await apiFetch<CropHistoryRow[]>(`/fazendas/${farmId}/safras/historico`, {
+        token,
+      });
+      setRows(data);
+    } catch {
+      setRows([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <section className="mb-8 rounded border border-gray-200 bg-white p-4">
+      <div className="flex items-center justify-between">
+        <h2 className="font-semibold text-gray-800">Histórico de safras (custos e resultados)</h2>
+        <button
+          type="button"
+          onClick={load}
+          className="text-sm font-medium text-green-700 hover:underline"
+        >
+          {rows ? 'Atualizar' : 'Ver histórico'}
+        </button>
+      </div>
+      {loading && <p className="mt-2 text-sm text-gray-400">Carregando...</p>}
+      {rows && rows.length === 0 && !loading && (
+        <p className="mt-2 text-sm text-gray-500">Nenhuma safra registrada ainda.</p>
+      )}
+      {rows && rows.length > 0 && (
+        <div className="mt-3 overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-gray-200 text-xs uppercase text-gray-500">
+                <th className="py-1 pr-3">Cultura</th>
+                <th className="py-1 pr-3">Plantio</th>
+                <th className="py-1 pr-3">Produtiv.</th>
+                <th className="py-1 pr-3">Custo</th>
+                <th className="py-1 pr-3">Receita</th>
+                <th className="py-1 pr-3">Lucro</th>
+                <th className="py-1">Margem</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.id} className="border-b border-gray-100">
+                  <td className="py-1.5 pr-3 font-medium text-gray-900">
+                    {r.cropName}
+                    {r.variety ? ` (${r.variety})` : ''}
+                  </td>
+                  <td className="py-1.5 pr-3 text-gray-600">
+                    {new Date(r.plantedAt).toLocaleDateString('pt-BR')}
+                  </td>
+                  <td className="py-1.5 pr-3 text-gray-600">
+                    {r.productivityPerHa != null ? `${r.productivityPerHa} ${r.unitLabel}/ha` : '—'}
+                  </td>
+                  <td className="py-1.5 pr-3 text-gray-600">{currency(r.totalCost)}</td>
+                  <td className="py-1.5 pr-3 text-gray-600">
+                    {r.revenue != null ? currency(r.revenue) : '—'}
+                  </td>
+                  <td
+                    className={`py-1.5 pr-3 font-medium ${
+                      r.profit != null && r.profit < 0 ? 'text-red-600' : 'text-gray-900'
+                    }`}
+                  >
+                    {r.profit != null ? currency(r.profit) : '—'}
+                  </td>
+                  <td className="py-1.5 text-gray-600">
+                    {r.marginPercent != null ? `${r.marginPercent}%` : '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
   );
 }

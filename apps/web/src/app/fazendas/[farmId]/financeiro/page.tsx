@@ -5,7 +5,13 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, ApiError } from '@/lib/api';
-import type { CashFlowBucket, Transaction, TransactionCategory, TransactionType } from '@/lib/types';
+import type {
+  CashFlowBucket,
+  CropCycle,
+  Transaction,
+  TransactionCategory,
+  TransactionType,
+} from '@/lib/types';
 
 const TYPE_OPTIONS: TransactionType[] = ['RECEITA', 'DESPESA'];
 const CATEGORY_OPTIONS: TransactionCategory[] = [
@@ -47,6 +53,8 @@ export default function FinancePage() {
   const [amount, setAmount] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [alreadyPaid, setAlreadyPaid] = useState(false);
+  const [cropCycleId, setCropCycleId] = useState('');
+  const [cropCycles, setCropCycles] = useState<CropCycle[]>([]);
 
   const loadTransactions = useCallback(async () => {
     try {
@@ -85,9 +93,17 @@ export default function FinancePage() {
     const ok = await loadTransactions();
     if (ok) {
       await loadCashFlow();
+      try {
+        const safras = await apiFetch<CropCycle[]>(`/fazendas/${farmId}/safras`, {
+          token: accessToken,
+        });
+        setCropCycles(safras);
+      } catch {
+        setCropCycles([]);
+      }
     }
     setFetching(false);
-  }, [loadTransactions, loadCashFlow]);
+  }, [loadTransactions, loadCashFlow, farmId, accessToken]);
 
   useEffect(() => {
     if (loading) return;
@@ -126,12 +142,14 @@ export default function FinancePage() {
           amount: Number(amount),
           dueDate,
           paidAt: alreadyPaid ? today : undefined,
+          cropCycleId: cropCycleId || undefined,
         },
       });
       setDescription('');
       setAmount('');
       setDueDate('');
       setAlreadyPaid(false);
+      setCropCycleId('');
       await loadData();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao criar lançamento');
@@ -261,6 +279,28 @@ export default function FinancePage() {
                 className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
               />
             </div>
+
+            {cropCycles.length > 0 && (
+              <div className="col-span-2 sm:col-span-3">
+                <label className="text-xs font-medium text-gray-600">
+                  Vincular a uma safra (opcional)
+                </label>
+                <select
+                  value={cropCycleId}
+                  onChange={(e) => setCropCycleId(e.target.value)}
+                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                >
+                  <option value="">Sem vínculo</option>
+                  {cropCycles.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.cropName}
+                      {c.variety ? ` — ${c.variety}` : ''} ·{' '}
+                      {new Date(c.plantedAt).toLocaleDateString('pt-BR')}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <div className="flex items-center gap-2 self-end pb-1.5">
               <input

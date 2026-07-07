@@ -1,5 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { CropCycle } from '@prisma/client';
+import {
+  CropApplication,
+  CropCycle,
+  CropSaleUnit,
+  Transaction,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { SoilAnalysisService } from '../soil-analysis/soil-analysis.service';
 import { CreateCropCycleDto } from './dto/create-crop-cycle.dto';
@@ -7,6 +12,8 @@ import { UpdateCropCycleDto } from './dto/update-crop-cycle.dto';
 import { CreateCropApplicationDto } from './dto/create-crop-application.dto';
 import { UpdateCropApplicationDto } from './dto/update-crop-application.dto';
 import { PlantingCalculatorDto } from './dto/planting-calculator.dto';
+import { CreateCropCostEntryDto } from './dto/create-crop-cost-entry.dto';
+import { UpdateCropCostEntryDto } from './dto/update-crop-cost-entry.dto';
 import {
   CROP_REFERENCES,
   findCropReference,
@@ -59,6 +66,8 @@ export class CropsService {
           : undefined,
         harvestedAt: dto.harvestedAt ? new Date(dto.harvestedAt) : undefined,
         yieldKg: dto.yieldKg,
+        salePricePerUnit: dto.salePricePerUnit,
+        saleUnit: dto.saleUnit,
         notes: dto.notes,
         createdById,
       },
@@ -118,6 +127,10 @@ export class CropsService {
           ? { harvestedAt: new Date(dto.harvestedAt) }
           : {}),
         ...(dto.yieldKg !== undefined ? { yieldKg: dto.yieldKg } : {}),
+        ...(dto.salePricePerUnit !== undefined
+          ? { salePricePerUnit: dto.salePricePerUnit }
+          : {}),
+        ...(dto.saleUnit !== undefined ? { saleUnit: dto.saleUnit } : {}),
         ...(dto.notes !== undefined ? { notes: dto.notes } : {}),
       },
     });
@@ -365,6 +378,7 @@ export class CropsService {
         dosePerHa: dto.dosePerHa,
         doseUnit: dto.doseUnit,
         totalQuantity: dto.totalQuantity,
+        unitPrice: dto.unitPrice,
         appliedAt: dto.appliedAt ? new Date(dto.appliedAt) : undefined,
         preHarvestIntervalDays: dto.preHarvestIntervalDays,
         responsible: dto.responsible,
@@ -403,6 +417,7 @@ export class CropsService {
         ...(dto.totalQuantity !== undefined
           ? { totalQuantity: dto.totalQuantity }
           : {}),
+        ...(dto.unitPrice !== undefined ? { unitPrice: dto.unitPrice } : {}),
         ...(dto.appliedAt !== undefined
           ? { appliedAt: new Date(dto.appliedAt) }
           : {}),
@@ -426,5 +441,250 @@ export class CropsService {
     await this.assertApplication(cropCycleId, applicationId);
     await this.prisma.cropApplication.delete({ where: { id: applicationId } });
     return { success: true };
+  }
+
+  // ---- Custos manuais da safra ------------------------------------------
+  async listCostEntries(farmId: string, cropCycleId: string) {
+    await this.assertCycle(farmId, cropCycleId);
+    return this.prisma.cropCostEntry.findMany({
+      where: { cropCycleId },
+      orderBy: { incurredAt: 'desc' },
+    });
+  }
+
+  async addCostEntry(
+    farmId: string,
+    cropCycleId: string,
+    dto: CreateCropCostEntryDto,
+  ) {
+    await this.assertCycle(farmId, cropCycleId);
+    return this.prisma.cropCostEntry.create({
+      data: {
+        farmId,
+        cropCycleId,
+        category: dto.category,
+        description: dto.description,
+        amount: dto.amount,
+        incurredAt: dto.incurredAt ? new Date(dto.incurredAt) : undefined,
+      },
+    });
+  }
+
+  async updateCostEntry(
+    farmId: string,
+    cropCycleId: string,
+    entryId: string,
+    dto: UpdateCropCostEntryDto,
+  ) {
+    await this.assertCycle(farmId, cropCycleId);
+    const entry = await this.prisma.cropCostEntry.findUnique({
+      where: { id: entryId },
+    });
+    if (!entry || entry.cropCycleId !== cropCycleId) {
+      throw new NotFoundException('Custo não encontrado');
+    }
+    return this.prisma.cropCostEntry.update({
+      where: { id: entryId },
+      data: {
+        ...(dto.category !== undefined ? { category: dto.category } : {}),
+        ...(dto.description !== undefined
+          ? { description: dto.description }
+          : {}),
+        ...(dto.amount !== undefined ? { amount: dto.amount } : {}),
+        ...(dto.incurredAt !== undefined
+          ? { incurredAt: new Date(dto.incurredAt) }
+          : {}),
+      },
+    });
+  }
+
+  async removeCostEntry(farmId: string, cropCycleId: string, entryId: string) {
+    await this.assertCycle(farmId, cropCycleId);
+    const entry = await this.prisma.cropCostEntry.findUnique({
+      where: { id: entryId },
+    });
+    if (!entry || entry.cropCycleId !== cropCycleId) {
+      throw new NotFoundException('Custo não encontrado');
+    }
+    await this.prisma.cropCostEntry.delete({ where: { id: entryId } });
+    return { success: true };
+  }
+
+  // Custo de uma aplicação do caderno de campo: preço × (quantidade total ou
+  // dose/ha × área). Retorna null se não houver preço informado.
+  private applicationCost(app: CropApplication, areaHectares: number | null) {
+    if (app.unitPrice == null) return null;
+    const quantity =
+      app.totalQuantity ??
+      (app.dosePerHa != null && areaHectares != null
+        ? app.dosePerHa * areaHectares
+        : null);
+    if (quantity == null) return null;
+    return quantity * app.unitPrice;
+  }
+
+  private kgToUnit(kg: number, unit: CropSaleUnit | null): number {
+    if (unit === 'SACA60') return kg / 60;
+    if (unit === 'ARROBA') return kg / 15;
+    return kg; // KG ou não informado
+  }
+
+  private saleUnitLabel(unit: CropSaleUnit | null): string {
+    if (unit === 'SACA60') return 'sc (60kg)';
+    if (unit === 'ARROBA') return '@';
+    return 'kg';
+  }
+
+  // ---- Fechamento da safra (custos, receita, resultado) -----------------
+  async closing(farmId: string, cropCycleId: string) {
+    await this.assertCycle(farmId, cropCycleId);
+    const cycle = await this.prisma.cropCycle.findUnique({
+      where: { id: cropCycleId },
+      include: {
+        applications: true,
+        costEntries: true,
+        transactions: true,
+      },
+    });
+    if (!cycle) throw new NotFoundException('Safra não encontrada');
+
+    const area = cycle.areaHectares ?? null;
+
+    // Custos por fonte
+    const fieldBookCost = cycle.applications.reduce(
+      (sum, a) => sum + (this.applicationCost(a, area) ?? 0),
+      0,
+    );
+    const manualCost = cycle.costEntries.reduce((sum, e) => sum + e.amount, 0);
+    const financeCost = cycle.transactions
+      .filter((t: Transaction) => t.type === 'DESPESA')
+      .reduce((sum, t) => sum + t.amount, 0);
+    const totalCost = Number(
+      (fieldBookCost + manualCost + financeCost).toFixed(2),
+    );
+
+    // Custos por categoria (dos lançamentos manuais)
+    const costByCategory: Record<string, number> = {};
+    for (const e of cycle.costEntries) {
+      costByCategory[e.category] = (costByCategory[e.category] ?? 0) + e.amount;
+    }
+
+    // Produção e receita
+    const productionUnit = cycle.saleUnit ?? null;
+    const productionInUnit =
+      cycle.yieldKg != null
+        ? Number(this.kgToUnit(cycle.yieldKg, productionUnit).toFixed(2))
+        : null;
+    const productivityPerHa =
+      productionInUnit != null && area && area > 0
+        ? Number((productionInUnit / area).toFixed(2))
+        : null;
+    const revenue =
+      productionInUnit != null && cycle.salePricePerUnit != null
+        ? Number((productionInUnit * cycle.salePricePerUnit).toFixed(2))
+        : null;
+
+    // Resultado
+    const profit =
+      revenue != null ? Number((revenue - totalCost).toFixed(2)) : null;
+    const marginPercent =
+      revenue != null && revenue > 0
+        ? Number(((profit! / revenue) * 100).toFixed(1))
+        : null;
+    const costPerHa =
+      area && area > 0 ? Number((totalCost / area).toFixed(2)) : null;
+    const costPerUnit =
+      productionInUnit != null && productionInUnit > 0
+        ? Number((totalCost / productionInUnit).toFixed(2))
+        : null;
+
+    return {
+      cropName: cycle.cropName,
+      variety: cycle.variety,
+      areaHectares: area,
+      status: this.withStatus(cycle).status,
+      unitLabel: this.saleUnitLabel(productionUnit),
+      production: {
+        yieldKg: cycle.yieldKg,
+        productionInUnit,
+        productivityPerHa,
+      },
+      costs: {
+        fieldBook: Number(fieldBookCost.toFixed(2)),
+        manual: Number(manualCost.toFixed(2)),
+        finance: Number(financeCost.toFixed(2)),
+        total: totalCost,
+        perHectare: costPerHa,
+        perUnit: costPerUnit,
+        byCategory: costByCategory,
+      },
+      revenue: {
+        salePricePerUnit: cycle.salePricePerUnit,
+        total: revenue,
+      },
+      result: {
+        profit,
+        marginPercent,
+        breakEvenPricePerUnit: costPerUnit,
+      },
+    };
+  }
+
+  // ---- Histórico comparativo de safras ----------------------------------
+  async history(farmId: string) {
+    const cycles = await this.prisma.cropCycle.findMany({
+      where: { farmId },
+      orderBy: { plantedAt: 'desc' },
+      include: { applications: true, costEntries: true, transactions: true },
+    });
+
+    return cycles.map((cycle) => {
+      const area = cycle.areaHectares ?? null;
+      const fieldBookCost = cycle.applications.reduce(
+        (sum, a) => sum + (this.applicationCost(a, area) ?? 0),
+        0,
+      );
+      const manualCost = cycle.costEntries.reduce((s, e) => s + e.amount, 0);
+      const financeCost = cycle.transactions
+        .filter((t: Transaction) => t.type === 'DESPESA')
+        .reduce((s, t) => s + t.amount, 0);
+      const totalCost = Number(
+        (fieldBookCost + manualCost + financeCost).toFixed(2),
+      );
+      const productionInUnit =
+        cycle.yieldKg != null
+          ? Number(this.kgToUnit(cycle.yieldKg, cycle.saleUnit).toFixed(2))
+          : null;
+      const productivityPerHa =
+        productionInUnit != null && area && area > 0
+          ? Number((productionInUnit / area).toFixed(2))
+          : null;
+      const revenue =
+        productionInUnit != null && cycle.salePricePerUnit != null
+          ? Number((productionInUnit * cycle.salePricePerUnit).toFixed(2))
+          : null;
+      const profit =
+        revenue != null ? Number((revenue - totalCost).toFixed(2)) : null;
+      const marginPercent =
+        revenue != null && revenue > 0
+          ? Number(((profit! / revenue) * 100).toFixed(1))
+          : null;
+
+      return {
+        id: cycle.id,
+        cropName: cycle.cropName,
+        variety: cycle.variety,
+        areaHectares: area,
+        plantedAt: cycle.plantedAt,
+        harvestedAt: cycle.harvestedAt,
+        status: this.withStatus(cycle).status,
+        unitLabel: this.saleUnitLabel(cycle.saleUnit),
+        productivityPerHa,
+        totalCost,
+        revenue,
+        profit,
+        marginPercent,
+      };
+    });
   }
 }

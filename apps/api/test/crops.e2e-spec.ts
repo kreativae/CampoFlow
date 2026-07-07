@@ -92,7 +92,9 @@ describe('Crops / Safras (e2e)', () => {
   });
 
   afterAll(async () => {
+    await prisma.transaction.deleteMany({ where: { farmId } });
     await prisma.cropApplication.deleteMany({ where: { farmId } });
+    await prisma.cropCostEntry.deleteMany({ where: { farmId } });
     await prisma.cropCycle.deleteMany({ where: { farmId } });
     await prisma.soilAnalysis.deleteMany({ where: { farmId } });
     await prisma.mapFeature.deleteMany({ where: { farmId } });
@@ -320,6 +322,95 @@ describe('Crops / Safras (e2e)', () => {
       )
       .set('Authorization', `Bearer ${accessToken}`)
       .expect(200);
+  });
+
+  it('closing: computes costs (field-book + manual), revenue and margin', async () => {
+    // Marca produção e preço de venda por saca. Área 12.5 ha.
+    await request(app.getHttpServer())
+      .patch(`/fazendas/${farmId}/safras/${cycleId}`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ yieldKg: 45000, saleUnit: 'SACA60', salePricePerUnit: 130 })
+      .expect(200);
+
+    // Caderno de campo com preço: 2 L/ha × 12.5 ha × R$ 40 = R$ 1.000
+    await request(app.getHttpServer())
+      .post(`/fazendas/${farmId}/safras/${cycleId}/aplicacoes`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ type: 'HERBICIDA', product: 'Glifosato', dosePerHa: 2, unitPrice: 40 })
+      .expect(201);
+
+    // Custo manual: R$ 9.000
+    await request(app.getHttpServer())
+      .post(`/fazendas/${farmId}/safras/${cycleId}/custos`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ category: 'SEMENTE', description: 'Sementes de soja', amount: 9000 })
+      .expect(201);
+
+    const res = await request(app.getHttpServer())
+      .get(`/fazendas/${farmId}/safras/${cycleId}/fechamento`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    const body = res.body as {
+      production: { productionInUnit: number; productivityPerHa: number };
+      costs: { fieldBook: number; manual: number; total: number; perUnit: number };
+      revenue: { total: number };
+      result: { profit: number; marginPercent: number; breakEvenPricePerUnit: number };
+    };
+    expect(body.production.productionInUnit).toBe(750); // 45000 / 60
+    expect(body.production.productivityPerHa).toBe(60); // 750 / 12.5
+    expect(body.costs.fieldBook).toBe(1000);
+    expect(body.costs.manual).toBe(9000);
+    expect(body.costs.total).toBe(10000);
+    expect(body.revenue.total).toBe(97500); // 750 × 130
+    expect(body.result.profit).toBe(87500); // 97500 - 10000
+    expect(body.result.marginPercent).toBe(89.7);
+    expect(body.costs.perUnit).toBeCloseTo(13.33, 1); // 10000 / 750
+  });
+
+  it('history lists safras with productivity, cost, revenue and margin', async () => {
+    const res = await request(app.getHttpServer())
+      .get(`/fazendas/${farmId}/safras/historico`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    const body = res.body as {
+      id: string;
+      totalCost: number;
+      revenue: number | null;
+      profit: number | null;
+    }[];
+    const row = body.find((r) => r.id === cycleId);
+    expect(row).toBeTruthy();
+    expect(row!.totalCost).toBe(10000);
+    expect(row!.revenue).toBe(97500);
+    expect(row!.profit).toBe(87500);
+  });
+
+  it('links a finance transaction to a safra and it enters the closing cost', async () => {
+    await request(app.getHttpServer())
+      .post(`/fazendas/${farmId}/lancamentos`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        type: 'DESPESA',
+        category: 'COMBUSTIVEL',
+        amount: 2000,
+        dueDate: '2026-03-01',
+        cropCycleId: cycleId,
+      })
+      .expect(201);
+
+    const res = await request(app.getHttpServer())
+      .get(`/fazendas/${farmId}/safras/${cycleId}/fechamento`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+    const body = res.body as {
+      costs: { finance: number; total: number };
+      result: { profit: number };
+    };
+    expect(body.costs.finance).toBe(2000);
+    expect(body.costs.total).toBe(12000); // 1000 + 9000 + 2000
+    expect(body.result.profit).toBe(85500); // 97500 - 12000
   });
 
   it('deletes a crop cycle', async () => {

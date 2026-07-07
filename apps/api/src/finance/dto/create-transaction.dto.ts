@@ -29,4 +29,9 @@ export class CreateTransactionDto {
   @IsOptional()
   @IsDateString()
   paidAt?: string;
+
+  // Vincula o lançamento a uma safra, para entrar no fechamento dela.
+  @IsOptional()
+  @IsString()
+  cropCycleId?: string;
 }

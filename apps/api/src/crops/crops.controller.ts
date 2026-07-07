@@ -21,6 +21,8 @@ import { UpdateCropCycleDto } from './dto/update-crop-cycle.dto';
 import { CreateCropApplicationDto } from './dto/create-crop-application.dto';
 import { UpdateCropApplicationDto } from './dto/update-crop-application.dto';
 import { PlantingCalculatorDto } from './dto/planting-calculator.dto';
+import { CreateCropCostEntryDto } from './dto/create-crop-cost-entry.dto';
+import { UpdateCropCostEntryDto } from './dto/update-crop-cost-entry.dto';
 
 @Controller('fazendas/:farmId/safras')
 @UseGuards(JwtAuthGuard)
@@ -44,6 +46,12 @@ export class CropsController {
   @UseGuards(FarmAccessGuard)
   rotation(@Param('farmId') farmId: string) {
     return this.cropsService.rotation(farmId);
+  }
+
+  @Get('historico')
+  @UseGuards(FarmAccessGuard)
+  history(@Param('farmId') farmId: string) {
+    return this.cropsService.history(farmId);
   }
 
   // ---- CRUD de safras ---------------------------------------------------
@@ -102,6 +110,53 @@ export class CropsController {
     @Param('id') id: string,
   ) {
     return this.cropsService.fertilizerRecommendation(farmId, id);
+  }
+
+  @Get(':id/fechamento')
+  @UseGuards(FarmAccessGuard)
+  closing(@Param('farmId') farmId: string, @Param('id') id: string) {
+    return this.cropsService.closing(farmId, id);
+  }
+
+  // ---- Custos manuais da safra ------------------------------------------
+  @Get(':id/custos')
+  @UseGuards(FarmAccessGuard)
+  listCostEntries(@Param('farmId') farmId: string, @Param('id') id: string) {
+    return this.cropsService.listCostEntries(farmId, id);
+  }
+
+  @Post(':id/custos')
+  @UseGuards(RolesGuard)
+  @Roles(Role.OWNER, Role.MANAGER, Role.EMPLOYEE)
+  addCostEntry(
+    @Param('farmId') farmId: string,
+    @Param('id') id: string,
+    @Body() dto: CreateCropCostEntryDto,
+  ) {
+    return this.cropsService.addCostEntry(farmId, id, dto);
+  }
+
+  @Patch(':id/custos/:entryId')
+  @UseGuards(RolesGuard)
+  @Roles(Role.OWNER, Role.MANAGER, Role.EMPLOYEE)
+  updateCostEntry(
+    @Param('farmId') farmId: string,
+    @Param('id') id: string,
+    @Param('entryId') entryId: string,
+    @Body() dto: UpdateCropCostEntryDto,
+  ) {
+    return this.cropsService.updateCostEntry(farmId, id, entryId, dto);
+  }
+
+  @Delete(':id/custos/:entryId')
+  @UseGuards(RolesGuard)
+  @Roles(Role.OWNER, Role.MANAGER)
+  removeCostEntry(
+    @Param('farmId') farmId: string,
+    @Param('id') id: string,
+    @Param('entryId') entryId: string,
+  ) {
+    return this.cropsService.removeCostEntry(farmId, id, entryId);
   }
 
   // ---- Caderno de campo (aplicações) ------------------------------------

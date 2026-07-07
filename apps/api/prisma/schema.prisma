@@ -153,6 +153,7 @@ model Farm {
   soilAnalyses       SoilAnalysis[]
   cropCycles         CropCycle[]
   cropApplications   CropApplication[]
+  cropCostEntries    CropCostEntry[]
   contacts           Contact[]
   employees          Employee[]
   timeEntries        TimeEntry[]
@@ -369,6 +370,8 @@ model Transaction {
   amount      Float
   dueDate     DateTime
   paidAt      DateTime?
+  cropCycle   CropCycle?          @relation(fields: [cropCycleId], references: [id], onDelete: SetNull)
+  cropCycleId String?
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
 }
@@ -741,11 +744,47 @@ model CropCycle {
   expectedHarvestAt DateTime?
   harvestedAt       DateTime?
   yieldKg           Float?
+  salePricePerUnit  Float?
+  saleUnit          CropSaleUnit?
   notes             String?
   createdById       String?
   applications      CropApplication[]
+  costEntries       CropCostEntry[]
+  transactions      Transaction[]
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
+}
+
+// Unidade de venda para calcular receita/produtividade no fechamento da safra.
+enum CropSaleUnit {
+  SACA60
+  KG
+  ARROBA
+}
+
+enum CropCostCategory {
+  SEMENTE
+  FERTILIZANTE
+  DEFENSIVO
+  CALCARIO
+  OPERACAO
+  MAO_DE_OBRA
+  ARRENDAMENTO
+  OUTRO
+}
+
+// Lançamento manual de custo de uma safra (para o fechamento).
+model CropCostEntry {
+  id          String           @id @default(uuid())
+  farm        Farm             @relation(fields: [farmId], references: [id])
+  farmId      String
+  cropCycle   CropCycle        @relation(fields: [cropCycleId], references: [id], onDelete: Cascade)
+  cropCycleId String
+  category    CropCostCategory
+  description String
+  amount      Float
+  incurredAt  DateTime         @default(now())
+  createdAt   DateTime         @default(now())
 }
 
 enum CropApplicationType {
@@ -773,6 +812,7 @@ model CropApplication {
   dosePerHa              Float?
   doseUnit               String?
   totalQuantity          Float?
+  unitPrice              Float?
   appliedAt              DateTime            @default(now())
   preHarvestIntervalDays Int?
   responsible            String?

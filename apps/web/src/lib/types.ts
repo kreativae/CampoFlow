@@ -757,9 +757,80 @@ export interface CropCycle {
   expectedHarvestAt: string | null;
   harvestedAt: string | null;
   yieldKg: number | null;
+  salePricePerUnit: number | null;
+  saleUnit: CropSaleUnit | null;
   notes: string | null;
   status: CropCycleStatus;
   createdAt: string;
+}
+
+export type CropSaleUnit = 'SACA60' | 'KG' | 'ARROBA';
+
+export type CropCostCategory =
+  | 'SEMENTE'
+  | 'FERTILIZANTE'
+  | 'DEFENSIVO'
+  | 'CALCARIO'
+  | 'OPERACAO'
+  | 'MAO_DE_OBRA'
+  | 'ARRENDAMENTO'
+  | 'OUTRO';
+
+export interface CropCostEntry {
+  id: string;
+  cropCycleId: string;
+  category: CropCostCategory;
+  description: string;
+  amount: number;
+  incurredAt: string;
+  createdAt: string;
+}
+
+export interface CropClosing {
+  cropName: string;
+  variety: string | null;
+  areaHectares: number | null;
+  status: CropCycleStatus;
+  unitLabel: string;
+  production: {
+    yieldKg: number | null;
+    productionInUnit: number | null;
+    productivityPerHa: number | null;
+  };
+  costs: {
+    fieldBook: number;
+    manual: number;
+    finance: number;
+    total: number;
+    perHectare: number | null;
+    perUnit: number | null;
+    byCategory: Record<string, number>;
+  };
+  revenue: {
+    salePricePerUnit: number | null;
+    total: number | null;
+  };
+  result: {
+    profit: number | null;
+    marginPercent: number | null;
+    breakEvenPricePerUnit: number | null;
+  };
+}
+
+export interface CropHistoryRow {
+  id: string;
+  cropName: string;
+  variety: string | null;
+  areaHectares: number | null;
+  plantedAt: string;
+  harvestedAt: string | null;
+  status: CropCycleStatus;
+  unitLabel: string;
+  productivityPerHa: number | null;
+  totalCost: number;
+  revenue: number | null;
+  profit: number | null;
+  marginPercent: number | null;
 }
 
 export type CropApplicationType =
