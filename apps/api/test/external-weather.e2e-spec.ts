@@ -16,7 +16,6 @@ interface FarmResponseBody {
 interface WeatherRecordBody {
   temperatureC: number;
   windSpeedKmh: number;
-  alertType: string | null;
   source: string | null;
   recordedAt: string;
 }
@@ -145,7 +144,6 @@ describe('External weather (e2e)', () => {
 
     const body = latest.body as WeatherRecordBody;
     expect(body.temperatureC).toBe(22);
-    expect(body.alertType).toBeNull();
     expect(body.source).toBe('Open-Meteo');
   });
 
@@ -163,73 +161,5 @@ describe('External weather (e2e)', () => {
       .set('Authorization', `Bearer ${accessToken}`)
       .expect(201)
       .expect({ created: false });
-  });
-
-  it('infers GEADA (frost) when temperature is at or below the threshold', async () => {
-    fetchSpy = jest
-      .spyOn(global, 'fetch')
-      .mockResolvedValue(
-        new Response(
-          JSON.stringify(fakeOpenMeteoResponse(`${today}T16:00`, 2, 5, 0)),
-        ),
-      );
-
-    await request(app.getHttpServer())
-      .post(`/fazendas/${farmId}/clima/atualizar`)
-      .set('Authorization', `Bearer ${accessToken}`)
-      .expect(201);
-
-    const alerts = await request(app.getHttpServer())
-      .get(`/fazendas/${farmId}/clima/alertas`)
-      .set('Authorization', `Bearer ${accessToken}`)
-      .expect(200);
-
-    expect(
-      (alerts.body as WeatherRecordBody[]).some((a) => a.alertType === 'GEADA'),
-    ).toBe(true);
-  });
-
-  it('infers VENTO_FORTE (strong wind) when wind speed crosses the threshold', async () => {
-    fetchSpy = jest
-      .spyOn(global, 'fetch')
-      .mockResolvedValue(
-        new Response(
-          JSON.stringify(fakeOpenMeteoResponse(`${today}T19:00`, 25, 55, 2)),
-        ),
-      );
-
-    await request(app.getHttpServer())
-      .post(`/fazendas/${farmId}/clima/atualizar`)
-      .set('Authorization', `Bearer ${accessToken}`)
-      .expect(201);
-
-    const latest = await request(app.getHttpServer())
-      .get(`/fazendas/${farmId}/clima/recente`)
-      .set('Authorization', `Bearer ${accessToken}`)
-      .expect(200);
-
-    expect((latest.body as WeatherRecordBody).alertType).toBe('VENTO_FORTE');
-  });
-
-  it('infers GRANIZO (hail) from the WMO thunderstorm-with-hail codes', async () => {
-    fetchSpy = jest
-      .spyOn(global, 'fetch')
-      .mockResolvedValue(
-        new Response(
-          JSON.stringify(fakeOpenMeteoResponse(`${today}T22:00`, 25, 20, 96)),
-        ),
-      );
-
-    await request(app.getHttpServer())
-      .post(`/fazendas/${farmId}/clima/atualizar`)
-      .set('Authorization', `Bearer ${accessToken}`)
-      .expect(201);
-
-    const latest = await request(app.getHttpServer())
-      .get(`/fazendas/${farmId}/clima/recente`)
-      .set('Authorization', `Bearer ${accessToken}`)
-      .expect(200);
-
-    expect((latest.body as WeatherRecordBody).alertType).toBe('GRANIZO');
   });
 });

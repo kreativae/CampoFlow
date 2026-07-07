@@ -7,7 +7,6 @@ import { FinanceService } from '../finance/finance.service';
 import { HealthRecordsService } from '../health-records/health-records.service';
 import { FarmsService } from '../farms/farms.service';
 import { ReproductionService } from '../reproduction/reproduction.service';
-import { WeatherService } from '../weather/weather.service';
 import { SuppliesService } from '../supplies/supplies.service';
 import { MachinesService } from '../machines/machines.service';
 import { TasksService } from '../teams/tasks.service';
@@ -33,7 +32,6 @@ export class DashboardService {
     private readonly healthRecordsService: HealthRecordsService,
     private readonly farmsService: FarmsService,
     private readonly reproductionService: ReproductionService,
-    private readonly weatherService: WeatherService,
     private readonly suppliesService: SuppliesService,
     private readonly machinesService: MachinesService,
     private readonly tasksService: TasksService,
@@ -101,7 +99,6 @@ export class DashboardService {
       herd,
       members,
       reproductionStats,
-      weatherAlerts,
       supplyAlerts,
       supplies,
       machines,
@@ -119,7 +116,6 @@ export class DashboardService {
       this.getOverview(farmId),
       this.farmsService.listMembers(farmId),
       this.reproductionService.stats(farmId),
-      this.weatherService.activeAlerts(farmId),
       this.suppliesService.alerts(farmId),
       this.suppliesService.findAll(farmId),
       this.machinesService.findAll(farmId),
@@ -144,10 +140,6 @@ export class DashboardService {
       herd,
       members: { total: members.length },
       reproduction: reproductionStats,
-      weather: {
-        activeAlertsCount: weatherAlerts.length,
-        latestAlert: weatherAlerts[0] ?? null,
-      },
       supplies: {
         total: supplies.length,
         alertsCount: supplyAlerts.length,

@@ -53,12 +53,6 @@ export class WeatherController {
     return this.weatherService.latest(farmId);
   }
 
-  @Get('alertas')
-  @UseGuards(FarmAccessGuard)
-  activeAlerts(@Param('farmId') farmId: string) {
-    return this.weatherService.activeAlerts(farmId);
-  }
-
   @Patch(':id')
   @UseGuards(RolesGuard)
   @Roles(Role.OWNER, Role.MANAGER, Role.EMPLOYEE)

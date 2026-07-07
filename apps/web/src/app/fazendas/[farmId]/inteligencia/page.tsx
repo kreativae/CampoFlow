@@ -110,14 +110,8 @@ export default function BiPage() {
               ({data.forecastWeightGain.herdSize} animais)
             </p>
             <p className="text-sm text-gray-700">
-              Projeção base: <strong>{data.forecastWeightGain.projectedArrobas} @</strong>
+              Projeção: <strong>{data.forecastWeightGain.projectedArrobas} @</strong>
             </p>
-            {data.forecastWeightGain.weatherRiskActive && (
-              <p className="text-sm text-amber-700">
-                ⚠ Alerta climático ativo — projeção ajustada para{' '}
-                <strong>{data.forecastWeightGain.weatherAdjustedProjectedArrobas} @</strong>
-              </p>
-            )}
           </section>
 
           <section className="mb-8 rounded border border-gray-200 bg-white p-4">

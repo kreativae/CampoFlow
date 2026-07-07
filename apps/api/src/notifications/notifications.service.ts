@@ -13,7 +13,6 @@ import type { EmailDigestJobData } from './email-digest.processor';
 import { HealthRecordsService } from '../health-records/health-records.service';
 import { AgendaService } from '../agenda/agenda.service';
 import { SuppliesService } from '../supplies/supplies.service';
-import { WeatherService } from '../weather/weather.service';
 
 interface AlertCandidate {
   source: NotificationSource;
@@ -31,17 +30,14 @@ export class NotificationsService {
     private readonly healthRecordsService: HealthRecordsService,
     private readonly agendaService: AgendaService,
     private readonly suppliesService: SuppliesService,
-    private readonly weatherService: WeatherService,
   ) {}
 
   private async collectAlerts(farmId: string): Promise<AlertCandidate[]> {
-    const [vaccinations, agendaItems, supplies, weatherAlerts] =
-      await Promise.all([
-        this.healthRecordsService.pendingAlerts(farmId),
-        this.agendaService.alerts(farmId),
-        this.suppliesService.alerts(farmId),
-        this.weatherService.activeAlerts(farmId),
-      ]);
+    const [vaccinations, agendaItems, supplies] = await Promise.all([
+      this.healthRecordsService.pendingAlerts(farmId),
+      this.agendaService.alerts(farmId),
+      this.suppliesService.alerts(farmId),
+    ]);
 
     const candidates: AlertCandidate[] = [];
 
@@ -76,14 +72,6 @@ export class NotificationsService {
           message: `${s.name}`,
         });
       }
-    }
-
-    for (const w of weatherAlerts) {
-      candidates.push({
-        source: NotificationSource.CLIMA,
-        title: 'Alerta climático',
-        message: `${w.alertType} registrado em ${new Date(w.recordedAt).toLocaleDateString('pt-BR')}`,
-      });
     }
 
     return candidates;

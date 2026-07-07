@@ -465,10 +465,6 @@ export interface DashboardFullOverview {
     births: number;
     abortions: number;
   };
-  weather: {
-    activeAlertsCount: number;
-    latestAlert: { alertType: string | null; recordedAt: string } | null;
-  };
   supplies: {
     total: number;
     alertsCount: number;
@@ -500,8 +496,6 @@ export interface DashboardFullOverview {
   quotations: { commodity: string; price: number; unit: string }[];
 }
 
-export type WeatherAlertType = 'GEADA' | 'TEMPESTADE' | 'GRANIZO' | 'SECA' | 'VENTO_FORTE';
-
 export interface WeatherRecord {
   id: string;
   temperatureC: number | null;
@@ -509,7 +503,6 @@ export interface WeatherRecord {
   windSpeedKmh: number | null;
   pressureHpa: number | null;
   rainfallMm: number | null;
-  alertType: WeatherAlertType | null;
   notes: string | null;
   source: string | null;
   recordedAt: string;
@@ -733,8 +726,6 @@ export interface BiOverview {
     averageDailyGainKg: number;
     herdSize: number;
     projectedArrobas: number;
-    weatherRiskActive: boolean;
-    weatherAdjustedProjectedArrobas: number;
   };
   forecastSales: {
     recentMonths: { period: string; receita: number; despesa: number; saldo: number }[];

@@ -58,19 +58,4 @@ export class WeatherService {
       orderBy: { recordedAt: 'desc' },
     });
   }
-
-  // Active alerts: records with an alertType in the last 7 days, most recent first.
-  async activeAlerts(farmId: string) {
-    const windowStart = new Date();
-    windowStart.setDate(windowStart.getDate() - 7);
-
-    return this.prisma.weatherRecord.findMany({
-      where: {
-        farmId,
-        alertType: { not: null },
-        recordedAt: { gte: windowStart },
-      },
-      orderBy: { recordedAt: 'desc' },
-    });
-  }
 }

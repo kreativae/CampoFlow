@@ -7,7 +7,6 @@ import { PasturesService } from '../pastures/pastures.service';
 import { SuppliesService } from '../supplies/supplies.service';
 import { AgendaService } from '../agenda/agenda.service';
 import { HealthRecordsService } from '../health-records/health-records.service';
-import { WeatherService } from '../weather/weather.service';
 import { QuotationsService } from '../quotations/quotations.service';
 import { MachinesService } from '../machines/machines.service';
 import { SoilAnalysisService } from '../soil-analysis/soil-analysis.service';
@@ -16,7 +15,6 @@ import { DocumentsService } from '../documents/documents.service';
 const KG_PER_ARROBA = 15;
 const FORECAST_WINDOW_DAYS = 30;
 const MIN_WEIGHINGS_FOR_GAIN = 2;
-const WEATHER_RISK_REDUCTION = 0.85; // -15% projected gain when an active weather alert exists
 const HIGH_OCCUPANCY_THRESHOLD = 0.9;
 
 @Injectable()
@@ -30,7 +28,6 @@ export class BiService {
     private readonly suppliesService: SuppliesService,
     private readonly agendaService: AgendaService,
     private readonly healthRecordsService: HealthRecordsService,
-    private readonly weatherService: WeatherService,
     private readonly quotationsService: QuotationsService,
     private readonly machinesService: MachinesService,
     private readonly soilAnalysisService: SoilAnalysisService,
@@ -89,10 +86,9 @@ export class BiService {
     };
   }
 
-  // Heuristic forecast: herd average daily gain extrapolated forward, discounted when an
-  // active weather alert (seca, geada, etc.) is present. Not a trained ML model — there is
-  // no ML/LLM infrastructure available in this environment, so this is a transparent,
-  // rule-based substitute documented as such.
+  // Heuristic forecast: herd average daily gain extrapolated forward. Not a trained ML
+  // model — there is no ML/LLM infrastructure available in this environment, so this is a
+  // transparent, rule-based substitute documented as such.
   async forecastWeightGain(farmId: string) {
     const animals = await this.animalsService.findAll(farmId);
     const summaries = await Promise.all(
@@ -106,24 +102,14 @@ export class BiService {
         ? valid.reduce((sum, s) => sum + s.averageDailyGainKg, 0) / valid.length
         : 0;
 
-    const weatherAlerts = await this.weatherService.activeAlerts(farmId);
-    const weatherRisk = weatherAlerts.length > 0;
-
     const baseProjectedKg =
       averageDailyGainKg * animals.length * FORECAST_WINDOW_DAYS;
-    const adjustedProjectedKg = weatherRisk
-      ? baseProjectedKg * WEATHER_RISK_REDUCTION
-      : baseProjectedKg;
 
     return {
       windowDays: FORECAST_WINDOW_DAYS,
       averageDailyGainKg: Number(averageDailyGainKg.toFixed(3)),
       herdSize: animals.length,
       projectedArrobas: Number((baseProjectedKg / KG_PER_ARROBA).toFixed(2)),
-      weatherRiskActive: weatherRisk,
-      weatherAdjustedProjectedArrobas: Number(
-        (adjustedProjectedKg / KG_PER_ARROBA).toFixed(2),
-      ),
     };
   }
 
@@ -190,25 +176,18 @@ export class BiService {
   }
 
   // Rule-based management suggestions composed from alerts already surfaced by other
-  // modules (pasture occupancy, supplies, agenda, vaccination, weather, soil). This is a
+  // modules (pasture occupancy, supplies, agenda, vaccination, soil). This is a
   // transparent rules engine, not generative AI — there is no LLM API key configured in
   // this environment to power real natural-language suggestions.
   async managementSuggestions(farmId: string): Promise<string[]> {
-    const [
-      occupancy,
-      supplyAlerts,
-      agendaAlerts,
-      healthAlerts,
-      weatherAlerts,
-      soilAnalyses,
-    ] = await Promise.all([
-      this.pasturesService.occupancyStats(farmId),
-      this.suppliesService.alerts(farmId),
-      this.agendaService.alerts(farmId),
-      this.healthRecordsService.pendingAlerts(farmId),
-      this.weatherService.activeAlerts(farmId),
-      this.soilAnalysisService.findAll(farmId),
-    ]);
+    const [occupancy, supplyAlerts, agendaAlerts, healthAlerts, soilAnalyses] =
+      await Promise.all([
+        this.pasturesService.occupancyStats(farmId),
+        this.suppliesService.alerts(farmId),
+        this.agendaService.alerts(farmId),
+        this.healthRecordsService.pendingAlerts(farmId),
+        this.soilAnalysisService.findAll(farmId),
+      ]);
 
     const suggestions: string[] = [];
 
@@ -252,12 +231,6 @@ export class BiService {
           `Vacina "${h.vaccineName}" do animal ${h.animalEarTag} está atrasada.`,
         );
       }
-    }
-
-    for (const w of weatherAlerts) {
-      suggestions.push(
-        `Alerta climático ativo (${w.alertType}) — avalie manejo e proteção do rebanho.`,
-      );
     }
 
     for (const analysis of soilAnalyses) {

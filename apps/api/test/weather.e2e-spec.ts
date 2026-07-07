@@ -15,7 +15,6 @@ interface FarmResponseBody {
 
 interface WeatherRecordResponseBody {
   id: string;
-  alertType: string | null;
   temperatureC: number | null;
 }
 
@@ -104,18 +103,17 @@ describe('Weather (e2e)', () => {
       .expect(403);
   });
 
-  it('records a frost alert', async () => {
+  it('records a cold reading', async () => {
     const res = await request(app.getHttpServer())
       .post(`/fazendas/${farmId}/clima`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({
         temperatureC: 1,
-        alertType: 'GEADA',
-        notes: 'Geada forte prevista',
+        notes: 'Frente fria forte prevista',
       })
       .expect(201);
 
-    expect((res.body as WeatherRecordResponseBody).alertType).toBe('GEADA');
+    expect((res.body as WeatherRecordResponseBody).temperatureC).toBe(1);
   });
 
   it('returns the most recent record as latest', async () => {
@@ -124,18 +122,7 @@ describe('Weather (e2e)', () => {
       .set('Authorization', `Bearer ${consultantToken}`)
       .expect(200);
 
-    expect((res.body as WeatherRecordResponseBody).alertType).toBe('GEADA');
-  });
-
-  it('lists the frost alert as an active alert', async () => {
-    const res = await request(app.getHttpServer())
-      .get(`/fazendas/${farmId}/clima/alertas`)
-      .set('Authorization', `Bearer ${consultantToken}`)
-      .expect(200);
-
-    const alerts = res.body as WeatherRecordResponseBody[];
-    expect(alerts.length).toBe(1);
-    expect(alerts[0].alertType).toBe('GEADA');
+    expect((res.body as WeatherRecordResponseBody).temperatureC).toBe(1);
   });
 
   it('lists full history with both records, most recent first', async () => {
@@ -146,7 +133,7 @@ describe('Weather (e2e)', () => {
 
     const history = res.body as WeatherRecordResponseBody[];
     expect(history.length).toBe(2);
-    expect(history[0].alertType).toBe('GEADA');
+    expect(history[0].temperatureC).toBe(1);
   });
 
   it('updates a weather record', async () => {

@@ -1,15 +1,9 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { WeatherAlertType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 const OPEN_METEO_URL = 'https://api.open-meteo.com/v1/forecast';
 const SOURCE_LABEL = 'Open-Meteo';
-const FROST_THRESHOLD_C = 3;
-const STRONG_WIND_THRESHOLD_KMH = 50;
-// WMO weather codes: https://open-meteo.com/en/docs (codes 95/96/99 = thunderstorm).
-const HAIL_CODES = new Set([96, 99]);
-const THUNDERSTORM_CODES = new Set([95, 96, 99]);
 
 interface OpenMeteoResponse {
   current: {
@@ -82,26 +76,12 @@ export class ExternalWeatherService {
         humidityPercent: data.current.relative_humidity_2m,
         windSpeedKmh: data.current.wind_speed_10m,
         rainfallMm: data.current.precipitation,
-        alertType: this.inferAlertType(data.current),
         source: SOURCE_LABEL,
         recordedAt,
       },
     });
 
     return { created: true };
-  }
-
-  private inferAlertType(
-    current: OpenMeteoResponse['current'],
-  ): WeatherAlertType | undefined {
-    if (current.temperature_2m <= FROST_THRESHOLD_C)
-      return WeatherAlertType.GEADA;
-    if (HAIL_CODES.has(current.weather_code)) return WeatherAlertType.GRANIZO;
-    if (THUNDERSTORM_CODES.has(current.weather_code))
-      return WeatherAlertType.TEMPESTADE;
-    if (current.wind_speed_10m >= STRONG_WIND_THRESHOLD_KMH)
-      return WeatherAlertType.VENTO_FORTE;
-    return undefined;
   }
 
   private async fetchCurrent(
