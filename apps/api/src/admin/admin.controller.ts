@@ -15,6 +15,7 @@ import { UpdateAccountDto } from './dto/update-account.dto';
 import { UpdateAccountUserDto } from './dto/update-account-user.dto';
 import { DeleteAccountsDto } from './dto/delete-accounts.dto';
 import { UpdateMercadoPagoConfigDto } from './dto/update-mercadopago-config.dto';
+import { UpdateNotificationConfigDto } from './dto/update-notification-config.dto';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, PlatformAdminGuard)
@@ -79,5 +80,15 @@ export class AdminController {
   @Get('mercadopago/logs')
   getMercadoPagoLogs() {
     return this.adminService.getMercadoPagoLogs();
+  }
+
+  @Get('notificacoes/config')
+  getNotificationConfig() {
+    return this.adminService.getNotificationConfig();
+  }
+
+  @Patch('notificacoes/config')
+  updateNotificationConfig(@Body() dto: UpdateNotificationConfigDto) {
+    return this.adminService.updateNotificationConfig(dto);
   }
 }

@@ -12,6 +12,8 @@ import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
 import { UpdateAccountDto } from './dto/update-account.dto';
 import { UpdateAccountUserDto } from './dto/update-account-user.dto';
 import { UpdateMercadoPagoConfigDto } from './dto/update-mercadopago-config.dto';
+import { UpdateNotificationConfigDto } from './dto/update-notification-config.dto';
+import { NotificationsService } from '../notifications/notifications.service';
 
 const PASSWORD_SALT_ROUNDS = 10;
 
@@ -21,6 +23,7 @@ export class AdminService {
     private readonly prisma: PrismaService,
     private readonly mercadoPagoService: MercadoPagoService,
     private readonly farmsService: FarmsService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async listAccounts() {
@@ -228,5 +231,13 @@ export class AdminService {
 
   getMercadoPagoLogs() {
     return this.mercadoPagoService.getLogs();
+  }
+
+  getNotificationConfig() {
+    return this.notificationsService.getSchedule();
+  }
+
+  updateNotificationConfig(dto: UpdateNotificationConfigDto) {
+    return this.notificationsService.updateSchedule(dto);
   }
 }

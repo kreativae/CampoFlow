@@ -111,6 +111,13 @@ export interface MercadoPagoConfigStatus {
   webhookSecretSet: boolean;
 }
 
+export interface NotificationScheduleConfig {
+  frequency: string;
+  enabled: boolean;
+  updatedAt: string;
+  options: { key: string; label: string; cron: string }[];
+}
+
 export type MercadoPagoLogEvent =
   | 'CREATE_SUBSCRIPTION'
   | 'CANCEL_SUBSCRIPTION'

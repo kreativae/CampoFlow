@@ -1007,6 +1007,16 @@ model PlatformSetting {
   updatedAt     DateTime @updatedAt
 }
 
+// Singleton (id fixo) com a configuração da geração automática de notificações,
+// editável pelo admin da plataforma. frequency é uma das chaves conhecidas
+// (NotificationsService.FREQUENCY_CRON); enabled liga/desliga o cron.
+model NotificationSetting {
+  id        String   @id @default("default")
+  frequency String   @default("HOURLY")
+  enabled   Boolean  @default(true)
+  updatedAt DateTime @updatedAt
+}
+
 enum MercadoPagoLogEvent {
   CREATE_SUBSCRIPTION
   CANCEL_SUBSCRIPTION
