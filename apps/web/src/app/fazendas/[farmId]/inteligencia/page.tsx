@@ -133,14 +133,6 @@ export default function BiPage() {
             <h2 className="mb-3 font-semibold text-gray-800">Dados de outros módulos</h2>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <KpiCard
-                label="Cotação boi gordo"
-                value={
-                  data.additionalData.cotacaoBoiGordo
-                    ? `${formatCurrency(data.additionalData.cotacaoBoiGordo.price)}/${data.additionalData.cotacaoBoiGordo.unit}`
-                    : '—'
-                }
-              />
-              <KpiCard
                 label="Valor estimado do rebanho"
                 value={
                   data.additionalData.valorEstimadoRebanho != null
@@ -159,18 +151,9 @@ export default function BiPage() {
               <KpiCard label="Documentos cadastrados" value={`${data.additionalData.documentosCount}`} />
             </div>
             <p className="mt-3 text-xs text-gray-400">
-              Cotação nacional (Redação Agro/CEPEA), custos reais de manutenção + combustível das
-              máquinas da fazenda, e contagem de análises de solo e documentos cadastrados.
+              Custos reais de manutenção + combustível das máquinas da fazenda, e contagem de
+              análises de solo e documentos cadastrados.
             </p>
-          </section>
-
-          <section className="rounded border border-gray-200 bg-white p-4">
-            <h2 className="mb-3 font-semibold text-gray-800">Sugestões de manejo</h2>
-            <ul className="space-y-1 text-sm text-gray-700">
-              {data.managementSuggestions.map((s, i) => (
-                <li key={i}>• {s}</li>
-              ))}
-            </ul>
           </section>
         </>
       ) : null}

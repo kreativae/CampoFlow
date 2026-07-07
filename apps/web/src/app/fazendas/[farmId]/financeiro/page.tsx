@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, ApiError } from '@/lib/api';
+import { useToast } from '@/lib/toast-context';
 import type {
   CashFlowBucket,
   CropCycle,
@@ -37,6 +38,7 @@ function formatCurrency(value: number) {
 export default function FinancePage() {
   const { farmId } = useParams<{ farmId: string }>();
   const { user, accessToken, loading } = useAuth();
+  const { toastSuccess } = useToast();
   const router = useRouter();
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -151,6 +153,7 @@ export default function FinancePage() {
       setAlreadyPaid(false);
       setCropCycleId('');
       await loadData();
+      toastSuccess('Lançamento criado.');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao criar lançamento');
     } finally {

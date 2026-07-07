@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, apiUpload, apiDownload, ApiError } from '@/lib/api';
+import { useToast } from '@/lib/toast-context';
 import type { DocumentCategory, FarmDocument } from '@/lib/types';
 
 const CATEGORY_OPTIONS: { value: DocumentCategory; label: string }[] = [
@@ -29,6 +30,7 @@ function formatSize(bytes: number) {
 export default function DocumentsPage() {
   const { farmId } = useParams<{ farmId: string }>();
   const { user, accessToken, loading } = useAuth();
+  const { toastSuccess } = useToast();
   const router = useRouter();
 
   const [documents, setDocuments] = useState<FarmDocument[]>([]);
@@ -82,6 +84,7 @@ export default function DocumentsPage() {
       await apiUpload(`/fazendas/${farmId}/documentos`, formData, accessToken);
       if (fileInputRef.current) fileInputRef.current.value = '';
       await loadData();
+      toastSuccess('Documento enviado.');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao enviar documento');
     } finally {
@@ -106,6 +109,7 @@ export default function DocumentsPage() {
         token: accessToken,
       });
       await loadData();
+      toastSuccess('Documento excluído.');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao excluir documento');
     }

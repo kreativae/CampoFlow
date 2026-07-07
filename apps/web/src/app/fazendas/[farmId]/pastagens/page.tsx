@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, ApiError } from '@/lib/api';
 import { useConfirm } from '@/lib/confirm-context';
+import { useToast } from '@/lib/toast-context';
 import type { Pasture } from '@/lib/types';
 
 export default function PasturesPage() {
@@ -13,6 +14,7 @@ export default function PasturesPage() {
   const { user, accessToken, loading } = useAuth();
   const router = useRouter();
   const confirm = useConfirm();
+  const { toastSuccess } = useToast();
 
   const [pastures, setPastures] = useState<Pasture[]>([]);
   const [fetching, setFetching] = useState(true);
@@ -55,6 +57,15 @@ export default function PasturesPage() {
     void loadData();
   }, [loading, user, loadData, router]);
 
+  // Fecha a visualização rápida ao pressionar Esc.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setEditingId(null);
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   async function handleCreate(event: FormEvent) {
     event.preventDefault();
     setCreating(true);
@@ -75,6 +86,7 @@ export default function PasturesPage() {
       setGrassType('');
       setAnimalCapacity('');
       await loadData();
+      toastSuccess('Pasto cadastrado.');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao cadastrar pasto');
     } finally {
@@ -106,6 +118,7 @@ export default function PasturesPage() {
       });
       setEditingId(null);
       await loadData();
+      toastSuccess('Pasto atualizado.');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao atualizar pasto');
     } finally {
@@ -128,6 +141,7 @@ export default function PasturesPage() {
         token: accessToken,
       });
       await loadData();
+      toastSuccess('Pasto excluído.');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao excluir pasto');
     }
@@ -260,7 +274,12 @@ export default function PasturesPage() {
       )}
 
       {editingId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setEditingId(null);
+          }}
+        >
           <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-lg">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900">

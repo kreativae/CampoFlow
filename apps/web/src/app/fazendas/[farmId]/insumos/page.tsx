@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, ApiError } from '@/lib/api';
+import { useToast } from '@/lib/toast-context';
 import { useConfirm } from '@/lib/confirm-context';
 import type { Supply, SupplyAlert, SupplyCategory } from '@/lib/types';
 
@@ -30,6 +31,7 @@ function categoryLabel(supply: { category: SupplyCategory; customCategory: strin
 export default function SuppliesPage() {
   const { farmId } = useParams<{ farmId: string }>();
   const { user, accessToken, loading } = useAuth();
+  const { toastSuccess } = useToast();
   const router = useRouter();
   const confirm = useConfirm();
 
@@ -108,6 +110,7 @@ export default function SuppliesPage() {
       setQuantity('');
       setExpirationDate('');
       await loadData();
+      toastSuccess('Insumo cadastrado.');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao cadastrar insumo');
     } finally {
@@ -150,6 +153,7 @@ export default function SuppliesPage() {
       });
       setEditingId(null);
       await loadData();
+      toastSuccess('Insumo atualizado.');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao atualizar insumo');
     } finally {
@@ -172,6 +176,7 @@ export default function SuppliesPage() {
         token: accessToken,
       });
       await loadData();
+      toastSuccess('Insumo excluído.');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao excluir insumo');
     }

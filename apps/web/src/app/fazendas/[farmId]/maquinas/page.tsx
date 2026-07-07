@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, ApiError } from '@/lib/api';
+import { useToast } from '@/lib/toast-context';
 import { useConfirm } from '@/lib/confirm-context';
 import type { Machine, MachineCostSummary, MachineType } from '@/lib/types';
 
@@ -26,6 +27,7 @@ function formatCurrency(value: number) {
 export default function MachinesPage() {
   const { farmId } = useParams<{ farmId: string }>();
   const { user, accessToken, loading } = useAuth();
+  const { toastSuccess } = useToast();
   const router = useRouter();
   const confirm = useConfirm();
 
@@ -89,6 +91,7 @@ export default function MachinesPage() {
       setBrand('');
       setYear('');
       await loadData();
+      toastSuccess('Máquina cadastrada.');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao cadastrar máquina');
     } finally {
@@ -120,6 +123,7 @@ export default function MachinesPage() {
       });
       setEditingId(null);
       await loadData();
+      toastSuccess('Máquina atualizada.');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao atualizar máquina');
     } finally {
@@ -142,6 +146,7 @@ export default function MachinesPage() {
         token: accessToken,
       });
       await loadData();
+      toastSuccess('Máquina excluída.');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao excluir máquina');
     }

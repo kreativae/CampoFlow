@@ -51,6 +51,18 @@ export interface AccountSummary {
   createdAt: string;
 }
 
+// Resposta de GET /conta/assinatura — assinatura da conta do próprio usuário.
+export interface AccountSubscription {
+  planTier: PlanTier;
+  status: SubscriptionStatus;
+  trialEndsAt: string | null;
+  currentPeriodEnd: string | null;
+  canceledAt: string | null;
+  plan: { tier: PlanTier; label: string; maxFarms: number | null; priceBRL: number | null };
+  farmsUsed: number;
+  farmsLimit: number | null;
+}
+
 export interface PaymentHistoryEntry {
   id: number;
   status: string;

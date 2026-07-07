@@ -9,7 +9,7 @@ import type { DashboardFullOverview, DashboardOverview, Farm } from '@/lib/types
 
 export default function FarmDashboardPage() {
   const { farmId } = useParams<{ farmId: string }>();
-  const { user, accessToken, loading, logout } = useAuth();
+  const { user, accessToken, loading } = useAuth();
   const router = useRouter();
   const [farm, setFarm] = useState<Farm | null>(null);
   const [dashboard, setDashboard] = useState<DashboardOverview | null>(null);
@@ -68,68 +68,10 @@ export default function FarmDashboardPage() {
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
-      <header className="mb-8 flex items-center justify-between">
-        <div>
-          <Link href="/fazendas" className="text-sm text-green-700 hover:underline">
-            ← Propriedades
-          </Link>
-          <h1 className="text-2xl font-semibold text-green-800">{farm?.name ?? 'Propriedade'}</h1>
-        </div>
-        <button onClick={logout} className="text-sm font-medium text-gray-600 hover:text-gray-900">
-          Sair
-        </button>
+      <header className="mb-8">
+        <h1 className="text-2xl font-semibold text-green-800">{farm?.name ?? 'Propriedade'}</h1>
+        <p className="text-sm text-gray-500">Painel geral da propriedade</p>
       </header>
-
-      <nav className="mb-8 flex gap-4 border-b border-gray-200 pb-2 text-sm">
-        <Link href={`/fazendas/${farmId}/animais`} className="font-medium text-green-700 hover:underline">
-          Rebanho
-        </Link>
-        <Link href={`/fazendas/${farmId}/pastagens`} className="font-medium text-green-700 hover:underline">
-          Pastagens
-        </Link>
-        <Link href={`/fazendas/${farmId}/reproducao`} className="font-medium text-green-700 hover:underline">
-          Reprodução
-        </Link>
-        <Link href={`/fazendas/${farmId}/insumos`} className="font-medium text-green-700 hover:underline">
-          Insumos
-        </Link>
-        <Link href={`/fazendas/${farmId}/maquinas`} className="font-medium text-green-700 hover:underline">
-          Máquinas
-        </Link>
-        <Link href={`/fazendas/${farmId}/equipe`} className="font-medium text-green-700 hover:underline">
-          Equipe
-        </Link>
-        <Link href={`/fazendas/${farmId}/agenda`} className="font-medium text-green-700 hover:underline">
-          Agenda
-        </Link>
-        <Link href={`/fazendas/${farmId}/mapa`} className="font-medium text-green-700 hover:underline">
-          Solo
-        </Link>
-        <Link href={`/fazendas/${farmId}/safras`} className="font-medium text-green-700 hover:underline">
-          Safras
-        </Link>
-        <Link href={`/fazendas/${farmId}/documentos`} className="font-medium text-green-700 hover:underline">
-          Documentos
-        </Link>
-        <Link href={`/fazendas/${farmId}/relatorios`} className="font-medium text-green-700 hover:underline">
-          Relatórios
-        </Link>
-        <Link href={`/fazendas/${farmId}/inteligencia`} className="font-medium text-green-700 hover:underline">
-          IA
-        </Link>
-        <Link
-          href={`/fazendas/${farmId}/notificacoes`}
-          className="font-medium text-green-700 hover:underline"
-        >
-          Notificações
-        </Link>
-        <Link href={`/fazendas/${farmId}/financeiro`} className="font-medium text-green-700 hover:underline">
-          Financeiro
-        </Link>
-        <Link href={`/fazendas/${farmId}/contatos`} className="font-medium text-green-700 hover:underline">
-          Contatos
-        </Link>
-      </nav>
 
       {error && (
         <p className="mb-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
@@ -150,7 +92,13 @@ export default function FarmDashboardPage() {
             label="Taxa de lotação"
             value={`${(dashboard.stockingRate.occupancyRate * 100).toFixed(0)}%`}
           />
-          <Card label="Saldo do mês (R$)" value={dashboard.currentMonthFinance.saldo} />
+          <Card
+            label="Saldo do mês (R$)"
+            value={dashboard.currentMonthFinance.saldo.toLocaleString('pt-BR', {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}
+          />
           <Card label="Alertas pendentes" value={dashboard.pendingAlerts.length} />
 
           {dashboard.pendingAlerts.length > 0 && (

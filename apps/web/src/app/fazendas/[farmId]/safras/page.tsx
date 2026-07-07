@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, ApiError } from '@/lib/api';
+import { useToast } from '@/lib/toast-context';
 import { useConfirm } from '@/lib/confirm-context';
 import type {
   CropCycle,
@@ -97,6 +98,7 @@ function buildUpdateBody(form: FormState) {
 export default function CropsPage() {
   const { farmId } = useParams<{ farmId: string }>();
   const { user, accessToken, loading } = useAuth();
+  const { toastSuccess } = useToast();
   const router = useRouter();
   const confirm = useConfirm();
 
@@ -147,6 +149,15 @@ export default function CropsPage() {
     void loadData();
   }, [loading, user, loadData, router]);
 
+  // Fecha a visualização rápida ao pressionar Esc.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setEditingId(null);
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   useEffect(() => {
     if (!editingId || !editForm.mapFeatureId) {
       return;
@@ -184,6 +195,7 @@ export default function CropsPage() {
       });
       setForm(EMPTY_FORM);
       await loadData();
+      toastSuccess('Safra cadastrada.');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao cadastrar a safra');
     } finally {
@@ -221,6 +233,7 @@ export default function CropsPage() {
       });
       setEditingId(null);
       await loadData();
+      toastSuccess('Safra atualizada.');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao atualizar a safra');
     } finally {
@@ -243,6 +256,7 @@ export default function CropsPage() {
         token: accessToken,
       });
       await loadData();
+      toastSuccess('Safra excluída.');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao excluir a safra');
     }
@@ -425,7 +439,12 @@ export default function CropsPage() {
       )}
 
       {editingId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setEditingId(null);
+          }}
+        >
           <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg bg-white p-6 shadow-lg">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900">

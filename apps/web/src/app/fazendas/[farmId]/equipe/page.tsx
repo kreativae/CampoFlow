@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, ApiError } from '@/lib/api';
+import { useToast } from '@/lib/toast-context';
 import { useConfirm } from '@/lib/confirm-context';
 import type { Employee, EmployeeType, TimeEntry } from '@/lib/types';
 
@@ -76,6 +77,7 @@ export default function TeamPage() {
   const { user, accessToken, loading } = useAuth();
   const router = useRouter();
   const confirm = useConfirm();
+  const { toastSuccess } = useToast();
 
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [fetching, setFetching] = useState(true);
@@ -212,6 +214,7 @@ export default function TeamPage() {
         await loadData();
         await loadDetail(selectedId);
       }
+      toastSuccess('Funcionário salvo.');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao salvar o funcionário');
     } finally {
@@ -237,6 +240,7 @@ export default function TeamPage() {
       setSelectedId(null);
       setDetail(null);
       await loadData();
+      toastSuccess('Funcionário excluído.');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao excluir o funcionário');
     }

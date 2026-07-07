@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, ApiError } from '@/lib/api';
+import { useToast } from '@/lib/toast-context';
 import { useConfirm } from '@/lib/confirm-context';
 import type { Contact, ContactCategory, ContactType } from '@/lib/types';
 
@@ -111,6 +112,7 @@ function contactToForm(c: Contact): FormState {
 export default function ContactsPage() {
   const { farmId } = useParams<{ farmId: string }>();
   const { user, accessToken, loading } = useAuth();
+  const { toastSuccess } = useToast();
   const router = useRouter();
   const confirm = useConfirm();
 
@@ -210,6 +212,7 @@ export default function ContactsPage() {
         });
         await loadData();
       }
+      toastSuccess('Contato salvo.');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao salvar o contato');
     } finally {
@@ -235,6 +238,7 @@ export default function ContactsPage() {
       setSelectedId(null);
       setForm(EMPTY_FORM);
       await loadData();
+      toastSuccess('Contato excluído.');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao excluir o contato');
     }

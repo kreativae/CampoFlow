@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, ApiError } from '@/lib/api';
+import { useToast } from '@/lib/toast-context';
 import { useConfirm } from '@/lib/confirm-context';
 import type { AgendaAlert, AgendaEvent, AgendaEventType } from '@/lib/types';
 
@@ -44,6 +45,7 @@ function isSameDay(a: Date, b: Date) {
 export default function AgendaPage() {
   const { farmId } = useParams<{ farmId: string }>();
   const { user, accessToken, loading } = useAuth();
+  const { toastSuccess } = useToast();
   const router = useRouter();
   const confirm = useConfirm();
 
@@ -103,6 +105,7 @@ export default function AgendaPage() {
       setTitle('');
       setScheduledDate('');
       await loadData();
+      toastSuccess('Agendamento criado.');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao criar evento');
     } finally {
@@ -138,6 +141,7 @@ export default function AgendaPage() {
         token: accessToken,
       });
       await loadData();
+      toastSuccess('Agendamento excluído.');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao excluir evento');
     }

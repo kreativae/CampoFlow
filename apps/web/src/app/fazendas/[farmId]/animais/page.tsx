@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, ApiError } from '@/lib/api';
 import { useConfirm } from '@/lib/confirm-context';
+import { useToast } from '@/lib/toast-context';
 import type {
   Animal,
   AnimalCategory,
@@ -58,6 +59,7 @@ export default function AnimalsPage() {
   const { user, accessToken, loading } = useAuth();
   const router = useRouter();
   const confirm = useConfirm();
+  const { toastSuccess } = useToast();
 
   const [animals, setAnimals] = useState<Animal[]>([]);
   const [pastures, setPastures] = useState<Pasture[]>([]);
@@ -148,6 +150,18 @@ export default function AnimalsPage() {
     void loadData();
   }, [loading, user, loadData, router]);
 
+  // Fecha a visualização rápida / mover de pasto ao pressionar Esc.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        setEditingId(null);
+        setMoveModalOpen(false);
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   async function handleCreate(event: FormEvent) {
     event.preventDefault();
     setCreating(true);
@@ -168,6 +182,7 @@ export default function AnimalsPage() {
       setBreed('');
       setPastureId('');
       await loadData();
+      toastSuccess('Animal cadastrado.');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao cadastrar animal');
     } finally {
@@ -213,6 +228,7 @@ export default function AnimalsPage() {
       });
       setEditingId(null);
       await loadData();
+      toastSuccess('Animal atualizado.');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao atualizar animal');
     } finally {
@@ -235,6 +251,7 @@ export default function AnimalsPage() {
         token: accessToken,
       });
       await loadData();
+      toastSuccess('Animal excluído.');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao excluir animal');
     }
@@ -255,8 +272,10 @@ export default function AnimalsPage() {
       });
       setMoveModalOpen(false);
       setMovePastureId('');
+      const moved = selected.size;
       setSelected(new Set());
       await loadData();
+      toastSuccess(`${moved} brinco(s) movido(s) de pasto.`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao mover os brincos de pasto');
     } finally {
@@ -676,7 +695,12 @@ export default function AnimalsPage() {
       )}
 
       {moveModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setMoveModalOpen(false);
+          }}
+        >
           <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-lg">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900">Mover de pasto</h2>
@@ -727,7 +751,12 @@ export default function AnimalsPage() {
       )}
 
       {editingId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setEditingId(null);
+          }}
+        >
           <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-lg">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900">
