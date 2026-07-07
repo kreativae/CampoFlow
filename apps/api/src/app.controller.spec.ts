@@ -15,8 +15,11 @@ describe('AppController', () => {
   });
 
   describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(appController.getHello()).toBe('Hello World!');
+    it('returns API info with name and docs path', () => {
+      const info = appController.getInfo();
+      expect(info.name).toBe('CampoFlow API');
+      expect(info.status).toBe('ok');
+      expect(info.docs).toBe('/docs');
     });
   });
 });
