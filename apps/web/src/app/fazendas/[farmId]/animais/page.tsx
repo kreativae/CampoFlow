@@ -88,6 +88,9 @@ export default function AnimalsPage() {
   const [saving, setSaving] = useState(false);
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [moveModalOpen, setMoveModalOpen] = useState(false);
+  const [movePastureId, setMovePastureId] = useState('');
+  const [moving, setMoving] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
@@ -234,6 +237,30 @@ export default function AnimalsPage() {
       await loadData();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao excluir animal');
+    }
+  }
+
+  async function handleMovePasture() {
+    if (selected.size === 0) return;
+    setMoving(true);
+    setError(null);
+    try {
+      await apiFetch(`/fazendas/${farmId}/animais/mover-pasto`, {
+        method: 'POST',
+        token: accessToken,
+        body: {
+          animalIds: Array.from(selected),
+          pastureId: movePastureId || null,
+        },
+      });
+      setMoveModalOpen(false);
+      setMovePastureId('');
+      setSelected(new Set());
+      await loadData();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao mover os brincos de pasto');
+    } finally {
+      setMoving(false);
     }
   }
 
@@ -580,13 +607,25 @@ export default function AnimalsPage() {
           )}
 
           {selected.size > 0 && (
-            <p className="mb-3 text-sm font-medium text-gray-900">
-              {selected.size} brinco(s) selecionado(s) · peso total{' '}
-              {selectedTotalWeightKg.toLocaleString('pt-BR', {
-                maximumFractionDigits: 1,
-              })}{' '}
-              kg
-            </p>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-medium text-gray-900">
+                {selected.size} brinco(s) selecionado(s) · peso total{' '}
+                {selectedTotalWeightKg.toLocaleString('pt-BR', {
+                  maximumFractionDigits: 1,
+                })}{' '}
+                kg
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setMovePastureId('');
+                  setMoveModalOpen(true);
+                }}
+                className="rounded bg-green-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-800"
+              >
+                Mover de pasto
+              </button>
+            </div>
           )}
 
           {filteredAnimals.length === 0 ? (
@@ -634,6 +673,57 @@ export default function AnimalsPage() {
           </ul>
           )}
         </>
+      )}
+
+      {moveModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-lg">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900">Mover de pasto</h2>
+              <button
+                type="button"
+                onClick={() => setMoveModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+                aria-label="Fechar"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="mb-4 text-sm text-gray-600">
+              Mover {selected.size} brinco(s) selecionado(s) para outro pasto.
+            </p>
+            <label className="text-xs font-medium text-gray-600">Pasto de destino</label>
+            <select
+              value={movePastureId}
+              onChange={(e) => setMovePastureId(e.target.value)}
+              className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            >
+              <option value="">— Sem pasto —</option>
+              {pastures.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setMoveModalOpen(false)}
+                className="rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={moving}
+                onClick={handleMovePasture}
+                className="rounded bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+              >
+                {moving ? 'Movendo...' : 'Mover'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {editingId && (

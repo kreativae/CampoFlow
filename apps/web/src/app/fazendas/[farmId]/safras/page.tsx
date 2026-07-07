@@ -6,7 +6,14 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, ApiError } from '@/lib/api';
 import { useConfirm } from '@/lib/confirm-context';
-import type { CropCycle, CropCycleStatus, MapFeature, SoilAnalysis } from '@/lib/types';
+import type {
+  CropCycle,
+  CropCycleStatus,
+  CropReferenceOption,
+  MapFeature,
+  SoilAnalysis,
+} from '@/lib/types';
+import { PlantingCalculator, CropRotation, CropPlanning } from './planning';
 
 const STATUS_LABEL: Record<CropCycleStatus, string> = {
   PLANEJADA: 'Planejada',
@@ -80,6 +87,7 @@ export default function CropsPage() {
 
   const [cycles, setCycles] = useState<CropCycle[]>([]);
   const [features, setFeatures] = useState<MapFeature[]>([]);
+  const [references, setReferences] = useState<CropReferenceOption[]>([]);
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -97,12 +105,16 @@ export default function CropsPage() {
     setFetching(true);
     setError(null);
     try {
-      const [cyclesData, featuresData] = await Promise.all([
+      const [cyclesData, featuresData, referencesData] = await Promise.all([
         apiFetch<CropCycle[]>(`/fazendas/${farmId}/safras`, { token: accessToken }),
         apiFetch<MapFeature[]>(`/fazendas/${farmId}/elementos-mapa`, { token: accessToken }),
+        apiFetch<CropReferenceOption[]>(`/fazendas/${farmId}/safras/referencias/culturas`, {
+          token: accessToken,
+        }),
       ]);
       setCycles(cyclesData);
       setFeatures(featuresData);
+      setReferences(referencesData);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao carregar as safras');
     } finally {
@@ -337,6 +349,9 @@ export default function CropsPage() {
         </div>
       </form>
 
+      <PlantingCalculator farmId={farmId} token={accessToken} references={references} />
+      <CropRotation farmId={farmId} token={accessToken} />
+
       {cycles.length === 0 ? (
         <p className="text-sm text-gray-500">Nenhuma safra registrada ainda.</p>
       ) : (
@@ -393,7 +408,7 @@ export default function CropsPage() {
 
       {editingId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-lg">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg bg-white p-6 shadow-lg">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900">
                 Visualização rápida — {editForm.cropName}
@@ -540,6 +555,13 @@ export default function CropsPage() {
                   className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
                 />
               </div>
+            </div>
+
+            <div className="mt-6 border-t border-gray-200 pt-4">
+              <h3 className="mb-3 text-sm font-semibold text-gray-800">
+                Planejamento de plantio
+              </h3>
+              <CropPlanning farmId={farmId} token={accessToken} cycleId={editingId} />
             </div>
 
             <div className="mt-6 flex justify-end gap-2">

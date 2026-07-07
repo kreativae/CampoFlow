@@ -92,7 +92,9 @@ describe('Crops / Safras (e2e)', () => {
   });
 
   afterAll(async () => {
+    await prisma.cropApplication.deleteMany({ where: { farmId } });
     await prisma.cropCycle.deleteMany({ where: { farmId } });
+    await prisma.soilAnalysis.deleteMany({ where: { farmId } });
     await prisma.mapFeature.deleteMany({ where: { farmId } });
     await prisma.membership.deleteMany({ where: { farmId } });
     await prisma.farm.delete({ where: { id: farmId } });
@@ -181,6 +183,143 @@ describe('Crops / Safras (e2e)', () => {
     const body = res.body as CropCycleBody;
     expect(body.status).toBe('COLHIDA');
     expect(body.harvestedAt).toBeTruthy();
+  });
+
+  it('#3 planting window flags a planting date outside the recommended months', async () => {
+    // cycleId is Soja planted 2026-01-01; recommended window is out/nov/dez.
+    const res = await request(app.getHttpServer())
+      .get(`/fazendas/${farmId}/safras/${cycleId}/janela-plantio`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    const body = res.body as {
+      recognized: boolean;
+      recommendedMonths: number[];
+      plantedMonth: number;
+      withinWindow: boolean | null;
+    };
+    expect(body.recognized).toBe(true);
+    expect(body.recommendedMonths).toEqual([10, 11, 12]);
+    expect(body.plantedMonth).toBe(1);
+    expect(body.withinWindow).toBe(false);
+  });
+
+  it('#1 fertilizer/liming recommendation uses the latest soil analysis of the talhão', async () => {
+    await request(app.getHttpServer())
+      .post(`/fazendas/${farmId}/analises-solo`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        mapFeatureId: otherMapFeatureId,
+        collectedAt: '2026-01-10',
+        ph: 5.2,
+        baseSaturationPercent: 40,
+        ctcCmolcDm3: 8,
+        phosphorusMgDm3: 6,
+      })
+      .expect(201);
+
+    const res = await request(app.getHttpServer())
+      .get(`/fazendas/${farmId}/safras/${cycleId}/recomendacao`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    const body = res.body as {
+      fertilizer: {
+        phosphorusKgPerHa: number;
+        potassiumKgPerHa: number;
+        phosphorusTotalKg: number;
+      } | null;
+      liming: { limestoneTonPerHa: number | null } | null;
+      soilAnalysisId: string | null;
+    };
+    expect(body.soilAnalysisId).toBeTruthy();
+    expect(body.fertilizer?.phosphorusKgPerHa).toBe(80); // Soja
+    expect(body.fertilizer?.phosphorusTotalKg).toBe(1000); // 80 × 12.5 ha
+    // V% 40 → alvo 60, CTC 8 → NC = 8 × 0.2 = 1.6 t/ha
+    expect(body.liming?.limestoneTonPerHa).toBe(1.6);
+  });
+
+  it('#2 planting calculator computes totals and cost from area and rates', async () => {
+    const res = await request(app.getHttpServer())
+      .post(`/fazendas/${farmId}/safras/calculadora-plantio`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        areaHectares: 10,
+        seedRateKgPerHa: 60,
+        seedPricePerKg: 5,
+        fertilizerKgPerHa: 300,
+        fertilizerPricePerKg: 4,
+      })
+      .expect(201);
+
+    const body = res.body as {
+      seedTotalKg: number;
+      seedCost: number;
+      fertilizerTotalKg: number;
+      totalCost: number;
+      costPerHa: number;
+    };
+    expect(body.seedTotalKg).toBe(600);
+    expect(body.seedCost).toBe(3000);
+    expect(body.fertilizerTotalKg).toBe(3000);
+    expect(body.totalCost).toBe(15000); // 3000 + 12000
+    expect(body.costPerHa).toBe(1500);
+  });
+
+  it('#6 rotation groups crop history by talhão', async () => {
+    const res = await request(app.getHttpServer())
+      .get(`/fazendas/${farmId}/safras/rotacao`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    const body = res.body as {
+      mapFeatureId: string;
+      history: { cropName: string }[];
+    }[];
+    const group = body.find((g) => g.mapFeatureId === otherMapFeatureId);
+    expect(group).toBeTruthy();
+    expect(group!.history.some((h) => h.cropName === 'Soja')).toBe(true);
+  });
+
+  it('#4 records, lists and deletes a field-book application', async () => {
+    const createRes = await request(app.getHttpServer())
+      .post(`/fazendas/${farmId}/safras/${cycleId}/aplicacoes`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        type: 'HERBICIDA',
+        product: 'Glifosato',
+        dosePerHa: 2.5,
+        doseUnit: 'L/ha',
+        preHarvestIntervalDays: 30,
+        responsible: 'João Agrônomo',
+      })
+      .expect(201);
+    const applicationId = (createRes.body as { id: string }).id;
+
+    const listRes = await request(app.getHttpServer())
+      .get(`/fazendas/${farmId}/safras/${cycleId}/aplicacoes`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+    expect(
+      (listRes.body as { id: string; product: string }[]).some(
+        (a) => a.id === applicationId && a.product === 'Glifosato',
+      ),
+    ).toBe(true);
+
+    await request(app.getHttpServer())
+      .patch(
+        `/fazendas/${farmId}/safras/${cycleId}/aplicacoes/${applicationId}`,
+      )
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ dosePerHa: 3 })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .delete(
+        `/fazendas/${farmId}/safras/${cycleId}/aplicacoes/${applicationId}`,
+      )
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
   });
 
   it('deletes a crop cycle', async () => {

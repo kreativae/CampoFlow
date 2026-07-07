@@ -152,7 +152,10 @@ model Farm {
   documents          Document[]
   soilAnalyses       SoilAnalysis[]
   cropCycles         CropCycle[]
+  cropApplications   CropApplication[]
   contacts           Contact[]
+  employees          Employee[]
+  timeEntries        TimeEntry[]
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
 }
@@ -622,6 +625,49 @@ model Shift {
   createdAt DateTime @default(now())
 }
 
+enum EmployeeType {
+  EFETIVO
+  CHAPA
+  TEMPORARIO
+  OUTRO
+}
+
+// Funcionário da equipe (não é um usuário do sistema): efetivos, chapas, temporários
+// e outros. hourlyRate is the valor/hora used to cost this worker's logged hours.
+model Employee {
+  id          String       @id @default(uuid())
+  farm        Farm         @relation(fields: [farmId], references: [id])
+  farmId      String
+  name        String
+  type        EmployeeType @default(EFETIVO)
+  role        String?
+  document    String?
+  phone       String?
+  hourlyRate  Float        @default(0)
+  active      Boolean      @default(true)
+  notes       String?
+  timeEntries TimeEntry[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+// Registro de horas / banco de horas de um funcionário. hours é positivo para horas
+// trabalhadas/crédito e negativo para folga/débito, de modo que a soma é o saldo do
+// banco de horas. O custo é derivado de horas positivas × hourlyRate do funcionário.
+model TimeEntry {
+  id          String   @id @default(uuid())
+  farm        Farm     @relation(fields: [farmId], references: [id])
+  farmId      String
+  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employeeId  String
+  workDate    DateTime @default(now())
+  hours       Float
+  description String
+  paid        Boolean  @default(false)
+  notes       String?
+  createdAt   DateTime @default(now())
+}
+
 enum AgendaEventType {
   VACINACAO
   PESAGEM
@@ -697,8 +743,41 @@ model CropCycle {
   yieldKg           Float?
   notes             String?
   createdById       String?
+  applications      CropApplication[]
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
+}
+
+enum CropApplicationType {
+  PLANTIO
+  ADUBACAO
+  CALAGEM
+  HERBICIDA
+  FUNGICIDA
+  INSETICIDA
+  DEFENSIVO
+  IRRIGACAO
+  OUTRO
+}
+
+// Caderno de campo: registro de operações/aplicações em uma safra (plantio,
+// adubação, defensivos), com dose, carência e responsável.
+model CropApplication {
+  id                     String              @id @default(uuid())
+  farm                   Farm                @relation(fields: [farmId], references: [id])
+  farmId                 String
+  cropCycle              CropCycle           @relation(fields: [cropCycleId], references: [id], onDelete: Cascade)
+  cropCycleId            String
+  type                   CropApplicationType
+  product                String
+  dosePerHa              Float?
+  doseUnit               String?
+  totalQuantity          Float?
+  appliedAt              DateTime            @default(now())
+  preHarvestIntervalDays Int?
+  responsible            String?
+  notes                  String?
+  createdAt              DateTime            @default(now())
 }
 
 enum ContactType {

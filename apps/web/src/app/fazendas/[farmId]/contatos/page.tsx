@@ -59,6 +59,19 @@ const EMPTY_FORM: FormState = {
   notes: '',
 };
 
+const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+
+// Primeira letra do nome, sem acento e em maiúscula; números/símbolos viram '#'.
+function firstLetter(name: string): string {
+  const ch = name
+    .trim()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .charAt(0)
+    .toUpperCase();
+  return /[A-Z]/.test(ch) ? ch : '#';
+}
+
 function buildBody(form: FormState) {
   return {
     type: form.type,
@@ -107,6 +120,7 @@ export default function ContactsPage() {
   const [saving, setSaving] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [letterFilter, setLetterFilter] = useState<string | null>(null);
   const [filterTypes, setFilterTypes] = useState<Set<ContactType>>(new Set());
   const [filterCategories, setFilterCategories] = useState<Set<ContactCategory>>(
     new Set(),
@@ -147,6 +161,8 @@ export default function ContactsPage() {
     setter(next);
   }
 
+  const availableLetters = new Set(contacts.map((c) => firstLetter(c.name)));
+
   const filteredContacts = contacts.filter((c) => {
     if (
       searchTerm &&
@@ -155,6 +171,7 @@ export default function ContactsPage() {
     ) {
       return false;
     }
+    if (letterFilter && firstLetter(c.name) !== letterFilter) return false;
     if (filterTypes.size > 0 && !filterTypes.has(c.type)) return false;
     if (filterCategories.size > 0 && !filterCategories.has(c.category)) return false;
     return true;
@@ -268,6 +285,55 @@ export default function ContactsPage() {
             >
               + Novo
             </button>
+          </div>
+
+          {/* Índice alfabético — busca por letra inicial do nome */}
+          <div className="mb-3 flex flex-wrap gap-1">
+            <button
+              type="button"
+              onClick={() => setLetterFilter(null)}
+              className={`rounded px-1.5 py-0.5 text-xs font-medium ${
+                letterFilter === null
+                  ? 'bg-green-700 text-white'
+                  : 'text-green-700 hover:bg-green-50'
+              }`}
+            >
+              Todos
+            </button>
+            {ALPHABET.map((letter) => {
+              const enabled = availableLetters.has(letter);
+              const active = letterFilter === letter;
+              return (
+                <button
+                  key={letter}
+                  type="button"
+                  disabled={!enabled}
+                  onClick={() => setLetterFilter(active ? null : letter)}
+                  className={`w-6 rounded px-0 py-0.5 text-xs font-medium ${
+                    active
+                      ? 'bg-green-700 text-white'
+                      : enabled
+                        ? 'text-green-700 hover:bg-green-50'
+                        : 'cursor-default text-gray-300'
+                  }`}
+                >
+                  {letter}
+                </button>
+              );
+            })}
+            {availableLetters.has('#') && (
+              <button
+                type="button"
+                onClick={() => setLetterFilter(letterFilter === '#' ? null : '#')}
+                className={`w-6 rounded px-0 py-0.5 text-xs font-medium ${
+                  letterFilter === '#'
+                    ? 'bg-green-700 text-white'
+                    : 'text-green-700 hover:bg-green-50'
+                }`}
+              >
+                #
+              </button>
+            )}
           </div>
 
           <div className="mb-3 rounded border border-gray-200 bg-white p-3">

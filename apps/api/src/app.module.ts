@@ -33,6 +33,7 @@ import { MapFeaturesModule } from './map-features/map-features.module';
 import { SoilAnalysisModule } from './soil-analysis/soil-analysis.module';
 import { CropsModule } from './crops/crops.module';
 import { ContactsModule } from './contacts/contacts.module';
+import { EmployeesModule } from './employees/employees.module';
 import { DocumentsModule } from './documents/documents.module';
 import { ReportsModule } from './reports/reports.module';
 import { BiModule } from './bi/bi.module';
@@ -67,6 +68,7 @@ import { TicketsModule } from './tickets/tickets.module';
     SuppliesModule,
     MachinesModule,
     TeamsModule,
+    EmployeesModule,
     AgendaModule,
     MapFeaturesModule,
     SoilAnalysisModule,

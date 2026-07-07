@@ -126,9 +126,6 @@ export default function FarmDashboardPage() {
         <Link href={`/fazendas/${farmId}/financeiro`} className="font-medium text-green-700 hover:underline">
           Financeiro
         </Link>
-        <Link href={`/fazendas/${farmId}/membros`} className="font-medium text-green-700 hover:underline">
-          Membros
-        </Link>
         <Link href={`/fazendas/${farmId}/contatos`} className="font-medium text-green-700 hover:underline">
           Contatos
         </Link>
@@ -187,17 +184,6 @@ export default function FarmDashboardPage() {
               ]}
             />
             <SummaryCard
-              title="Clima"
-              href={`/fazendas/${farmId}/mapa`}
-              lines={[
-                `Alertas ativos: ${resumo.weather.activeAlertsCount}`,
-                resumo.weather.latestAlert
-                  ? `Último: ${resumo.weather.latestAlert.alertType}`
-                  : 'Sem alertas recentes',
-              ]}
-              highlight={resumo.weather.activeAlertsCount > 0}
-            />
-            <SummaryCard
               title="Insumos"
               href={`/fazendas/${farmId}/insumos`}
               lines={[
@@ -215,8 +201,8 @@ export default function FarmDashboardPage() {
               title="Equipe"
               href={`/fazendas/${farmId}/equipe`}
               lines={[
-                `${resumo.tasks.total} tarefa(s)`,
-                `${resumo.tasks.openCount} em aberto`,
+                `${resumo.employees.employeeCount} funcionário(s)`,
+                `Custo de horas: ${resumo.employees.totalCost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`,
               ]}
             />
             <SummaryCard
@@ -253,11 +239,6 @@ export default function FarmDashboardPage() {
               highlight={resumo.notifications.unreadCount > 0}
             />
             <SummaryCard
-              title="Membros"
-              href={`/fazendas/${farmId}/membros`}
-              lines={[`${resumo.members.total} membro(s)`]}
-            />
-            <SummaryCard
               title="Relatórios"
               href={`/fazendas/${farmId}/relatorios`}
               lines={['Exportação de dados gerenciais']}
@@ -266,17 +247,6 @@ export default function FarmDashboardPage() {
               title="IA / Inteligência"
               href={`/fazendas/${farmId}/inteligencia`}
               lines={['KPIs, previsões e sugestões']}
-            />
-            <SummaryCard
-              title="Cotações"
-              href="/cotacoes"
-              lines={
-                resumo.quotations.length > 0
-                  ? resumo.quotations.map(
-                      (q) => `${q.commodity}: ${q.price} ${q.unit}`,
-                    )
-                  : ['Nenhuma cotação registrada']
-              }
             />
           </div>
         </section>

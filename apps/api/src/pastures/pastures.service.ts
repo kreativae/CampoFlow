@@ -18,24 +18,35 @@ export class PasturesService {
     return this.prisma.pasture.create({ data: { ...dto, farmId } });
   }
 
-  // Includes active occupations so the list view can show "X/Y animais" per
-  // pasture without a second round-trip per row.
-  findAll(farmId: string) {
-    return this.prisma.pasture.findMany({
+  // Includes active occupations (manual rotation batches) and the live head count
+  // of animals assigned to the pasture in the herd module, so the list view can
+  // show "X/Y animais" reflecting real animal→pasture assignments.
+  async findAll(farmId: string) {
+    const pastures = await this.prisma.pasture.findMany({
       where: { farmId },
-      include: { occupations: { where: { exitedAt: null } } },
+      include: {
+        occupations: { where: { exitedAt: null } },
+        _count: { select: { animals: { where: { active: true } } } },
+      },
     });
+    return pastures.map(({ _count, ...pasture }) => ({
+      ...pasture,
+      animalHeadCount: _count.animals,
+    }));
   }
 
   async findOne(farmId: string, pastureId: string) {
     const pasture = await this.prisma.pasture.findUnique({
       where: { id: pastureId },
-      include: { occupations: { orderBy: { enteredAt: 'desc' } } },
+      include: {
+        occupations: { orderBy: { enteredAt: 'desc' } },
+        animals: { where: { active: true }, orderBy: { earTag: 'asc' } },
+      },
     });
     if (!pasture || pasture.farmId !== farmId) {
       throw new NotFoundException('Pasto não encontrado');
     }
-    return pasture;
+    return { ...pasture, animalHeadCount: pasture.animals.length };
   }
 
   async update(farmId: string, pastureId: string, dto: UpdatePastureDto) {
@@ -181,11 +192,15 @@ export class PasturesService {
     });
   }
 
-  // Stocking rate across all pastures of the farm: occupied head count vs. total capacity.
+  // Stocking rate across all pastures of the farm: occupied head count vs. total
+  // capacity. Occupancy is driven by real animals assigned to each pasture in the
+  // herd module, so it stays in sync with animal→pasture moves.
   async occupancyStats(farmId: string) {
     const pastures = await this.prisma.pasture.findMany({
       where: { farmId },
-      include: { occupations: { where: { exitedAt: null } } },
+      include: {
+        _count: { select: { animals: { where: { active: true } } } },
+      },
     });
 
     const totalCapacity = pastures.reduce(
@@ -193,7 +208,7 @@ export class PasturesService {
       0,
     );
     const occupiedHeadCount = pastures.reduce(
-      (sum, p) => sum + p.occupations.reduce((s, o) => s + o.headCount, 0),
+      (sum, p) => sum + p._count.animals,
       0,
     );
 

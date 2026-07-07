@@ -17,6 +17,7 @@ import { AnimalsService } from './animals.service';
 import { CreateAnimalDto } from './dto/create-animal.dto';
 import { UpdateAnimalDto } from './dto/update-animal.dto';
 import { TransferAnimalDto } from './dto/transfer-animal.dto';
+import { MoveAnimalsDto } from './dto/move-animals.dto';
 
 @Controller('fazendas/:farmId/animais')
 @UseGuards(JwtAuthGuard)
@@ -61,6 +62,13 @@ export class AnimalsController {
   @Roles(Role.OWNER, Role.MANAGER)
   remove(@Param('farmId') farmId: string, @Param('animalId') animalId: string) {
     return this.animalsService.remove(farmId, animalId);
+  }
+
+  @Post('mover-pasto')
+  @UseGuards(RolesGuard)
+  @Roles(Role.OWNER, Role.MANAGER, Role.EMPLOYEE)
+  moveToPasture(@Param('farmId') farmId: string, @Body() dto: MoveAnimalsDto) {
+    return this.animalsService.moveToPasture(farmId, dto);
   }
 
   @Post(':animalId/transferir')

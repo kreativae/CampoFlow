@@ -316,6 +316,10 @@ export interface Pasture {
   grassType: string | null;
   animalCapacity: number;
   occupations?: PastureOccupation[];
+  // Nº de animais do rebanho atualmente atribuídos a este pasto (Animal.pastureId).
+  animalHeadCount?: number;
+  // Animais do rebanho neste pasto (retornado no detalhe).
+  animals?: Animal[];
 }
 
 export type ReproductiveEventType =
@@ -427,6 +431,7 @@ export interface DashboardFullOverview {
     total: number;
     openCount: number;
   };
+  employees: EmployeeSummary;
   agenda: {
     upcomingCount: number;
     upcoming: { title: string; scheduledDate: string; overdue: boolean }[];
@@ -577,6 +582,51 @@ export interface Shift {
   user: { id: string; name: string; email: string };
 }
 
+export type EmployeeType = 'EFETIVO' | 'CHAPA' | 'TEMPORARIO' | 'OUTRO';
+
+export interface TimeEntry {
+  id: string;
+  employeeId: string;
+  workDate: string;
+  hours: number;
+  description: string;
+  paid: boolean;
+  notes: string | null;
+  createdAt: string;
+}
+
+export interface Employee {
+  id: string;
+  farmId: string;
+  name: string;
+  type: EmployeeType;
+  role: string | null;
+  document: string | null;
+  phone: string | null;
+  hourlyRate: number;
+  active: boolean;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+  // Aggregated on read by the API (findAll/findOne):
+  totalHours: number;
+  balanceHours: number;
+  grossCost: number;
+  paidCost: number;
+  totalCost: number;
+  timeEntries?: TimeEntry[];
+}
+
+export interface EmployeeSummary {
+  employeeCount: number;
+  activeCount: number;
+  totalHours: number;
+  balanceHours: number;
+  grossCost: number;
+  paidCost: number;
+  totalCost: number;
+}
+
 export type AgendaEventType = 'VACINACAO' | 'PESAGEM' | 'MANEJO' | 'COMPRA' | 'VENDA' | 'OUTRO';
 
 export interface AgendaEvent {
@@ -710,6 +760,96 @@ export interface CropCycle {
   notes: string | null;
   status: CropCycleStatus;
   createdAt: string;
+}
+
+export type CropApplicationType =
+  | 'PLANTIO'
+  | 'ADUBACAO'
+  | 'CALAGEM'
+  | 'HERBICIDA'
+  | 'FUNGICIDA'
+  | 'INSETICIDA'
+  | 'DEFENSIVO'
+  | 'IRRIGACAO'
+  | 'OUTRO';
+
+export interface CropApplication {
+  id: string;
+  cropCycleId: string;
+  type: CropApplicationType;
+  product: string;
+  dosePerHa: number | null;
+  doseUnit: string | null;
+  totalQuantity: number | null;
+  appliedAt: string;
+  preHarvestIntervalDays: number | null;
+  responsible: string | null;
+  notes: string | null;
+  createdAt: string;
+}
+
+export interface CropReferenceOption {
+  key: string;
+  label: string;
+  plantingMonths: number[];
+  seedRateKgPerHa: number | null;
+  cycleDays: number | null;
+  rotationGroup: string;
+}
+
+export interface PlantingWindow {
+  cropName: string;
+  recognized: boolean;
+  recommendedMonths: number[];
+  recommendedLabel: string | null;
+  plantedMonth: number;
+  withinWindow: boolean | null;
+  note: string;
+}
+
+export interface CropFertilizerRecommendation {
+  cropName: string;
+  areaHectares: number | null;
+  soilAnalysisId: string | null;
+  soilCollectedAt: string | null;
+  liming: {
+    limingNeeded: boolean;
+    limestoneTonPerHa: number | null;
+    targetBaseSaturationPercent: number;
+    notes: string[];
+  } | null;
+  fertilizer: {
+    nitrogenKgPerHa: number;
+    phosphorusKgPerHa: number;
+    potassiumKgPerHa: number;
+    nitrogenTotalKg: number | null;
+    phosphorusTotalKg: number | null;
+    potassiumTotalKg: number | null;
+  } | null;
+  notes: string[];
+}
+
+export interface PlantingCalcResult {
+  areaHectares: number;
+  seedTotalKg: number | null;
+  seedCost: number | null;
+  fertilizerTotalKg: number | null;
+  fertilizerCost: number | null;
+  totalCost: number | null;
+  costPerHa: number | null;
+}
+
+export interface CropRotationGroup {
+  mapFeatureId: string;
+  label: string;
+  history: {
+    id: string;
+    cropName: string;
+    variety: string | null;
+    plantedAt: string;
+    harvestedAt: string | null;
+  }[];
+  advice: string;
 }
 
 export type ContactType = 'PESSOA_FISICA' | 'PESSOA_JURIDICA';

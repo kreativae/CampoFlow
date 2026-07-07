@@ -163,8 +163,9 @@ export default function PastureDetailPage() {
   }
 
   const activeOccupations = pasture?.occupations?.filter((o) => o.exitedAt === null) ?? [];
-  const occupiedHeadCount = activeOccupations.reduce((sum, o) => sum + o.headCount, 0);
   const pastOccupations = pasture?.occupations?.filter((o) => o.exitedAt !== null) ?? [];
+  const herdAnimals = pasture?.animals ?? [];
+  const herdHeadCount = pasture?.animalHeadCount ?? herdAnimals.length;
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
@@ -186,7 +187,36 @@ export default function PastureDetailPage() {
 
       <section className="mb-8 grid grid-cols-2 gap-3">
         <SummaryCard label="Capacidade" value={`${pasture?.animalCapacity ?? 0} animais`} />
-        <SummaryCard label="Ocupação atual" value={`${occupiedHeadCount} animais`} />
+        <SummaryCard label="Ocupação atual (rebanho)" value={`${herdHeadCount} animais`} />
+      </section>
+
+      <section className="mb-8 rounded border border-gray-200 bg-white p-4">
+        <h2 className="mb-3 font-semibold text-gray-800">
+          Animais neste pasto (rebanho)
+        </h2>
+        {herdAnimals.length === 0 ? (
+          <p className="text-sm text-gray-500">
+            Nenhum animal do rebanho está atribuído a este pasto. Atribua ou mova brincos
+            para cá em Rebanho.
+          </p>
+        ) : (
+          <ul className="divide-y divide-gray-100 text-sm">
+            {herdAnimals.map((animal) => (
+              <li key={animal.id} className="flex items-center justify-between py-2">
+                <Link
+                  href={`/fazendas/${farmId}/animais/${animal.id}`}
+                  className="font-medium text-green-700 hover:underline"
+                >
+                  {animal.earTag}
+                </Link>
+                <span className="text-gray-500">
+                  {animal.category}
+                  {animal.currentWeightKg ? ` · ${animal.currentWeightKg} kg` : ''}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <section className="mb-8 rounded border border-gray-200 bg-white p-4">

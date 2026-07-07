@@ -10,6 +10,7 @@ import { WeatherModule } from '../weather/weather.module';
 import { SuppliesModule } from '../supplies/supplies.module';
 import { MachinesModule } from '../machines/machines.module';
 import { TeamsModule } from '../teams/teams.module';
+import { EmployeesModule } from '../employees/employees.module';
 import { AgendaModule } from '../agenda/agenda.module';
 import { MapFeaturesModule } from '../map-features/map-features.module';
 import { SoilAnalysisModule } from '../soil-analysis/soil-analysis.module';
@@ -33,6 +34,7 @@ import { DashboardController } from './dashboard.controller';
     SuppliesModule,
     MachinesModule,
     TeamsModule,
+    EmployeesModule,
     AgendaModule,
     MapFeaturesModule,
     SoilAnalysisModule,

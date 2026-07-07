@@ -135,9 +135,6 @@ export default function FarmsPage() {
           <p className="text-sm text-gray-500">Olá, {user.name}</p>
         </div>
         <div className="flex items-center gap-4">
-          <Link href="/cotacoes" className="text-sm font-medium text-green-700 hover:underline">
-            Cotações
-          </Link>
           <Link href="/seguranca" className="text-sm font-medium text-green-700 hover:underline">
             Segurança
           </Link>

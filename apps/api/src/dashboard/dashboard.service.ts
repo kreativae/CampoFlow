@@ -11,6 +11,7 @@ import { WeatherService } from '../weather/weather.service';
 import { SuppliesService } from '../supplies/supplies.service';
 import { MachinesService } from '../machines/machines.service';
 import { TasksService } from '../teams/tasks.service';
+import { EmployeesService } from '../employees/employees.service';
 import { AgendaService } from '../agenda/agenda.service';
 import { MapFeaturesService } from '../map-features/map-features.service';
 import { SoilAnalysisService } from '../soil-analysis/soil-analysis.service';
@@ -36,6 +37,7 @@ export class DashboardService {
     private readonly suppliesService: SuppliesService,
     private readonly machinesService: MachinesService,
     private readonly tasksService: TasksService,
+    private readonly employeesService: EmployeesService,
     private readonly agendaService: AgendaService,
     private readonly mapFeaturesService: MapFeaturesService,
     private readonly soilAnalysisService: SoilAnalysisService,
@@ -105,6 +107,7 @@ export class DashboardService {
       machines,
       machinesCosts,
       tasks,
+      employeesSummary,
       agendaAlerts,
       mapFeatures,
       soilAnalyses,
@@ -122,6 +125,7 @@ export class DashboardService {
       this.machinesService.findAll(farmId),
       this.machinesService.costsSummary(farmId),
       this.tasksService.findAll(farmId),
+      this.employeesService.summary(farmId),
       this.agendaService.alerts(farmId),
       this.mapFeaturesService.findAll(farmId),
       this.soilAnalysisService.findAll(farmId),
@@ -157,6 +161,7 @@ export class DashboardService {
         total: tasks.length,
         openCount: openTasks.length,
       },
+      employees: employeesSummary,
       agenda: {
         upcomingCount: agendaAlerts.length,
         upcoming: agendaAlerts.slice(0, 5),

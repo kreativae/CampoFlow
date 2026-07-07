@@ -10,6 +10,7 @@ import type {
   Animal,
   AnimalEvent,
   GainSummary,
+  Pasture,
   PregnancyDiagnosisResult,
   ReproductiveEvent,
   ReproductiveEventType,
@@ -34,6 +35,9 @@ export default function AnimalDetailPage() {
   const confirm = useConfirm();
 
   const [animal, setAnimal] = useState<Animal | null>(null);
+  const [pastures, setPastures] = useState<Pasture[]>([]);
+  const [movePastureId, setMovePastureId] = useState('');
+  const [savingPasture, setSavingPasture] = useState(false);
   const [weighings, setWeighings] = useState<WeighingRecord[]>([]);
   const [gainSummary, setGainSummary] = useState<GainSummary | null>(null);
   const [vaccinations, setVaccinations] = useState<VaccinationRecord[]>([]);
@@ -80,6 +84,7 @@ export default function AnimalDetailPage() {
       const base = `/fazendas/${farmId}/animais/${animalId}`;
       const [
         animalData,
+        pasturesData,
         weighingsData,
         gainData,
         vaccinationsData,
@@ -87,6 +92,7 @@ export default function AnimalDetailPage() {
         historyData,
       ] = await Promise.all([
         apiFetch<Animal>(base, { token: accessToken }),
+        apiFetch<Pasture[]>(`/fazendas/${farmId}/pastagens`, { token: accessToken }),
         apiFetch<WeighingRecord[]>(`${base}/pesagens`, { token: accessToken }),
         apiFetch<GainSummary>(`${base}/pesagens/resumo-ganho`, { token: accessToken }),
         apiFetch<VaccinationRecord[]>(`${base}/vacinacoes`, { token: accessToken }),
@@ -94,6 +100,8 @@ export default function AnimalDetailPage() {
         apiFetch<AnimalEvent[]>(`${base}/historico`, { token: accessToken }),
       ]);
       setAnimal(animalData);
+      setPastures(pasturesData);
+      setMovePastureId(animalData.pastureId ?? '');
       setWeighings(weighingsData);
       setGainSummary(gainData);
       setVaccinations(vaccinationsData);
@@ -116,6 +124,27 @@ export default function AnimalDetailPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadData();
   }, [loading, user, loadData, router]);
+
+  async function handleChangePasture(event: FormEvent) {
+    event.preventDefault();
+    setSavingPasture(true);
+    setError(null);
+    try {
+      await apiFetch(`/fazendas/${farmId}/animais/mover-pasto`, {
+        method: 'POST',
+        token: accessToken,
+        body: {
+          animalIds: [animalId],
+          pastureId: movePastureId || null,
+        },
+      });
+      await loadData();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao trocar o pasto do animal');
+    } finally {
+      setSavingPasture(false);
+    }
+  }
 
   async function handleAddWeighing(event: FormEvent) {
     event.preventDefault();
@@ -364,6 +393,37 @@ export default function AnimalDetailPage() {
           label="Ganho mensal médio"
           value={`${gainSummary?.averageMonthlyGainKg ?? 0} kg`}
         />
+      </section>
+
+      <section className="mb-8 rounded border border-gray-200 bg-white p-4">
+        <h2 className="mb-3 font-semibold text-gray-800">Pasto</h2>
+        <p className="mb-3 text-sm text-gray-500">
+          Pasto atual:{' '}
+          <span className="font-medium text-gray-800">
+            {pastures.find((p) => p.id === animal?.pastureId)?.name ?? 'Sem pasto'}
+          </span>
+        </p>
+        <form onSubmit={handleChangePasture} className="flex flex-wrap gap-2">
+          <select
+            value={movePastureId}
+            onChange={(e) => setMovePastureId(e.target.value)}
+            className="flex-1 rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+          >
+            <option value="">— Sem pasto —</option>
+            {pastures.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+          <button
+            type="submit"
+            disabled={savingPasture || movePastureId === (animal?.pastureId ?? '')}
+            className="rounded bg-green-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+          >
+            {savingPasture ? 'Salvando...' : 'Trocar pasto'}
+          </button>
+        </form>
       </section>
 
       <section className="mb-8 rounded border border-gray-200 bg-white p-4">

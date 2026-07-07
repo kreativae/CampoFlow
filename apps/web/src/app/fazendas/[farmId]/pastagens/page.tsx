@@ -222,10 +222,7 @@ export default function PasturesPage() {
       ) : (
         <ul className="space-y-2">
           {pastures.map((pasture) => {
-            const occupiedHeadCount = (pasture.occupations ?? []).reduce(
-              (sum, o) => sum + o.headCount,
-              0,
-            );
+            const occupiedHeadCount = pasture.animalHeadCount ?? 0;
             return (
               <li
                 key={pasture.id}
