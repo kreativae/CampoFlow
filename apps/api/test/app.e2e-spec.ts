@@ -16,11 +16,14 @@ describe('AppController (e2e)', () => {
     await app.init();
   });
 
-  it('/ (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/')
-      .expect(200)
-      .expect('Hello World!');
+  it('/ (GET) retorna as informações da API', async () => {
+    const res = await request(app.getHttpServer()).get('/').expect(200);
+    expect(res.body).toMatchObject({
+      name: 'CampoFlow API',
+      status: 'ok',
+      docs: '/docs',
+    });
+    expect(typeof res.body.version).toBe('string');
   });
 
   afterEach(async () => {
