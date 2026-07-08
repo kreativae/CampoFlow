@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
+import { SubscriptionStatus, TicketStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { PLAN_DEFINITIONS } from '../billing/plans';
 import { MercadoPagoService } from '../billing/mercadopago.service';
@@ -25,6 +26,76 @@ export class AdminService {
     private readonly farmsService: FarmsService,
     private readonly notificationsService: NotificationsService,
   ) {}
+
+  // Painel de visão geral da plataforma: números que o dono acompanha no dia a dia.
+  // Tudo agregado do próprio banco (assinaturas + planos), sem depender de serviço
+  // externo. MRR considera apenas assinaturas ACTIVE com preço numérico (trial e
+  // enterprise "fale com vendas" não entram na receita recorrente).
+  async overview() {
+    const now = new Date();
+    const days7 = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const days30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    const [
+      totalAccounts,
+      totalFarms,
+      newAccounts7d,
+      newAccounts30d,
+      subscriptions,
+      openTickets,
+    ] = await Promise.all([
+      this.prisma.account.count(),
+      this.prisma.farm.count(),
+      this.prisma.account.count({ where: { createdAt: { gte: days7 } } }),
+      this.prisma.account.count({ where: { createdAt: { gte: days30 } } }),
+      this.prisma.subscription.findMany({
+        select: { status: true, planTier: true },
+      }),
+      this.prisma.ticket.count({
+        where: {
+          status: { in: [TicketStatus.ABERTO, TicketStatus.EM_ANDAMENTO] },
+        },
+      }),
+    ]);
+
+    const statusCounts: Record<string, number> = {
+      TRIALING: 0,
+      ACTIVE: 0,
+      PAST_DUE: 0,
+      CANCELED: 0,
+      SUSPENDED: 0,
+    };
+    const planCounts: Record<string, number> = {
+      TRIAL: 0,
+      BASICO: 0,
+      PROFISSIONAL: 0,
+      ENTERPRISE: 0,
+    };
+    let mrr = 0;
+    for (const sub of subscriptions) {
+      statusCounts[sub.status] = (statusCounts[sub.status] ?? 0) + 1;
+      planCounts[sub.planTier] = (planCounts[sub.planTier] ?? 0) + 1;
+      if (sub.status === SubscriptionStatus.ACTIVE) {
+        const price = PLAN_DEFINITIONS[sub.planTier]?.priceBRL;
+        if (price) mrr += price;
+      }
+    }
+
+    // Contas sem assinatura (staff da plataforma) não aparecem nos status acima.
+    const withoutSubscription = totalAccounts - subscriptions.length;
+
+    return {
+      totalAccounts,
+      totalFarms,
+      newAccounts7d,
+      newAccounts30d,
+      openTickets,
+      withoutSubscription,
+      statusCounts,
+      planCounts,
+      mrr: Number(mrr.toFixed(2)),
+    };
+  }
 
   async listAccounts() {
     const accounts = await this.prisma.account.findMany({

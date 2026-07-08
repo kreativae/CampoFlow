@@ -8,10 +8,16 @@ import { apiFetch, ApiError } from '@/lib/api';
 import type {
   AccountDetail,
   AccountSummary,
+  AdminOverview,
   PlanTier,
   SubscriptionStatus,
 } from '@/lib/types';
 import { SUBSCRIPTION_STATUS_LABEL, paymentStatusLabel } from '@/lib/types';
+
+const BRL = new Intl.NumberFormat('pt-BR', {
+  style: 'currency',
+  currency: 'BRL',
+});
 
 const PLAN_OPTIONS: PlanTier[] = ['TRIAL', 'BASICO', 'PROFISSIONAL', 'ENTERPRISE'];
 const STATUS_OPTIONS: SubscriptionStatus[] = [
@@ -28,11 +34,37 @@ function statusBadgeClass(status: SubscriptionStatus | null) {
   return 'bg-red-50 text-red-700';
 }
 
+function MetricCard({
+  label,
+  value,
+  accent,
+}: {
+  label: string;
+  value: string | number;
+  accent?: 'green' | 'amber' | 'red';
+}) {
+  const valueColor =
+    accent === 'green'
+      ? 'text-green-700'
+      : accent === 'amber'
+        ? 'text-amber-700'
+        : accent === 'red'
+          ? 'text-red-700'
+          : 'text-gray-900';
+  return (
+    <div className="rounded border border-gray-200 bg-white px-3 py-3">
+      <p className="text-xs text-gray-500">{label}</p>
+      <p className={`mt-1 text-xl font-semibold ${valueColor}`}>{value}</p>
+    </div>
+  );
+}
+
 export default function AdminAccountsPage() {
   const { accessToken } = useAuth();
   const confirm = useConfirm();
 
   const [accounts, setAccounts] = useState<AccountSummary[]>([]);
+  const [overview, setOverview] = useState<AdminOverview | null>(null);
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -46,8 +78,14 @@ export default function AdminAccountsPage() {
     setFetching(true);
     setError(null);
     try {
-      const data = await apiFetch<AccountSummary[]>('/admin/contas', { token: accessToken });
+      const [data, ov] = await Promise.all([
+        apiFetch<AccountSummary[]>('/admin/contas', { token: accessToken }),
+        apiFetch<AdminOverview>('/admin/overview', { token: accessToken }).catch(
+          () => null,
+        ),
+      ]);
       setAccounts(data);
+      setOverview(ov);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao carregar contas');
     } finally {
@@ -182,6 +220,46 @@ export default function AdminAccountsPage() {
           </button>
         )}
       </header>
+
+      {overview && (
+        <section className="mb-8">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+            <MetricCard label="Contas" value={overview.totalAccounts} />
+            <MetricCard label="MRR" value={BRL.format(overview.mrr)} accent="green" />
+            <MetricCard
+              label="Ativas"
+              value={overview.statusCounts.ACTIVE ?? 0}
+              accent="green"
+            />
+            <MetricCard label="Em trial" value={overview.statusCounts.TRIALING ?? 0} />
+            <MetricCard
+              label="Inadimplentes"
+              value={overview.statusCounts.PAST_DUE ?? 0}
+              accent={
+                (overview.statusCounts.PAST_DUE ?? 0) > 0 ? 'amber' : undefined
+              }
+            />
+            <MetricCard
+              label="Canceladas"
+              value={overview.statusCounts.CANCELED ?? 0}
+              accent={(overview.statusCounts.CANCELED ?? 0) > 0 ? 'red' : undefined}
+            />
+            <MetricCard label="Fazendas" value={overview.totalFarms} />
+            <MetricCard label="Novas contas (7d)" value={overview.newAccounts7d} />
+            <MetricCard label="Novas contas (30d)" value={overview.newAccounts30d} />
+            <MetricCard
+              label="Tickets abertos"
+              value={overview.openTickets}
+              accent={overview.openTickets > 0 ? 'amber' : undefined}
+            />
+            <MetricCard
+              label="Básico / Prof."
+              value={`${overview.planCounts.BASICO ?? 0} / ${overview.planCounts.PROFISSIONAL ?? 0}`}
+            />
+            <MetricCard label="Enterprise" value={overview.planCounts.ENTERPRISE ?? 0} />
+          </div>
+        </section>
+      )}
 
       {error && (
         <p className="mb-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">

@@ -22,6 +22,11 @@ import { UpdateNotificationConfigDto } from './dto/update-notification-config.dt
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
+  @Get('overview')
+  overview() {
+    return this.adminService.overview();
+  }
+
   @Get('contas')
   listAccounts() {
     return this.adminService.listAccounts();

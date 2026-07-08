@@ -111,6 +111,18 @@ export interface MercadoPagoConfigStatus {
   webhookSecretSet: boolean;
 }
 
+export interface AdminOverview {
+  totalAccounts: number;
+  totalFarms: number;
+  newAccounts7d: number;
+  newAccounts30d: number;
+  openTickets: number;
+  withoutSubscription: number;
+  statusCounts: Record<string, number>;
+  planCounts: Record<string, number>;
+  mrr: number;
+}
+
 export interface NotificationScheduleConfig {
   frequency: string;
   enabled: boolean;
