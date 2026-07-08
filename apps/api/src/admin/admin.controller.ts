@@ -5,6 +5,7 @@ import {
   Get,
   Param,
   Patch,
+  Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -18,6 +19,8 @@ import { DeleteAccountsDto } from './dto/delete-accounts.dto';
 import { UpdateMercadoPagoConfigDto } from './dto/update-mercadopago-config.dto';
 import { UpdateNotificationConfigDto } from './dto/update-notification-config.dto';
 import { ListAccountsDto } from './dto/list-accounts.dto';
+import { ListAuditLogsDto } from './dto/list-audit-logs.dto';
+import { ExtendTrialDto } from './dto/extend-trial.dto';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, PlatformAdminGuard)
@@ -97,5 +100,30 @@ export class AdminController {
   @Patch('notificacoes/config')
   updateNotificationConfig(@Body() dto: UpdateNotificationConfigDto) {
     return this.adminService.updateNotificationConfig(dto);
+  }
+
+  // Ações rápidas de suporte
+  @Post('contas/:accountId/estender-trial')
+  extendTrial(
+    @Param('accountId') accountId: string,
+    @Body() dto: ExtendTrialDto,
+  ) {
+    return this.adminService.extendTrial(accountId, dto.days);
+  }
+
+  @Post('contas/:accountId/gerar-notificacoes')
+  generateNotifications(@Param('accountId') accountId: string) {
+    return this.adminService.generateNotificationsForAccount(accountId);
+  }
+
+  @Post('cotacoes/atualizar')
+  refreshQuotations() {
+    return this.adminService.refreshQuotations();
+  }
+
+  // Auditoria
+  @Get('auditoria')
+  listAuditLogs(@Query() query: ListAuditLogsDto) {
+    return this.adminService.listAuditLogs(query);
   }
 }

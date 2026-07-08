@@ -76,6 +76,8 @@ export default function AdminAccountsPage() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const pageSize = 20;
+  const [refreshingQuotations, setRefreshingQuotations] = useState(false);
+  const [quotationsMsg, setQuotationsMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -118,6 +120,25 @@ export default function AdminAccountsPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadAccounts();
   }, [loadAccounts]);
+
+  async function handleRefreshQuotations() {
+    setRefreshingQuotations(true);
+    setQuotationsMsg(null);
+    setError(null);
+    try {
+      const res = await apiFetch<{ created: number; skipped: number }>(
+        '/admin/cotacoes/atualizar',
+        { method: 'POST', token: accessToken },
+      );
+      setQuotationsMsg(
+        `Cotações atualizadas: ${res.created} nova(s), ${res.skipped} sem alteração.`,
+      );
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao atualizar cotações');
+    } finally {
+      setRefreshingQuotations(false);
+    }
+  }
 
   async function handleUpdate(
     accountId: string,
@@ -277,6 +298,19 @@ export default function AdminAccountsPage() {
               value={`${overview.planCounts.BASICO ?? 0} / ${overview.planCounts.PROFISSIONAL ?? 0}`}
             />
             <MetricCard label="Enterprise" value={overview.planCounts.ENTERPRISE ?? 0} />
+          </div>
+          <div className="mt-3 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={handleRefreshQuotations}
+              disabled={refreshingQuotations}
+              className="rounded border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-40"
+            >
+              {refreshingQuotations ? 'Atualizando...' : 'Atualizar cotações agora'}
+            </button>
+            {quotationsMsg && (
+              <span className="text-xs text-green-700">{quotationsMsg}</span>
+            )}
           </div>
         </section>
       )}

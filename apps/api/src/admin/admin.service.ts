@@ -15,7 +15,9 @@ import { UpdateAccountUserDto } from './dto/update-account-user.dto';
 import { UpdateMercadoPagoConfigDto } from './dto/update-mercadopago-config.dto';
 import { UpdateNotificationConfigDto } from './dto/update-notification-config.dto';
 import { ListAccountsDto } from './dto/list-accounts.dto';
+import { ListAuditLogsDto } from './dto/list-audit-logs.dto';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ExternalQuotationsService } from '../quotations/external-quotations.service';
 
 const PASSWORD_SALT_ROUNDS = 10;
 
@@ -26,6 +28,7 @@ export class AdminService {
     private readonly mercadoPagoService: MercadoPagoService,
     private readonly farmsService: FarmsService,
     private readonly notificationsService: NotificationsService,
+    private readonly externalQuotationsService: ExternalQuotationsService,
   ) {}
 
   // Painel de visão geral da plataforma: números que o dono acompanha no dia a dia.
@@ -347,5 +350,81 @@ export class AdminService {
 
   updateNotificationConfig(dto: UpdateNotificationConfigDto) {
     return this.notificationsService.updateSchedule(dto);
+  }
+
+  // ---- Ações rápidas de suporte ----
+
+  // Estende o período de teste: soma os dias a partir da data atual de término do
+  // trial (ou de agora, se já passou) e recoloca a assinatura em TRIALING.
+  async extendTrial(accountId: string, days: number) {
+    const subscription = await this.prisma.subscription.findUnique({
+      where: { accountId },
+    });
+    if (!subscription) {
+      throw new NotFoundException('Assinatura não encontrada para esta conta');
+    }
+    const now = new Date();
+    const base =
+      subscription.trialEndsAt && subscription.trialEndsAt > now
+        ? subscription.trialEndsAt
+        : now;
+    const trialEndsAt = new Date(base.getTime() + days * 24 * 60 * 60 * 1000);
+
+    return this.prisma.subscription.update({
+      where: { accountId },
+      data: { trialEndsAt, status: SubscriptionStatus.TRIALING },
+    });
+  }
+
+  // Dispara a geração de notificações para todas as fazendas da conta (mesma lógica
+  // do cron/da tela do cliente), útil para o suporte "forçar" um alerta na hora.
+  async generateNotificationsForAccount(accountId: string) {
+    const farms = await this.prisma.farm.findMany({
+      where: { accountId },
+      select: { id: true },
+    });
+    let created = 0;
+    for (const farm of farms) {
+      const res = await this.notificationsService.generateFromAlerts(farm.id);
+      created += res.created;
+    }
+    return { farms: farms.length, created };
+  }
+
+  // Atualização manual das cotações (global). Reaproveita o fetch da Redação Agro.
+  refreshQuotations() {
+    return this.externalQuotationsService.refresh();
+  }
+
+  // ---- Auditoria ----
+
+  async listAuditLogs(query: ListAuditLogsDto = {}) {
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 50;
+    const search = query.search?.trim();
+
+    const where: Prisma.AuditLogWhereInput = {
+      ...(query.method ? { method: query.method } : {}),
+      ...(search
+        ? {
+            OR: [
+              { userEmail: { contains: search, mode: 'insensitive' } },
+              { path: { contains: search, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
+    };
+
+    const [total, items] = await Promise.all([
+      this.prisma.auditLog.count({ where }),
+      this.prisma.auditLog.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+    ]);
+
+    return { items, total, page, pageSize };
   }
 }

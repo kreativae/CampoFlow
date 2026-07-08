@@ -32,6 +32,11 @@ export default function AdminAccountDetailPage() {
   const [savingSubscription, setSavingSubscription] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  // Ações rápidas de suporte
+  const [trialDays, setTrialDays] = useState(15);
+  const [actionBusy, setActionBusy] = useState<string | null>(null);
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
+
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [editUserName, setEditUserName] = useState('');
   const [editUserEmail, setEditUserEmail] = useState('');
@@ -149,6 +154,44 @@ export default function AdminAccountDetailPage() {
       setError(err instanceof ApiError ? err.message : 'Erro ao atualizar assinatura');
     } finally {
       setSavingSubscription(false);
+    }
+  }
+
+  async function handleExtendTrial() {
+    setActionBusy('trial');
+    setError(null);
+    setActionMessage(null);
+    try {
+      await apiFetch(`/admin/contas/${params.accountId}/estender-trial`, {
+        method: 'POST',
+        token: accessToken,
+        body: { days: trialDays },
+      });
+      setActionMessage(`Teste estendido em ${trialDays} dia(s).`);
+      await loadAccount();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao estender o teste');
+    } finally {
+      setActionBusy(null);
+    }
+  }
+
+  async function handleGenerateNotifications() {
+    setActionBusy('notif');
+    setError(null);
+    setActionMessage(null);
+    try {
+      const res = await apiFetch<{ farms: number; created: number }>(
+        `/admin/contas/${params.accountId}/gerar-notificacoes`,
+        { method: 'POST', token: accessToken },
+      );
+      setActionMessage(
+        `${res.created} notificação(ões) gerada(s) em ${res.farms} fazenda(s).`,
+      );
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao gerar notificações');
+    } finally {
+      setActionBusy(null);
     }
   }
 
@@ -293,6 +336,52 @@ export default function AdminAccountDetailPage() {
           </div>
         </section>
       )}
+
+      <section className="mb-8 rounded border border-gray-200 p-4">
+        <h2 className="mb-3 text-sm font-semibold text-gray-700">Ações de suporte</h2>
+        {actionMessage && (
+          <p className="mb-3 rounded bg-green-50 px-3 py-2 text-sm text-green-700">
+            {actionMessage}
+          </p>
+        )}
+        <div className="flex flex-wrap items-end gap-4">
+          <div className="flex items-end gap-2">
+            <div>
+              <label className="block text-xs font-medium text-gray-500">
+                Estender teste (dias)
+              </label>
+              <input
+                type="number"
+                min={1}
+                max={365}
+                value={trialDays}
+                onChange={(e) => setTrialDays(Number(e.target.value))}
+                className="mt-1 w-24 rounded border border-gray-300 px-2 py-1 text-sm focus:border-gray-900 focus:outline-none"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={handleExtendTrial}
+              disabled={!account.subscription || actionBusy !== null || trialDays < 1}
+              className="rounded border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-40"
+            >
+              {actionBusy === 'trial' ? 'Estendendo...' : 'Estender teste'}
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={handleGenerateNotifications}
+            disabled={actionBusy !== null}
+            className="rounded border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-40"
+          >
+            {actionBusy === 'notif' ? 'Gerando...' : 'Gerar notificações agora'}
+          </button>
+        </div>
+        <p className="mt-2 text-xs text-gray-400">
+          &quot;Estender teste&quot; recoloca a assinatura em período de teste. &quot;Gerar
+          notificações&quot; varre as fazendas desta conta e cria os alertas pendentes na hora.
+        </p>
+      </section>
 
       <section className="mb-8">
         <h2 className="mb-3 text-sm font-semibold text-gray-700">Membros da conta</h2>
