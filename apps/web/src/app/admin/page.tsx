@@ -7,6 +7,7 @@ import { useConfirm } from '@/lib/confirm-context';
 import { apiFetch, ApiError } from '@/lib/api';
 import type {
   AccountDetail,
+  AccountListResponse,
   AccountSummary,
   AdminOverview,
   PlanTier,
@@ -66,6 +67,15 @@ export default function AdminAccountsPage() {
   const [accounts, setAccounts] = useState<AccountSummary[]>([]);
   const [overview, setOverview] = useState<AdminOverview | null>(null);
   const [fetching, setFetching] = useState(true);
+
+  // Busca / filtro / paginação
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<SubscriptionStatus | ''>('');
+  const [planFilter, setPlanFilter] = useState<PlanTier | ''>('');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const pageSize = 20;
   const [error, setError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -78,20 +88,30 @@ export default function AdminAccountsPage() {
     setFetching(true);
     setError(null);
     try {
+      const params = new URLSearchParams();
+      if (search) params.set('search', search);
+      if (statusFilter) params.set('status', statusFilter);
+      if (planFilter) params.set('planTier', planFilter);
+      params.set('page', String(page));
+      params.set('pageSize', String(pageSize));
+
       const [data, ov] = await Promise.all([
-        apiFetch<AccountSummary[]>('/admin/contas', { token: accessToken }),
+        apiFetch<AccountListResponse>(`/admin/contas?${params.toString()}`, {
+          token: accessToken,
+        }),
         apiFetch<AdminOverview>('/admin/overview', { token: accessToken }).catch(
           () => null,
         ),
       ]);
-      setAccounts(data);
+      setAccounts(data.items);
+      setTotal(data.total);
       setOverview(ov);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao carregar contas');
     } finally {
       setFetching(false);
     }
-  }, [accessToken]);
+  }, [accessToken, search, statusFilter, planFilter, page]);
 
   useEffect(() => {
     // Fetching data on mount via an async callback is the intended pattern here.
@@ -267,8 +287,68 @@ export default function AdminAccountsPage() {
         </p>
       )}
 
+      {/* Busca e filtros */}
+      <div className="mb-4 flex flex-wrap items-end gap-3">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            setPage(1);
+            setSearch(searchInput.trim());
+          }}
+          className="flex flex-1 gap-2"
+        >
+          <input
+            type="text"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder="Buscar por nome, e-mail de cobrança ou de usuário"
+            className="w-full max-w-md rounded border border-gray-300 px-3 py-1.5 text-sm focus:border-gray-900 focus:outline-none"
+          />
+          <button
+            type="submit"
+            className="rounded bg-gray-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-800"
+          >
+            Buscar
+          </button>
+        </form>
+        <select
+          value={statusFilter}
+          onChange={(e) => {
+            setPage(1);
+            setStatusFilter(e.target.value as SubscriptionStatus | '');
+          }}
+          className="rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-gray-900 focus:outline-none"
+        >
+          <option value="">Todos os status</option>
+          {STATUS_OPTIONS.map((s) => (
+            <option key={s} value={s}>
+              {SUBSCRIPTION_STATUS_LABEL[s]}
+            </option>
+          ))}
+        </select>
+        <select
+          value={planFilter}
+          onChange={(e) => {
+            setPage(1);
+            setPlanFilter(e.target.value as PlanTier | '');
+          }}
+          className="rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-gray-900 focus:outline-none"
+        >
+          <option value="">Todos os planos</option>
+          {PLAN_OPTIONS.map((p) => (
+            <option key={p} value={p}>
+              {p}
+            </option>
+          ))}
+        </select>
+      </div>
+
       {accounts.length === 0 ? (
-        <p className="text-gray-500">Nenhuma conta cadastrada ainda.</p>
+        <p className="text-gray-500">
+          {search || statusFilter || planFilter
+            ? 'Nenhuma conta encontrada com esses filtros.'
+            : 'Nenhuma conta cadastrada ainda.'}
+        </p>
       ) : (
         <table className="w-full text-left text-sm">
           <thead>
@@ -406,6 +486,32 @@ export default function AdminAccountsPage() {
             ))}
           </tbody>
         </table>
+      )}
+
+      {total > 0 && (
+        <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
+          <span>
+            {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} de {total}
+          </span>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              className="rounded border border-gray-300 px-3 py-1 hover:bg-gray-100 disabled:opacity-40"
+            >
+              Anterior
+            </button>
+            <button
+              type="button"
+              onClick={() => setPage((p) => p + 1)}
+              disabled={page * pageSize >= total}
+              className="rounded border border-gray-300 px-3 py-1 hover:bg-gray-100 disabled:opacity-40"
+            >
+              Próxima
+            </button>
+          </div>
+        </div>
       )}
     </main>
   );

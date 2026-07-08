@@ -5,6 +5,7 @@ import {
   Get,
   Param,
   Patch,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -16,6 +17,7 @@ import { UpdateAccountUserDto } from './dto/update-account-user.dto';
 import { DeleteAccountsDto } from './dto/delete-accounts.dto';
 import { UpdateMercadoPagoConfigDto } from './dto/update-mercadopago-config.dto';
 import { UpdateNotificationConfigDto } from './dto/update-notification-config.dto';
+import { ListAccountsDto } from './dto/list-accounts.dto';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, PlatformAdminGuard)
@@ -28,8 +30,8 @@ export class AdminController {
   }
 
   @Get('contas')
-  listAccounts() {
-    return this.adminService.listAccounts();
+  listAccounts(@Query() query: ListAccountsDto) {
+    return this.adminService.listAccounts(query);
   }
 
   @Get('contas/:accountId')

@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { SubscriptionStatus, TicketStatus } from '@prisma/client';
+import { Prisma, SubscriptionStatus, TicketStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { PLAN_DEFINITIONS } from '../billing/plans';
 import { MercadoPagoService } from '../billing/mercadopago.service';
@@ -14,6 +14,7 @@ import { UpdateAccountDto } from './dto/update-account.dto';
 import { UpdateAccountUserDto } from './dto/update-account-user.dto';
 import { UpdateMercadoPagoConfigDto } from './dto/update-mercadopago-config.dto';
 import { UpdateNotificationConfigDto } from './dto/update-notification-config.dto';
+import { ListAccountsDto } from './dto/list-accounts.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 
 const PASSWORD_SALT_ROUNDS = 10;
@@ -97,21 +98,55 @@ export class AdminService {
     };
   }
 
-  async listAccounts() {
-    const accounts = await this.prisma.account.findMany({
-      include: {
-        subscription: true,
-        _count: { select: { farms: true } },
-        users: {
-          where: { isAccountAdmin: true },
-          select: { email: true, name: true },
-          take: 1,
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+  async listAccounts(query: ListAccountsDto = {}) {
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 20;
+    const search = query.search?.trim();
 
-    return accounts.map((account) => ({
+    const where: Prisma.AccountWhereInput = {
+      ...(query.status || query.planTier
+        ? {
+            subscription: {
+              ...(query.status ? { status: query.status } : {}),
+              ...(query.planTier ? { planTier: query.planTier } : {}),
+            },
+          }
+        : {}),
+      ...(search
+        ? {
+            OR: [
+              { name: { contains: search, mode: 'insensitive' } },
+              { billingEmail: { contains: search, mode: 'insensitive' } },
+              {
+                users: {
+                  some: { email: { contains: search, mode: 'insensitive' } },
+                },
+              },
+            ],
+          }
+        : {}),
+    };
+
+    const [total, accounts] = await Promise.all([
+      this.prisma.account.count({ where }),
+      this.prisma.account.findMany({
+        where,
+        include: {
+          subscription: true,
+          _count: { select: { farms: true } },
+          users: {
+            where: { isAccountAdmin: true },
+            select: { email: true, name: true },
+            take: 1,
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+    ]);
+
+    const items = accounts.map((account) => ({
       id: account.id,
       name: account.name,
       billingEmail: account.billingEmail,
@@ -123,6 +158,8 @@ export class AdminService {
       currentPeriodEnd: account.subscription?.currentPeriodEnd ?? null,
       createdAt: account.createdAt,
     }));
+
+    return { items, total, page, pageSize };
   }
 
   async getAccount(accountId: string) {

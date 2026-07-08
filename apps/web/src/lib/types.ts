@@ -111,6 +111,13 @@ export interface MercadoPagoConfigStatus {
   webhookSecretSet: boolean;
 }
 
+export interface AccountListResponse {
+  items: AccountSummary[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 export interface AdminOverview {
   totalAccounts: number;
   totalFarms: number;
