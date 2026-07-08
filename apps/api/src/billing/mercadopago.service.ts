@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  OnModuleInit,
+} from '@nestjs/common';
 import { MercadoPagoConfig, PreApproval } from 'mercadopago';
 import { PrismaService } from '../prisma/prisma.service';
 import { EncryptionService } from '../common/crypto/encryption.service';
@@ -214,12 +219,22 @@ export class MercadoPagoService implements OnModuleInit {
       );
       return { id: result.id, initPoint: result.init_point };
     } catch (err) {
+      const message = (err as Error).message;
       await this.log(
         MercadoPagoLogEvent.CREATE_SUBSCRIPTION,
         false,
-        `Falha ao criar assinatura para ${input.payerEmail}: ${(err as Error).message}`,
+        `Falha ao criar assinatura para ${input.payerEmail}: ${message}`,
       );
-      throw err;
+      // O SDK do MP lança erros crus (ex.: "Invalid value for back_url") que virariam
+      // um 500 genérico. Devolvemos 400 com a causa para a tela mostrar algo útil.
+      if (message.toLowerCase().includes('back_url')) {
+        throw new BadRequestException(
+          'O Mercado Pago rejeitou a URL de retorno (back_url). Ele exige uma URL pública ' +
+            '(https) — defina WEB_BILLING_REDIRECT_URL com a URL do painel em produção; ' +
+            'localhost não é aceito.',
+        );
+      }
+      throw new BadRequestException(`Erro do Mercado Pago: ${message}`);
     }
   }
 
