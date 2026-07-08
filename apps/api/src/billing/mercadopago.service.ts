@@ -33,6 +33,10 @@ export interface MercadoPagoConfigStatus {
   accessTokenMasked: string | null;
   publicKey: string | null;
   webhookSecretSet: boolean;
+  // Estado do checklist de produção, para orientar o admin.
+  billingRedirectUrl: string | null;
+  webhookEndpointUrl: string;
+  nodeEnv: string;
 }
 
 export interface UpdateMercadoPagoConfigInput {
@@ -103,12 +107,16 @@ export class MercadoPagoService implements OnModuleInit {
   }
 
   getConfigStatus(): MercadoPagoConfigStatus {
+    const apiBase = process.env.API_PUBLIC_URL || 'http://localhost:3000';
     return {
       configured: this.isConfigured(),
       source: this.source,
       accessTokenMasked: this.accessToken ? maskToken(this.accessToken) : null,
       publicKey: this.publicKey,
       webhookSecretSet: Boolean(this.webhookSecret),
+      billingRedirectUrl: process.env.WEB_BILLING_REDIRECT_URL ?? null,
+      webhookEndpointUrl: `${apiBase.replace(/\/$/, '')}/conta/assinatura/webhook/mercadopago`,
+      nodeEnv: process.env.NODE_ENV ?? 'development',
     };
   }
 

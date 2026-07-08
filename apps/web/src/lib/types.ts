@@ -109,6 +109,9 @@ export interface MercadoPagoConfigStatus {
   accessTokenMasked: string | null;
   publicKey: string | null;
   webhookSecretSet: boolean;
+  billingRedirectUrl: string | null;
+  webhookEndpointUrl: string;
+  nodeEnv: string;
 }
 
 export interface AccountListResponse {

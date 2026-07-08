@@ -19,6 +19,44 @@ const EVENT_LABEL: Record<MercadoPagoLog['event'], string> = {
   CONFIG_UPDATED: 'Configuração atualizada',
 };
 
+function ChecklistItem({
+  done,
+  label,
+  todoLabel = 'Pendente',
+  children,
+}: {
+  done: boolean;
+  label: string;
+  todoLabel?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <li className="flex gap-3">
+      <span
+        className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+          done ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+        }`}
+        aria-hidden
+      >
+        {done ? '✓' : '!'}
+      </span>
+      <div>
+        <p className="font-medium text-gray-800">
+          {label}{' '}
+          <span
+            className={`ml-2 rounded px-1.5 py-0.5 text-xs ${
+              done ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'
+            }`}
+          >
+            {done ? 'OK' : todoLabel}
+          </span>
+        </p>
+        <div className="mt-1 text-xs text-gray-600">{children}</div>
+      </div>
+    </li>
+  );
+}
+
 export default function AdminMercadoPagoPage() {
   const { accessToken } = useAuth();
 
@@ -169,6 +207,73 @@ export default function AdminMercadoPagoPage() {
               {saving ? 'Salvando...' : 'Salvar configuração'}
             </button>
           </form>
+        </section>
+      )}
+
+      {status && (
+        <section className="mb-8 rounded border border-gray-200 p-4">
+          <h2 className="mb-1 text-sm font-semibold text-gray-700">
+            Checklist para produção
+          </h2>
+          <p className="mb-3 text-xs text-gray-500">
+            Três coisas precisam estar prontas para o Mercado Pago funcionar em produção.
+            Ambiente atual: <strong>{status.nodeEnv}</strong>.
+          </p>
+          <ul className="space-y-3 text-sm">
+            <ChecklistItem
+              done={status.configured && status.webhookSecretSet}
+              label="Credenciais do Mercado Pago"
+            >
+              Salve o <strong>Access Token</strong> e o <strong>Webhook Secret</strong> no
+              formulário acima. O secret é obrigatório em produção — sem ele, o backend
+              não consegue verificar a autenticidade dos webhooks.
+            </ChecklistItem>
+
+            <ChecklistItem
+              done={Boolean(status.billingRedirectUrl)}
+              label="URL de retorno pós-pagamento (WEB_BILLING_REDIRECT_URL)"
+            >
+              Defina a env <code className="rounded bg-gray-100 px-1">WEB_BILLING_REDIRECT_URL</code>{' '}
+              no servidor (ex.: Railway) com a URL pública do painel, como{' '}
+              <code className="rounded bg-gray-100 px-1">
+                https://app.campoflow.com/conta/assinatura
+              </code>
+              . O Mercado Pago exige https público — localhost é rejeitado.
+              {status.billingRedirectUrl && (
+                <span className="mt-1 block text-xs text-gray-500">
+                  Atual: <code className="rounded bg-gray-100 px-1">{status.billingRedirectUrl}</code>
+                </span>
+              )}
+            </ChecklistItem>
+
+            <ChecklistItem
+              done={false}
+              label="Webhook cadastrado no painel do Mercado Pago"
+              todoLabel="Ação manual"
+            >
+              No painel do MP (Seus negócios → Notificações → Webhooks), cadastre esta URL
+              e ative o evento <strong>subscription_preapproval</strong>:
+              <div className="mt-2 flex items-center gap-2">
+                <code className="flex-1 overflow-x-auto rounded bg-gray-100 px-2 py-1 text-xs">
+                  {status.webhookEndpointUrl}
+                </code>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void navigator.clipboard.writeText(status.webhookEndpointUrl);
+                  }}
+                  className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-100"
+                >
+                  Copiar
+                </button>
+              </div>
+              <span className="mt-1 block text-xs text-gray-400">
+                Substitua o host se estiver rodando atrás de outro domínio (defina{' '}
+                <code className="rounded bg-gray-100 px-1">API_PUBLIC_URL</code> no
+                servidor).
+              </span>
+            </ChecklistItem>
+          </ul>
         </section>
       )}
 
