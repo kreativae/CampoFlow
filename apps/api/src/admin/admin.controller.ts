@@ -126,4 +126,10 @@ export class AdminController {
   listAuditLogs(@Query() query: ListAuditLogsDto) {
     return this.adminService.listAuditLogs(query);
   }
+
+  // TEMPORÁRIO: limpa todo o histórico de auditoria.
+  @Delete('auditoria')
+  clearAuditLogs() {
+    return this.adminService.clearAuditLogs();
+  }
 }

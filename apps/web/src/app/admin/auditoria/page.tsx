@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
+import { useConfirm } from '@/lib/confirm-context';
 import { apiFetch, ApiError } from '@/lib/api';
 import type { AuditLog, AuditLogListResponse } from '@/lib/types';
 
@@ -15,11 +16,13 @@ function methodBadgeClass(method: string) {
 
 export default function AdminAuditPage() {
   const { accessToken } = useAuth();
+  const confirm = useConfirm();
 
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [total, setTotal] = useState(0);
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [clearing, setClearing] = useState(false);
 
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
@@ -54,14 +57,53 @@ export default function AdminAuditPage() {
     void load();
   }, [load]);
 
+  async function handleClear() {
+    const ok = await confirm({
+      title: 'Limpar auditoria',
+      message:
+        'Apagar TODO o histórico de auditoria? Esta ação é irreversível. (Botão temporário para limpeza dos dados de teste.)',
+      confirmLabel: 'Apagar tudo',
+      danger: true,
+    });
+    if (!ok) return;
+    setClearing(true);
+    setError(null);
+    try {
+      await apiFetch('/admin/auditoria', {
+        method: 'DELETE',
+        token: accessToken,
+      });
+      setPage(1);
+      setSearch('');
+      setSearchInput('');
+      setMethod('');
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao limpar auditoria');
+    } finally {
+      setClearing(false);
+    }
+  }
+
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-10">
-      <header className="mb-6">
-        <h1 className="text-2xl font-semibold text-gray-900">Auditoria</h1>
-        <p className="text-sm text-gray-500">
-          Registro de todas as ações que alteram dados (criação, edição, exclusão) —
-          quem fez, o quê e quando.
-        </p>
+      <header className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">Auditoria</h1>
+          <p className="text-sm text-gray-500">
+            Registro de todas as ações que alteram dados (criação, edição, exclusão) —
+            quem fez, o quê e quando.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={handleClear}
+          disabled={clearing}
+          title="Botão temporário para limpar os dados de teste"
+          className="shrink-0 rounded border border-red-300 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-40"
+        >
+          {clearing ? 'Limpando...' : 'Limpar auditoria'}
+        </button>
       </header>
 
       <div className="mb-4 flex flex-wrap items-end gap-3">

@@ -427,4 +427,11 @@ export class AdminService {
 
     return { items, total, page, pageSize };
   }
+
+  // TEMPORÁRIO: apaga todo o histórico de auditoria (usado para limpar o lixo de
+  // dados de teste). Remover quando não for mais necessário.
+  async clearAuditLogs() {
+    const { count } = await this.prisma.auditLog.deleteMany({});
+    return { deleted: count };
+  }
 }
