@@ -340,7 +340,10 @@ export default function AgendaPage() {
       )}
 
       {view !== 'lista' ? null : events.length === 0 ? (
-        <p className="text-gray-500">Nenhum evento registrado ainda.</p>
+        <div className="flex flex-col items-center rounded-lg border-2 border-dashed border-gray-200 py-12 text-center">
+          <p className="text-lg font-medium text-gray-700">Nenhum evento na agenda</p>
+          <p className="mt-1 text-sm text-gray-500">Crie eventos para organizar vacinações, manejos e outras atividades da fazenda.</p>
+        </div>
       ) : (
         <ul className="space-y-2">
           {events.map((e) => (

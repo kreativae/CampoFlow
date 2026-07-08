@@ -181,7 +181,10 @@ export default function DocumentsPage() {
       </form>
 
       {documents.length === 0 ? (
-        <p className="text-gray-500">Nenhum documento enviado ainda.</p>
+        <div className="flex flex-col items-center rounded-lg border-2 border-dashed border-gray-200 py-12 text-center">
+          <p className="text-lg font-medium text-gray-700">Nenhum documento enviado</p>
+          <p className="mt-1 text-sm text-gray-500">Envie notas fiscais, laudos, contratos e outros arquivos da propriedade.</p>
+        </div>
       ) : (
         <ul className="space-y-2">
           {documents.map((doc) => (

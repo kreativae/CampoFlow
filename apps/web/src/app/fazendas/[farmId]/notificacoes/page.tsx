@@ -147,7 +147,10 @@ export default function NotificationsPage() {
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
 
       {notifications.length === 0 ? (
-        <p className="text-sm text-gray-500">Nenhuma notificação encontrada.</p>
+        <div className="flex flex-col items-center rounded-lg border-2 border-dashed border-gray-200 py-12 text-center">
+          <p className="text-lg font-medium text-gray-700">Nenhuma notificação</p>
+          <p className="mt-1 text-sm text-gray-500">Quando houver alertas de vacinação, vencimentos ou eventos, eles aparecerão aqui.</p>
+        </div>
       ) : (
         <ul className="space-y-2">
           {notifications.map((n) => (

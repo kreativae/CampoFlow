@@ -154,7 +154,10 @@ export default function SupportPage() {
       {fetching ? (
         <p className="text-gray-500">Carregando...</p>
       ) : tickets.length === 0 ? (
-        <p className="text-gray-500">Nenhum ticket aberto ainda.</p>
+        <div className="flex flex-col items-center rounded-lg border-2 border-dashed border-gray-200 py-12 text-center">
+          <p className="text-lg font-medium text-gray-700">Nenhum ticket de suporte</p>
+          <p className="mt-1 text-sm text-gray-500">Abra um chamado acima para tirar dúvidas ou reportar problemas.</p>
+        </div>
       ) : (
         <ul className="space-y-2">
           {tickets.map((ticket) => (

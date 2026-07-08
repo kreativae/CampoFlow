@@ -502,7 +502,10 @@ export default function TeamPage() {
           {fetching ? (
             <p className="text-sm text-gray-500">Carregando...</p>
           ) : filteredEmployees.length === 0 ? (
-            <p className="text-sm text-gray-500">Nenhum funcionário encontrado.</p>
+            <div className="flex flex-col items-center rounded-lg border-2 border-dashed border-gray-200 py-12 text-center">
+              <p className="text-lg font-medium text-gray-700">Nenhum funcionário cadastrado</p>
+              <p className="mt-1 text-sm text-gray-500">Cadastre funcionários para controlar banco de horas, custos e atribuições.</p>
+            </div>
           ) : (
             <ul className="space-y-1">
               {filteredEmployees.map((e) => (

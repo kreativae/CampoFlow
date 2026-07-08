@@ -377,7 +377,10 @@ export default function ContactsPage() {
           {fetching ? (
             <p className="text-sm text-gray-500">Carregando...</p>
           ) : filteredContacts.length === 0 ? (
-            <p className="text-sm text-gray-500">Nenhum contato encontrado.</p>
+            <div className="flex flex-col items-center rounded-lg border-2 border-dashed border-gray-200 py-12 text-center">
+              <p className="text-lg font-medium text-gray-700">Nenhum contato cadastrado</p>
+              <p className="mt-1 text-sm text-gray-500">Cadastre veterinários, fornecedores e outros contatos importantes da fazenda.</p>
+            </div>
           ) : (
             <ul className="space-y-1">
               {filteredContacts.map((c) => (

@@ -385,7 +385,10 @@ export default function CropsPage() {
       <CropRotation farmId={farmId} token={accessToken} />
 
       {cycles.length === 0 ? (
-        <p className="text-sm text-gray-500">Nenhuma safra registrada ainda.</p>
+        <div className="flex flex-col items-center rounded-lg border-2 border-dashed border-gray-200 py-12 text-center">
+          <p className="text-lg font-medium text-gray-700">Nenhuma safra registrada</p>
+          <p className="mt-1 text-sm text-gray-500">Registre safras para acompanhar plantio, colheita e vincular custos ao ciclo produtivo.</p>
+        </div>
       ) : (
         <ul className="space-y-3">
           {cycles.map((c) => {
