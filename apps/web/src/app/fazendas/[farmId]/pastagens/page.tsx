@@ -232,7 +232,10 @@ export default function PasturesPage() {
       {fetching ? (
         <p className="text-gray-500">Carregando pastos...</p>
       ) : pastures.length === 0 ? (
-        <p className="text-gray-500">Nenhum pasto cadastrado ainda.</p>
+        <div className="flex flex-col items-center rounded-lg border-2 border-dashed border-gray-200 py-12 text-center">
+          <p className="text-lg font-medium text-gray-700">Nenhum pasto cadastrado</p>
+          <p className="mt-1 text-sm text-gray-500">Cadastre seu primeiro pasto para controlar a lotação e rotação do rebanho.</p>
+        </div>
       ) : (
         <ul className="space-y-2">
           {pastures.map((pasture) => {

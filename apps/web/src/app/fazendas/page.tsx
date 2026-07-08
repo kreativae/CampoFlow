@@ -135,6 +135,9 @@ export default function FarmsPage() {
           <p className="text-sm text-gray-500">Olá, {user.name}</p>
         </div>
         <div className="flex items-center gap-4">
+          <Link href="/conta/perfil" className="text-sm font-medium text-green-700 hover:underline">
+            Meu perfil
+          </Link>
           <Link href="/conta/assinatura" className="text-sm font-medium text-green-700 hover:underline">
             Assinatura
           </Link>
@@ -185,7 +188,10 @@ export default function FarmsPage() {
       {fetching ? (
         <p className="text-gray-500">Carregando propriedades...</p>
       ) : farms.length === 0 ? (
-        <p className="text-gray-500">Nenhuma propriedade cadastrada ainda.</p>
+        <div className="flex flex-col items-center rounded-lg border-2 border-dashed border-gray-200 py-12 text-center">
+          <p className="text-lg font-medium text-gray-700">Bem-vindo ao CampoFlow!</p>
+          <p className="mt-1 text-sm text-gray-500">Cadastre sua primeira propriedade para começar a gerenciar o rebanho, pastagens e finanças.</p>
+        </div>
       ) : (
         <ul className="space-y-2">
           {farms.map((farm) =>

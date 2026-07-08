@@ -332,7 +332,10 @@ export default function FinancePage() {
           <section className="mb-8">
             <h2 className="mb-3 font-semibold text-gray-800">Lançamentos</h2>
             {transactions.length === 0 ? (
-              <p className="text-sm text-gray-500">Nenhum lançamento registrado ainda.</p>
+              <div className="flex flex-col items-center rounded-lg border-2 border-dashed border-gray-200 py-12 text-center">
+                <p className="text-lg font-medium text-gray-700">Nenhum lançamento</p>
+                <p className="mt-1 text-sm text-gray-500">Registre receitas e despesas para acompanhar o fluxo de caixa da propriedade.</p>
+              </div>
             ) : (
               <ul className="space-y-2">
                 {transactions.map((t) => (

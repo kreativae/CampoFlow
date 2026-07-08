@@ -466,7 +466,10 @@ export default function AnimalsPage() {
       {fetching ? (
         <p className="text-gray-500">Carregando animais...</p>
       ) : animals.length === 0 ? (
-        <p className="text-gray-500">Nenhum animal cadastrado ainda.</p>
+        <div className="flex flex-col items-center rounded-lg border-2 border-dashed border-gray-200 py-12 text-center">
+          <p className="text-lg font-medium text-gray-700">Nenhum animal cadastrado</p>
+          <p className="mt-1 text-sm text-gray-500">Comece cadastrando seu primeiro animal usando o formulário acima.</p>
+        </div>
       ) : (
         <>
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded border border-gray-200 bg-gray-50 px-3 py-2 text-sm">

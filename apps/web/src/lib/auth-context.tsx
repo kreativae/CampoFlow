@@ -25,6 +25,7 @@ interface AuthContextValue {
   register: (email: string, password: string, name: string) => Promise<void>;
   loginWithTokens: (accessToken: string, refreshToken: string) => Promise<void>;
   logout: () => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -109,9 +110,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     persist(null);
   }
 
+  async function refreshUser() {
+    if (!accessToken) return;
+    const freshUser = await apiFetch<User>('/auth/me', { token: accessToken });
+    setUser(freshUser);
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored) as StoredAuth;
+      persist({ ...parsed, user: freshUser });
+    }
+  }
+
   return (
     <AuthContext.Provider
-      value={{ user, accessToken, loading, login, register, loginWithTokens, logout }}
+      value={{ user, accessToken, loading, login, register, loginWithTokens, logout, refreshUser }}
     >
       {children}
     </AuthContext.Provider>
