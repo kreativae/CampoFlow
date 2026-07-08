@@ -1,8 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, ApiError } from '@/lib/api';
 import { useConfirm } from '@/lib/confirm-context';
@@ -61,9 +61,10 @@ function formatDate(value: string | null) {
   return value ? new Date(value).toLocaleDateString('pt-BR') : '—';
 }
 
-export default function SubscriptionPage() {
+function SubscriptionContent() {
   const { user, accessToken, loading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const confirm = useConfirm();
 
   const [sub, setSub] = useState<AccountSubscription | null>(null);
@@ -71,6 +72,17 @@ export default function SubscriptionPage() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [busyTier, setBusyTier] = useState<PlanTier | null>(null);
+
+  useEffect(() => {
+    const status = searchParams.get('status') ?? searchParams.get('collection_status');
+    if (status === 'approved') {
+      setMessage('Pagamento aprovado! Sua assinatura será ativada em instantes.');
+    } else if (status === 'pending' || status === 'in_process') {
+      setMessage('Pagamento em processamento. Assim que for confirmado, sua assinatura será ativada automaticamente.');
+    } else if (status === 'rejected') {
+      setError('O pagamento foi recusado. Tente novamente ou escolha outro meio de pagamento.');
+    }
+  }, [searchParams]);
 
   const loadData = useCallback(async () => {
     setFetching(true);
@@ -296,6 +308,20 @@ export default function SubscriptionPage() {
         </>
       )}
     </main>
+  );
+}
+
+export default function SubscriptionPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex flex-1 items-center justify-center">
+          <p className="text-gray-500">Carregando...</p>
+        </main>
+      }
+    >
+      <SubscriptionContent />
+    </Suspense>
   );
 }
 
