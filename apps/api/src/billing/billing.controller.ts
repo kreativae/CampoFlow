@@ -1,13 +1,26 @@
-import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  ForbiddenException,
+  Get,
+  Headers,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/decorators/current-user.decorator';
 import { BillingService } from './billing.service';
+import { MercadoPagoService } from './mercadopago.service';
 import { CheckoutDto } from './dto/checkout.dto';
 
 @Controller('conta/assinatura')
 export class BillingController {
-  constructor(private readonly billingService: BillingService) {}
+  constructor(
+    private readonly billingService: BillingService,
+    private readonly mercadoPagoService: MercadoPagoService,
+  ) {}
 
   @Get()
   @UseGuards(JwtAuthGuard)
@@ -31,16 +44,37 @@ export class BillingController {
     return this.billingService.cancel(user.accountId);
   }
 
-  // Public endpoint: Mercado Pago calls this directly, with no auth header. The
-  // handler re-fetches the resource from MP's API by id rather than trusting the
-  // webhook body, so an unauthenticated POST here can't be used to forge state.
+  // Endpoint público: o Mercado Pago chama direto, sem header de auth. Autenticamos
+  // via HMAC (x-signature + x-request-id), conforme especificação do MP. Sem essa
+  // verificação, um POST forjado poderia disparar handleWebhook e mexer no estado
+  // da assinatura. O handler ainda re-consulta o MP pelo id em vez de confiar no
+  // corpo, mas a HMAC é a barreira principal.
   @Post('webhook/mercadopago')
   async webhook(
     @Query('id') queryId: string,
+    @Query('data.id') queryDataId: string,
+    @Headers('x-signature') signature: string | undefined,
+    @Headers('x-request-id') requestId: string | undefined,
     @Body() body: Record<string, unknown>,
   ) {
     const data = body?.data as { id?: string } | undefined;
-    const preapprovalId = data?.id ?? queryId;
+    const preapprovalId = data?.id ?? queryDataId ?? queryId;
+
+    if (
+      !this.mercadoPagoService.verifyWebhookSignature(
+        signature,
+        requestId,
+        preapprovalId,
+      )
+    ) {
+      await this.mercadoPagoService.recordWebhook(
+        preapprovalId ?? 'desconhecido',
+        false,
+        'Assinatura HMAC inválida — webhook rejeitado',
+      );
+      throw new ForbiddenException('Assinatura inválida');
+    }
+
     if (preapprovalId) {
       await this.billingService.handleWebhook(preapprovalId);
     }

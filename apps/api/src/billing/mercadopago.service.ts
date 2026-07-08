@@ -4,6 +4,7 @@ import {
   Logger,
   OnModuleInit,
 } from '@nestjs/common';
+import { createHmac, timingSafeEqual } from 'crypto';
 import { MercadoPagoConfig, PreApproval } from 'mercadopago';
 import { PrismaService } from '../prisma/prisma.service';
 import { EncryptionService } from '../common/crypto/encryption.service';
@@ -59,7 +60,7 @@ export class MercadoPagoService implements OnModuleInit {
   private preApproval: PreApproval | null = null;
   private accessToken: string | undefined;
   private publicKey: string | null = null;
-  private webhookSecretSet = false;
+  private webhookSecret: string | null = null;
   private source: MercadoPagoConfigStatus['source'] = 'nenhum';
 
   constructor(
@@ -79,12 +80,14 @@ export class MercadoPagoService implements OnModuleInit {
     if (setting?.accessToken) {
       this.accessToken = this.encryptionService.decrypt(setting.accessToken);
       this.publicKey = setting.publicKey ?? null;
-      this.webhookSecretSet = Boolean(setting.webhookSecret);
+      this.webhookSecret = setting.webhookSecret
+        ? this.encryptionService.decrypt(setting.webhookSecret)
+        : null;
       this.source = 'banco';
     } else {
       this.accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
       this.publicKey = process.env.MERCADOPAGO_PUBLIC_KEY ?? null;
-      this.webhookSecretSet = Boolean(process.env.MERCADOPAGO_WEBHOOK_SECRET);
+      this.webhookSecret = process.env.MERCADOPAGO_WEBHOOK_SECRET ?? null;
       this.source = this.accessToken ? 'variavel_de_ambiente' : 'nenhum';
     }
 
@@ -105,7 +108,7 @@ export class MercadoPagoService implements OnModuleInit {
       source: this.source,
       accessTokenMasked: this.accessToken ? maskToken(this.accessToken) : null,
       publicKey: this.publicKey,
-      webhookSecretSet: this.webhookSecretSet,
+      webhookSecretSet: Boolean(this.webhookSecret),
     };
   }
 
@@ -323,6 +326,48 @@ export class MercadoPagoService implements OnModuleInit {
       );
       return [];
     }
+  }
+
+  // Verifica a assinatura HMAC dos webhooks conforme especificação do Mercado Pago:
+  // https://www.mercadopago.com.br/developers/pt/docs/your-integrations/notifications/webhooks
+  // Header `x-signature` vem no formato `ts=<timestamp>,v1=<hmacHex>`; o manifest
+  // assinado é `id:<dataId>;request-id:<xRequestId>;ts:<timestamp>;` (HMAC-SHA256
+  // com o webhookSecret). Sem secret configurado, retorna true — melhor deixar o
+  // webhook rodar do que travar a sincronização de assinatura por config faltando.
+  // A comparação usa timingSafeEqual para evitar timing attacks.
+  verifyWebhookSignature(
+    signatureHeader: string | undefined,
+    requestId: string | undefined,
+    dataId: string | undefined,
+  ): boolean {
+    if (!this.webhookSecret) {
+      this.logger.warn(
+        'Webhook do Mercado Pago recebido sem webhookSecret configurado — assinatura não pode ser verificada. Configure em /admin/mercadopago para produção.',
+      );
+      return true;
+    }
+    if (!signatureHeader || !dataId) return false;
+
+    const parts = signatureHeader
+      .split(',')
+      .reduce<Record<string, string>>((acc, part) => {
+        const [k, v] = part.split('=');
+        if (k && v) acc[k.trim()] = v.trim();
+        return acc;
+      }, {});
+    const ts = parts.ts;
+    const v1 = parts.v1;
+    if (!ts || !v1) return false;
+
+    const manifest = `id:${dataId};request-id:${requestId ?? ''};ts:${ts};`;
+    const expected = createHmac('sha256', this.webhookSecret)
+      .update(manifest)
+      .digest('hex');
+
+    const a = Buffer.from(expected, 'hex');
+    const b = Buffer.from(v1, 'hex');
+    if (a.length !== b.length) return false;
+    return timingSafeEqual(a, b);
   }
 
   async recordWebhook(

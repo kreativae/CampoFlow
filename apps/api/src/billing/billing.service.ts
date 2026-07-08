@@ -108,6 +108,17 @@ export class BillingService {
     const backUrl =
       process.env.WEB_BILLING_REDIRECT_URL ||
       'http://localhost:3100/conta/assinatura';
+    // Em produção, localhost é rejeitado pelo Mercado Pago (400 back_url inválida).
+    // Falhar aqui, com mensagem clara, é melhor do que deixar cada tentativa de
+    // checkout falhar com erro do MP até alguém perceber.
+    if (
+      process.env.NODE_ENV === 'production' &&
+      !process.env.WEB_BILLING_REDIRECT_URL
+    ) {
+      throw new BadRequestException(
+        'WEB_BILLING_REDIRECT_URL não está definida. Configure a env com a URL pública (https) do painel para habilitar o checkout do Mercado Pago.',
+      );
+    }
 
     const result = await this.mercadoPago.createSubscription({
       reason: `CampoFlow — Plano ${plan.label}`,
