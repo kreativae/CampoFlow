@@ -157,6 +157,23 @@ export interface NotificationScheduleConfig {
   options: { key: string; label: string; cron: string }[];
 }
 
+export interface PlatformHealth {
+  timestamp: string;
+  services: {
+    database: { connected: boolean; latencyMs: number };
+    email: { configured: boolean };
+    queue: { connected: boolean; waiting: number; active: number; failed: number };
+    storage: { provider: 'r2' | 'local' };
+    mercadoPago: { configured: boolean };
+    sentry: { configured: boolean };
+  };
+  data: {
+    lastQuotationFetch: string | null;
+    lastNotificationGeneration: string | null;
+    notificationSchedule: { frequency: string; enabled: boolean };
+  };
+}
+
 export type MercadoPagoLogEvent =
   | 'CREATE_SUBSCRIPTION'
   | 'CANCEL_SUBSCRIPTION'

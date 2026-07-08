@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { href: '/admin/mercadopago', label: 'Mercado Pago' },
   { href: '/admin/notificacoes', label: 'Notificações' },
   { href: '/admin/auditoria', label: 'Auditoria' },
+  { href: '/admin/saude', label: 'Saúde' },
 ];
 
 // Distinct dark header so it's visually obvious this is the platform-staff area,

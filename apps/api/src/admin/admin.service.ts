@@ -18,6 +18,10 @@ import { ListAccountsDto } from './dto/list-accounts.dto';
 import { ListAuditLogsDto } from './dto/list-audit-logs.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ExternalQuotationsService } from '../quotations/external-quotations.service';
+import { EmailService } from '../common/email/email.service';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
+import { EMAIL_DIGEST_QUEUE } from '../common/queue/queue.constants';
 
 const PASSWORD_SALT_ROUNDS = 10;
 
@@ -29,7 +33,79 @@ export class AdminService {
     private readonly farmsService: FarmsService,
     private readonly notificationsService: NotificationsService,
     private readonly externalQuotationsService: ExternalQuotationsService,
+    private readonly emailService: EmailService,
+    @InjectQueue(EMAIL_DIGEST_QUEUE) private readonly emailQueue: Queue,
   ) {}
+
+  async healthCheck() {
+    const now = new Date();
+
+    const email = { configured: this.emailService.isConfigured() };
+
+    const mercadoPago = { configured: this.mercadoPagoService.isConfigured() };
+
+    const storage = {
+      provider: process.env.R2_ACCESS_KEY_ID ? 'r2' : 'local',
+    };
+
+    let queue: { connected: boolean; waiting: number; active: number; failed: number } = {
+      connected: false, waiting: 0, active: 0, failed: 0,
+    };
+    try {
+      const [waiting, active, failed] = await Promise.all([
+        this.emailQueue.getWaitingCount(),
+        this.emailQueue.getActiveCount(),
+        this.emailQueue.getFailedCount(),
+      ]);
+      queue = { connected: true, waiting, active, failed };
+    } catch {
+      queue = { connected: false, waiting: 0, active: 0, failed: 0 };
+    }
+
+    let database = { connected: false, latencyMs: 0 };
+    try {
+      const start = Date.now();
+      await this.prisma.$queryRaw`SELECT 1`;
+      database = { connected: true, latencyMs: Date.now() - start };
+    } catch {
+      database = { connected: false, latencyMs: 0 };
+    }
+
+    const lastQuotation = await this.prisma.quotation.findFirst({
+      orderBy: { createdAt: 'desc' },
+      select: { createdAt: true },
+    });
+
+    const lastNotificationLog = await this.prisma.auditLog.findFirst({
+      where: { path: { contains: 'gerar-notificacoes' } },
+      orderBy: { createdAt: 'desc' },
+      select: { createdAt: true },
+    });
+
+    const notificationSchedule = await this.notificationsService.getSchedule();
+
+    const sentry = { configured: Boolean(process.env.SENTRY_DSN) };
+
+    return {
+      timestamp: now.toISOString(),
+      services: {
+        database,
+        email,
+        queue,
+        storage,
+        mercadoPago,
+        sentry,
+      },
+      data: {
+        lastQuotationFetch: lastQuotation?.createdAt ?? null,
+        lastNotificationGeneration: lastNotificationLog?.createdAt ?? null,
+        notificationSchedule: {
+          frequency: notificationSchedule.frequency,
+          enabled: notificationSchedule.enabled,
+        },
+      },
+    };
+  }
 
   // Painel de visão geral da plataforma: números que o dono acompanha no dia a dia.
   // Tudo agregado do próprio banco (assinaturas + planos), sem depender de serviço

@@ -27,6 +27,11 @@ import { ExtendTrialDto } from './dto/extend-trial.dto';
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
+  @Get('saude')
+  healthCheck() {
+    return this.adminService.healthCheck();
+  }
+
   @Get('overview')
   overview() {
     return this.adminService.overview();
