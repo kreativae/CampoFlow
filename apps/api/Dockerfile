@@ -4,7 +4,8 @@ COPY package*.json ./
 COPY prisma ./prisma
 RUN npm ci
 COPY . .
-RUN npx prisma generate
+# Usamos uma URL fake apenas para enganar a validação do schema durante o build
+RUN DATABASE_URL="postgresql://fake:fake@fake:5432/fake" npx prisma generate
 RUN npm run build
 
 FROM node:22-alpine AS production
@@ -13,7 +14,7 @@ ENV NODE_ENV=production
 COPY package*.json ./
 COPY prisma ./prisma
 RUN npm ci --omit=dev
-RUN npx prisma generate
+RUN DATABASE_URL="postgresql://fake:fake@fake:5432/fake" npx prisma generate
 COPY --from=builder /app/dist ./dist
 
 EXPOSE 3000
