@@ -6,7 +6,7 @@ RUN npm ci
 COPY . .
 # Usamos uma URL fake apenas para enganar a validação do schema durante o build
 RUN DATABASE_URL="postgresql://fake:fake@fake:5432/fake" npx prisma generate
-RUN npm run build
+RUN npm run build || npx nest build
 
 FROM node:22-alpine AS production
 WORKDIR /app
@@ -18,4 +18,4 @@ RUN DATABASE_URL="postgresql://fake:fake@fake:5432/fake" npx prisma generate
 COPY --from=builder /app/dist ./dist
 
 EXPOSE 3000
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/src/main"]
