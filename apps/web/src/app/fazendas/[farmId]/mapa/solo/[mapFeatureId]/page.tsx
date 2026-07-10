@@ -8,8 +8,11 @@ import { apiFetch, apiUpload, apiDownload, ApiError } from '@/lib/api';
 import type {
   MapFeature,
   SoilAnalysis,
+  SoilAnalysisPhoto,
   SoilAnalysisRecommendation,
 } from '@/lib/types';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
 const FIELD_DEFS: { key: keyof SoilAnalysis; label: string }[] = [
   { key: 'ph', label: 'pH' },
@@ -30,6 +33,7 @@ export default function SoilAnalysisPage() {
   const { user, accessToken, loading } = useAuth();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   const [feature, setFeature] = useState<MapFeature | null>(null);
   const [history, setHistory] = useState<SoilAnalysis[]>([]);
@@ -52,6 +56,10 @@ export default function SoilAnalysisPage() {
   const [editForm, setEditForm] = useState<FormState>({});
   const [editNotes, setEditNotes] = useState('');
   const [saving, setSaving] = useState(false);
+
+  const [uploadingPhotosFor, setUploadingPhotosFor] = useState<string | null>(null);
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const [selectedPhotoCount, setSelectedPhotoCount] = useState(0);
 
   const loadData = useCallback(async () => {
     setFetching(true);
@@ -191,6 +199,73 @@ export default function SoilAnalysisPage() {
     }
   }
 
+  async function handleUploadPhotos(analysisId: string) {
+    const files = photoInputRef.current?.files;
+    if (!files || files.length === 0) {
+      setError('Selecione ao menos uma foto antes de enviar.');
+      return;
+    }
+
+    setUploadingPhotos(true);
+    setError(null);
+    try {
+      const formData = new FormData();
+      const metadata: { takenAt?: string; latitude?: number; longitude?: number }[] = [];
+
+      for (let i = 0; i < files.length; i++) {
+        formData.append('fotos', files[i]);
+        const meta: { takenAt?: string; latitude?: number; longitude?: number } = {};
+
+        // Extract EXIF-like metadata from file's lastModified as fallback
+        if (files[i].lastModified) {
+          meta.takenAt = new Date(files[i].lastModified).toISOString();
+        }
+        metadata.push(meta);
+      }
+      formData.append('metadata', JSON.stringify(metadata));
+
+      await apiUpload(
+        `/fazendas/${farmId}/analises-solo/${analysisId}/fotos`,
+        formData,
+        accessToken,
+      );
+      if (photoInputRef.current) photoInputRef.current.value = '';
+      setSelectedPhotoCount(0);
+      setUploadingPhotosFor(null);
+      await loadData();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao enviar fotos');
+    } finally {
+      setUploadingPhotos(false);
+    }
+  }
+
+  async function handleDeletePhoto(analysisId: string, photoId: string) {
+    setError(null);
+    try {
+      await apiFetch(
+        `/fazendas/${farmId}/analises-solo/${analysisId}/fotos/${photoId}`,
+        { method: 'DELETE', token: accessToken },
+      );
+      await loadData();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao excluir foto');
+    }
+  }
+
+  async function handleDownloadPhoto(analysisId: string, photo: SoilAnalysisPhoto) {
+    setError(null);
+    try {
+      await apiDownload(
+        `/fazendas/${farmId}/analises-solo/${analysisId}/fotos/${photo.id}/baixar`,
+        photo.fileName,
+        accessToken,
+      );
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao baixar foto');
+    }
+  }
+
   if (loading || !user || fetching) {
     return (
       <main className="flex flex-1 items-center justify-center">
@@ -305,6 +380,7 @@ export default function SoilAnalysisPage() {
             .reverse()
             .map((a) => {
               const rec = recommendations[a.id];
+              const photos = a.photos ?? [];
               return (
                 <li key={a.id} className="rounded border border-gray-200 bg-white p-4">
                   {editingId === a.id ? (
@@ -426,6 +502,111 @@ export default function SoilAnalysisPage() {
                           </ul>
                         </div>
                       )}
+
+                      {/* --- Fotos --- */}
+                      <div className="mt-4 border-t border-gray-100 pt-3">
+                        <div className="mb-2 flex items-center justify-between">
+                          <h3 className="text-sm font-medium text-gray-700">
+                            Fotos ({photos.length})
+                          </h3>
+                          <button
+                            type="button"
+                            onClick={() => { setUploadingPhotosFor(uploadingPhotosFor === a.id ? null : a.id); setSelectedPhotoCount(0); }}
+                            className="text-xs font-medium text-green-700 hover:underline"
+                          >
+                            {uploadingPhotosFor === a.id ? 'Cancelar' : 'Anexar fotos'}
+                          </button>
+                        </div>
+
+                        {uploadingPhotosFor === a.id && (
+                          <div className="mb-3 rounded border border-gray-200 bg-gray-50 p-3">
+                            <input
+                              ref={photoInputRef}
+                              type="file"
+                              accept="image/*"
+                              multiple
+                              className="block w-full text-sm"
+                              onChange={(e) => setSelectedPhotoCount(e.target.files?.length ?? 0)}
+                            />
+                            <p className="mt-1 text-xs text-gray-400">
+                              Selecione uma ou mais imagens. A data de modificação do arquivo será usada como data da foto.
+                            </p>
+                            <button
+                              type="button"
+                              disabled={uploadingPhotos}
+                              onClick={() => handleUploadPhotos(a.id)}
+                              className="mt-2 rounded bg-green-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-800 disabled:opacity-50"
+                            >
+                              {uploadingPhotos ? 'Enviando...' : selectedPhotoCount > 0 ? `Enviar ${selectedPhotoCount} foto${selectedPhotoCount > 1 ? 's' : ''}` : 'Enviar fotos'}
+                            </button>
+                          </div>
+                        )}
+
+                        {photos.length > 0 && (
+                          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                            {photos.map((photo) => (
+                              <div
+                                key={photo.id}
+                                className="group relative overflow-hidden rounded border border-gray-200 bg-gray-100"
+                              >
+                                <PhotoThumbnail
+                                  url={`${API_URL}/fazendas/${farmId}/analises-solo/${a.id}/fotos/${photo.id}/baixar`}
+                                  alt={photo.caption || photo.fileName}
+                                  token={accessToken}
+                                />
+                                <div className="p-1.5">
+                                  <p className="truncate text-xs font-medium text-gray-700">
+                                    {photo.fileName}
+                                  </p>
+                                  <div className="flex flex-wrap gap-x-2 text-[10px] text-gray-400">
+                                    {photo.takenAt && (
+                                      <span>
+                                        {new Date(photo.takenAt).toLocaleString('pt-BR', {
+                                          day: '2-digit',
+                                          month: '2-digit',
+                                          year: 'numeric',
+                                          hour: '2-digit',
+                                          minute: '2-digit',
+                                        })}
+                                      </span>
+                                    )}
+                                    {photo.latitude != null && photo.longitude != null && (
+                                      <span>
+                                        {photo.latitude.toFixed(4)}, {photo.longitude.toFixed(4)}
+                                      </span>
+                                    )}
+                                    <span>
+                                      {(photo.sizeBytes / 1024).toFixed(0)} KB
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="absolute right-1 top-1 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDownloadPhoto(a.id, photo)}
+                                    className="rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-medium text-green-700 shadow-sm hover:bg-white"
+                                  >
+                                    Baixar
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeletePhoto(a.id, photo.id)}
+                                    className="rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-medium text-red-600 shadow-sm hover:bg-white"
+                                  >
+                                    Excluir
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {photos.length === 0 && uploadingPhotosFor !== a.id && (
+                          <p className="text-xs text-gray-400">
+                            Nenhuma foto anexada. Clique em &quot;Anexar fotos&quot; para adicionar registros visuais.
+                          </p>
+                        )}
+                      </div>
                     </>
                   )}
                 </li>
@@ -434,6 +615,53 @@ export default function SoilAnalysisPage() {
         </ul>
       )}
     </main>
+  );
+}
+
+function PhotoThumbnail({
+  url,
+  alt,
+  token,
+}: {
+  url: string;
+  alt: string;
+  token?: string | null;
+}) {
+  const [src, setSrc] = useState<string | null>(null);
+
+  useEffect(() => {
+    let revoke: string | null = null;
+    const headers: Record<string, string> = {};
+    if (token) headers.Authorization = `Bearer ${token}`;
+
+    fetch(url, { headers })
+      .then((res) => {
+        if (!res.ok) return;
+        return res.blob();
+      })
+      .then((blob) => {
+        if (!blob) return;
+        revoke = URL.createObjectURL(blob);
+        setSrc(revoke);
+      })
+      .catch(() => {});
+
+    return () => {
+      if (revoke) URL.revokeObjectURL(revoke);
+    };
+  }, [url, token]);
+
+  if (!src) {
+    return (
+      <div className="flex aspect-square w-full items-center justify-center bg-gray-100 text-xs text-gray-400">
+        Carregando...
+      </div>
+    );
+  }
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={src} alt={alt} className="aspect-square w-full object-cover" />
   );
 }
 

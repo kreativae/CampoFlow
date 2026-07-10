@@ -317,6 +317,7 @@ export type ModuleKey =
   | 'relatorios'
   | 'inteligencia'
   | 'notificacoes'
+  | 'negocios'
   | 'membros';
 
 export const MODULE_OPTIONS: { key: ModuleKey; label: string }[] = [
@@ -335,6 +336,7 @@ export const MODULE_OPTIONS: { key: ModuleKey; label: string }[] = [
   { key: 'relatorios', label: 'Relatórios' },
   { key: 'inteligencia', label: 'Inteligência' },
   { key: 'notificacoes', label: 'Notificações' },
+  { key: 'negocios', label: 'Negócios' },
   { key: 'membros', label: 'Membros' },
 ];
 
@@ -429,6 +431,7 @@ export interface Pasture {
   areaHectares: number;
   grassType: string | null;
   animalCapacity: number;
+  boundaries?: [number, number][] | null;
   occupations?: PastureOccupation[];
   // Nº de animais do rebanho atualmente atribuídos a este pasto (Animal.pastureId).
   animalHeadCount?: number;
@@ -839,6 +842,21 @@ export interface SoilAnalysis {
   documentPath: string | null;
   documentFileName: string | null;
   notes: string | null;
+  photos?: SoilAnalysisPhoto[];
+  createdAt: string;
+}
+
+export interface SoilAnalysisPhoto {
+  id: string;
+  soilAnalysisId: string;
+  storagePath: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  takenAt: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  caption: string | null;
   createdAt: string;
 }
 
@@ -1057,4 +1075,50 @@ export interface Contact {
   notes: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+// --- Negócios (compra/venda) ---
+
+export type DealType = 'COMPRA' | 'VENDA';
+export type DealStatus = 'RASCUNHO' | 'FINALIZADO' | 'CANCELADO';
+
+export interface DealItem {
+  id: string;
+  dealId: string;
+  animalId: string | null;
+  earTag: string;
+  weightKg: number | null;
+  unitPrice: number | null;
+  animal?: Animal;
+}
+
+export interface Deal {
+  id: string;
+  farmId: string;
+  type: DealType;
+  status: DealStatus;
+  counterparty: string | null;
+  pricePerUnit: number;
+  priceUnit: string;
+  freightCost: number;
+  commissionPercent: number;
+  notes: string | null;
+  dealDate: string;
+  createdById: string;
+  items: DealItem[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DealSummary {
+  totalAnimals: number;
+  totalWeightKg: number;
+  totalArrobas: number;
+  subtotal: number;
+  freightPerAnimal: number;
+  freightPerArroba: number;
+  commissionValue: number;
+  grandTotal: number;
+  pricePerAnimal: number;
+  pricePerArroba: number;
 }

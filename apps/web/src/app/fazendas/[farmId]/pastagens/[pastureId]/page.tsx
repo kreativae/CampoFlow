@@ -1,11 +1,14 @@
 'use client';
 
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, ApiError } from '@/lib/api';
-import type { Pasture, PastureOccupation } from '@/lib/types';
+import type { Farm, Pasture, PastureOccupation } from '@/lib/types';
+
+const BoundaryDrawer = dynamic(() => import('../boundary-drawer'), { ssr: false });
 
 export default function PastureDetailPage() {
   const { farmId, pastureId } = useParams<{ farmId: string; pastureId: string }>();
@@ -14,8 +17,10 @@ export default function PastureDetailPage() {
 
   const [pasture, setPasture] = useState<Pasture | null>(null);
   const [pastures, setPastures] = useState<Pasture[]>([]);
+  const [farm, setFarm] = useState<Farm | null>(null);
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [drawingBoundary, setDrawingBoundary] = useState(false);
 
   const [headCount, setHeadCount] = useState('');
   const [notes, setNotes] = useState('');
@@ -38,14 +43,16 @@ export default function PastureDetailPage() {
     setFetching(true);
     setError(null);
     try {
-      const [data, allPastures] = await Promise.all([
+      const [data, allPastures, farmData] = await Promise.all([
         apiFetch<Pasture>(`/fazendas/${farmId}/pastagens/${pastureId}`, {
           token: accessToken,
         }),
         apiFetch<Pasture[]>(`/fazendas/${farmId}/pastagens`, { token: accessToken }),
+        apiFetch<Farm>(`/fazendas/${farmId}`, { token: accessToken }),
       ]);
       setPasture(data);
       setPastures(allPastures.filter((p) => p.id !== pastureId));
+      setFarm(farmData);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao carregar o pasto');
     } finally {
@@ -188,6 +195,54 @@ export default function PastureDetailPage() {
       <section className="mb-8 grid grid-cols-2 gap-3">
         <SummaryCard label="Capacidade" value={`${pasture?.animalCapacity ?? 0} animais`} />
         <SummaryCard label="Ocupação atual (rebanho)" value={`${herdHeadCount} animais`} />
+      </section>
+
+      <section className="mb-8 rounded border border-gray-200 bg-white p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="font-semibold text-gray-800">Croqui no mapa</h2>
+          {!drawingBoundary && (
+            <button
+              type="button"
+              onClick={() => setDrawingBoundary(true)}
+              className="text-sm font-medium text-green-700 hover:underline"
+            >
+              {pasture?.boundaries ? 'Editar croqui' : 'Desenhar croqui'}
+            </button>
+          )}
+        </div>
+        {drawingBoundary ? (
+          <BoundaryDrawer
+            initial={pasture?.boundaries}
+            center={
+              farm?.latitude && farm?.longitude
+                ? [farm.latitude, farm.longitude]
+                : [-15.78, -47.93]
+            }
+            onSave={async (boundaries) => {
+              try {
+                await apiFetch(`/fazendas/${farmId}/pastagens/${pastureId}`, {
+                  method: 'PATCH',
+                  token: accessToken,
+                  body: { boundaries },
+                });
+                setDrawingBoundary(false);
+                await loadData();
+              } catch (err) {
+                setError(err instanceof ApiError ? err.message : 'Erro ao salvar croqui');
+              }
+            }}
+            onCancel={() => setDrawingBoundary(false)}
+          />
+        ) : pasture?.boundaries && pasture.boundaries.length >= 3 ? (
+          <p className="text-sm text-gray-500">
+            Polígono com {pasture.boundaries.length} pontos definido.
+            Clique em &quot;Editar croqui&quot; para alterar.
+          </p>
+        ) : (
+          <p className="text-sm text-gray-500">
+            Nenhum croqui definido. Clique em &quot;Desenhar croqui&quot; para marcar a área deste pasto no mapa.
+          </p>
+        )}
       </section>
 
       <section className="mb-8 rounded border border-gray-200 bg-white p-4">

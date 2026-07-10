@@ -43,6 +43,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { BillingModule } from './billing/billing.module';
 import { AdminModule } from './admin/admin.module';
 import { TicketsModule } from './tickets/tickets.module';
+import { DealsModule } from './deals/deals.module';
 
 @Module({
   imports: [
@@ -83,6 +84,7 @@ import { TicketsModule } from './tickets/tickets.module';
     BillingModule,
     AdminModule,
     TicketsModule,
+    DealsModule,
     JwtModule.register({}),
   ],
   controllers: [AppController],

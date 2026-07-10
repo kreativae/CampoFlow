@@ -27,6 +27,7 @@ const NAV: NavItem[] = [
   { suffix: '/documentos', label: 'Documentos', module: 'documentos' },
   { suffix: '/contatos', label: 'Contatos', module: 'contatos' },
   { suffix: '/membros', label: 'Membros', module: 'membros' },
+  { suffix: '/negocios', label: 'Negócios', module: 'negocios' },
   { suffix: '/financeiro', label: 'Financeiro', module: 'financeiro' },
   { suffix: '/relatorios', label: 'Relatórios', module: 'relatorios' },
   { suffix: '/inteligencia', label: 'IA', module: 'inteligencia' },
