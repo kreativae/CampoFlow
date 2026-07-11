@@ -7,12 +7,11 @@ import * as bcrypt from 'bcrypt';
 import { Prisma, SubscriptionStatus, TicketStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { PLAN_DEFINITIONS } from '../billing/plans';
-import { MercadoPagoService } from '../billing/mercadopago.service';
+import { StripeService } from '../billing/stripe.service';
 import { FarmsService } from '../farms/farms.service';
 import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
 import { UpdateAccountDto } from './dto/update-account.dto';
 import { UpdateAccountUserDto } from './dto/update-account-user.dto';
-import { UpdateMercadoPagoConfigDto } from './dto/update-mercadopago-config.dto';
 import { UpdateNotificationConfigDto } from './dto/update-notification-config.dto';
 import { ListAccountsDto } from './dto/list-accounts.dto';
 import { ListAuditLogsDto } from './dto/list-audit-logs.dto';
@@ -29,7 +28,7 @@ const PASSWORD_SALT_ROUNDS = 10;
 export class AdminService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly mercadoPagoService: MercadoPagoService,
+    private readonly stripeService: StripeService,
     private readonly farmsService: FarmsService,
     private readonly notificationsService: NotificationsService,
     private readonly externalQuotationsService: ExternalQuotationsService,
@@ -42,7 +41,7 @@ export class AdminService {
 
     const email = { configured: this.emailService.isConfigured() };
 
-    const mercadoPago = { configured: this.mercadoPagoService.isConfigured() };
+    const stripe = { configured: this.stripeService.isConfigured() };
 
     const storage = {
       provider: process.env.R2_ACCESS_KEY_ID ? 'r2' : 'local',
@@ -93,7 +92,7 @@ export class AdminService {
         email,
         queue,
         storage,
-        mercadoPago,
+        stripe,
         sentry,
       },
       data: {
@@ -260,11 +259,7 @@ export class AdminService {
       ? PLAN_DEFINITIONS[account.subscription.planTier]
       : null;
 
-    const paymentHistory = account.subscription?.mercadoPagoPreapprovalId
-      ? await this.mercadoPagoService.getPaymentHistory(
-          account.subscription.mercadoPagoPreapprovalId,
-        )
-      : [];
+    const paymentHistory: unknown[] = [];
 
     return { ...account, plan, paymentHistory };
   }
@@ -363,9 +358,9 @@ export class AdminService {
       throw new NotFoundException('Conta não encontrada');
     }
 
-    if (account.subscription?.mercadoPagoPreapprovalId) {
-      await this.mercadoPagoService.cancelSubscription(
-        account.subscription.mercadoPagoPreapprovalId,
+    if (account.subscription?.stripeSubscriptionId) {
+      await this.stripeService.cancelSubscription(
+        account.subscription.stripeSubscriptionId,
       );
     }
 
@@ -408,16 +403,12 @@ export class AdminService {
     return results;
   }
 
-  getMercadoPagoConfig() {
-    return this.mercadoPagoService.getConfigStatus();
+  getStripeConfig() {
+    return this.stripeService.getConfigStatus();
   }
 
-  updateMercadoPagoConfig(dto: UpdateMercadoPagoConfigDto) {
-    return this.mercadoPagoService.updateConfig(dto);
-  }
-
-  getMercadoPagoLogs() {
-    return this.mercadoPagoService.getLogs();
+  updateStripeConfig(dto: { secretKey?: string; webhookSecret?: string }) {
+    return this.stripeService.updateConfig(dto);
   }
 
   getNotificationConfig() {

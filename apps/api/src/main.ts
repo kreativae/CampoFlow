@@ -12,6 +12,7 @@ import { JsonLogger } from './common/logging/json-logger.service';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger: new JsonLogger(),
+    rawBody: true,
   });
 
   app.use(helmet());

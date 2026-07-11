@@ -16,7 +16,6 @@ import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
 import { UpdateAccountDto } from './dto/update-account.dto';
 import { UpdateAccountUserDto } from './dto/update-account-user.dto';
 import { DeleteAccountsDto } from './dto/delete-accounts.dto';
-import { UpdateMercadoPagoConfigDto } from './dto/update-mercadopago-config.dto';
 import { UpdateNotificationConfigDto } from './dto/update-notification-config.dto';
 import { ListAccountsDto } from './dto/list-accounts.dto';
 import { ListAuditLogsDto } from './dto/list-audit-logs.dto';
@@ -82,19 +81,14 @@ export class AdminController {
     return this.adminService.deleteAccounts(dto.accountIds);
   }
 
-  @Get('mercadopago/config')
-  getMercadoPagoConfig() {
-    return this.adminService.getMercadoPagoConfig();
+  @Get('stripe/config')
+  getStripeConfig() {
+    return this.adminService.getStripeConfig();
   }
 
-  @Patch('mercadopago/config')
-  updateMercadoPagoConfig(@Body() dto: UpdateMercadoPagoConfigDto) {
-    return this.adminService.updateMercadoPagoConfig(dto);
-  }
-
-  @Get('mercadopago/logs')
-  getMercadoPagoLogs() {
-    return this.adminService.getMercadoPagoLogs();
+  @Patch('stripe/config')
+  updateStripeConfig(@Body() dto: { secretKey?: string; webhookSecret?: string }) {
+    return this.adminService.updateStripeConfig(dto);
   }
 
   @Get('notificacoes/config')
