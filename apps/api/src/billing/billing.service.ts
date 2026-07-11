@@ -160,7 +160,15 @@ export class BillingService {
   // (authorized, paused, cancelled). We re-fetch the object instead of trusting the
   // webhook body directly, since MP webhooks only reliably carry the resource id.
   async handleWebhook(preapprovalId: string) {
-    const remote = await this.mercadoPago.getSubscription(preapprovalId);
+    let remote: Awaited<ReturnType<typeof this.mercadoPago.getSubscription>>;
+    try {
+      remote = await this.mercadoPago.getSubscription(preapprovalId);
+    } catch (err) {
+      this.logger.warn(
+        `Webhook do Mercado Pago: erro ao buscar preapproval ${preapprovalId}: ${(err as Error).message}`,
+      );
+      return;
+    }
     if (!remote?.external_reference) {
       this.logger.warn(
         `Webhook do Mercado Pago sem external_reference: ${preapprovalId}`,
