@@ -119,7 +119,7 @@ function SubscriptionContent() {
         '/conta/assinatura/checkout',
         { method: 'POST', token: accessToken, body: { planTier: tier } },
       );
-      // Redireciona para o checkout do Mercado Pago.
+      // Redireciona para o checkout do Stripe.
       window.location.assign(checkoutUrl);
     } catch (err) {
       setError(
@@ -301,7 +301,7 @@ function SubscriptionContent() {
               })}
             </div>
             <p className="mt-3 text-xs text-gray-400">
-              Pagamento processado com segurança pelo Mercado Pago. A assinatura só fica ativa
+              Pagamento processado com segurança pelo Stripe. A assinatura só fica ativa
               após a confirmação do pagamento.
             </p>
           </section>

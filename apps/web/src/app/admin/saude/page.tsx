@@ -161,11 +161,11 @@ export default function AdminSaudePage() {
             )}
           </ServiceCard>
 
-          <ServiceCard title="Mercado Pago" ok={services.mercadoPago.configured}>
+          <ServiceCard title="Stripe" ok={services.mercadoPago.configured}>
             <p>
               {services.mercadoPago.configured
-                ? 'Access Token configurado'
-                : 'Sem token — checkout desabilitado'}
+                ? 'Secret Key configurada'
+                : 'Sem chave — checkout desabilitado'}
             </p>
           </ServiceCard>
 

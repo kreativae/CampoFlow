@@ -204,7 +204,7 @@ export default function AdminAccountsPage() {
       message:
         `ATENÇÃO: excluir ${selected.size} conta(s) é IRREVERSÍVEL.\n\n` +
         'Propriedades, usuários, tickets e assinaturas dessas contas serão apagados ' +
-        'permanentemente, e as assinaturas no Mercado Pago serão canceladas.',
+        'permanentemente, e as assinaturas no Stripe serão canceladas.',
       confirmLabel: 'Excluir definitivamente',
       danger: true,
       requireText: 'EXCLUIR',
@@ -246,7 +246,7 @@ export default function AdminAccountsPage() {
           <h1 className="text-2xl font-semibold text-gray-900">Contas e assinaturas</h1>
           <p className="text-sm text-gray-500">
             Visão restrita à equipe da plataforma. Alterar plano/status aqui não passa pelo
-            Mercado Pago — use só para suporte (conta de cortesia, corrigir assinatura travada,
+            Alterar plano/status aqui não passa pelo Stripe — use só para suporte (conta de cortesia, corrigir assinatura travada,
             reativação manual).
           </p>
         </div>

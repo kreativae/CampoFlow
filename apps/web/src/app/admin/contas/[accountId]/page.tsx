@@ -201,7 +201,7 @@ export default function AdminAccountDetailPage() {
       title: 'Excluir conta',
       message:
         `ATENÇÃO: excluir a conta "${account.name}" é IRREVERSÍVEL.\n\n` +
-        'Todas as propriedades, usuários, tickets e a assinatura (cancelada no Mercado Pago) ' +
+        'Todas as propriedades, usuários, tickets e a assinatura (cancelada no Stripe) ' +
         'serão apagados permanentemente.\n\n' +
         'Não será possível recuperar esses dados depois.',
       confirmLabel: 'Excluir definitivamente',
@@ -502,8 +502,7 @@ export default function AdminAccountDetailPage() {
         <h2 className="mb-3 text-sm font-semibold text-gray-700">Histórico de pagamentos</h2>
         {account.paymentHistory.length === 0 ? (
           <p className="text-sm text-gray-500">
-            Nenhum pagamento encontrado no Mercado Pago (ou integração não configurada
-            neste ambiente).
+            Nenhum pagamento encontrado (histórico via Stripe não implementado ainda).
           </p>
         ) : (
           <table className="w-full text-left text-sm">
@@ -538,7 +537,7 @@ export default function AdminAccountDetailPage() {
         <h2 className="mb-2 text-sm font-semibold text-red-700">Zona de risco</h2>
         <p className="mb-3 text-sm text-gray-500">
           Exclui a conta, suas propriedades, usuários e tickets permanentemente, e
-          cancela a assinatura no Mercado Pago.
+          cancela a assinatura no Stripe.
         </p>
         <button
           type="button"

@@ -8,7 +8,7 @@ import { useAuth } from '@/lib/auth-context';
 const NAV_ITEMS = [
   { href: '/admin', label: 'Contas e assinaturas' },
   { href: '/admin/tickets', label: 'Tickets' },
-  { href: '/admin/mercadopago', label: 'Mercado Pago' },
+  { href: '/admin/gateway', label: 'Gateway' },
   { href: '/admin/notificacoes', label: 'Notificações' },
   { href: '/admin/auditoria', label: 'Auditoria' },
   { href: '/admin/saude', label: 'Saúde' },

@@ -9,6 +9,7 @@ export interface StripeConfigStatus {
   secretKeyMasked: string | null;
   webhookSecretSet: boolean;
   webhookEndpointUrl: string;
+  billingRedirectUrl: string | null;
   nodeEnv: string;
 }
 
@@ -73,6 +74,7 @@ export class StripeService implements OnModuleInit {
       secretKeyMasked: this.secretKey ? maskKey(this.secretKey) : null,
       webhookSecretSet: Boolean(this.webhookSecret),
       webhookEndpointUrl: `${apiBase.replace(/\/$/, '')}/conta/assinatura/webhook/stripe`,
+      billingRedirectUrl: process.env.WEB_BILLING_REDIRECT_URL ?? null,
       nodeEnv: process.env.NODE_ENV ?? 'development',
     };
   }
