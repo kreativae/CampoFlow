@@ -5,18 +5,18 @@ import {
   Get,
   Headers,
   Post,
-  RawBodyRequest,
   Req,
   UseGuards,
 } from '@nestjs/common';
+import type { RawBodyRequest } from '@nestjs/common';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/decorators/current-user.decorator';
 import { BillingService } from './billing.service';
 import { StripeService } from './stripe.service';
+import type { UpdateStripeConfigInput } from './stripe.service';
 import { CheckoutDto } from './dto/checkout.dto';
-import { UpdateStripeConfigInput } from './stripe.service';
 
 @Controller('conta/assinatura')
 export class BillingController {
