@@ -336,14 +336,23 @@ describe('Crops / Safras (e2e)', () => {
     await request(app.getHttpServer())
       .post(`/fazendas/${farmId}/safras/${cycleId}/aplicacoes`)
       .set('Authorization', `Bearer ${accessToken}`)
-      .send({ type: 'HERBICIDA', product: 'Glifosato', dosePerHa: 2, unitPrice: 40 })
+      .send({
+        type: 'HERBICIDA',
+        product: 'Glifosato',
+        dosePerHa: 2,
+        unitPrice: 40,
+      })
       .expect(201);
 
     // Custo manual: R$ 9.000
     await request(app.getHttpServer())
       .post(`/fazendas/${farmId}/safras/${cycleId}/custos`)
       .set('Authorization', `Bearer ${accessToken}`)
-      .send({ category: 'SEMENTE', description: 'Sementes de soja', amount: 9000 })
+      .send({
+        category: 'SEMENTE',
+        description: 'Sementes de soja',
+        amount: 9000,
+      })
       .expect(201);
 
     const res = await request(app.getHttpServer())
@@ -353,9 +362,18 @@ describe('Crops / Safras (e2e)', () => {
 
     const body = res.body as {
       production: { productionInUnit: number; productivityPerHa: number };
-      costs: { fieldBook: number; manual: number; total: number; perUnit: number };
+      costs: {
+        fieldBook: number;
+        manual: number;
+        total: number;
+        perUnit: number;
+      };
       revenue: { total: number };
-      result: { profit: number; marginPercent: number; breakEvenPricePerUnit: number };
+      result: {
+        profit: number;
+        marginPercent: number;
+        breakEvenPricePerUnit: number;
+      };
     };
     expect(body.production.productionInUnit).toBe(750); // 45000 / 60
     expect(body.production.productivityPerHa).toBe(60); // 750 / 12.5

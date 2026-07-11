@@ -232,7 +232,10 @@ export class MercadoPagoService implements OnModuleInit {
     } catch (err) {
       const message = (err as Error).message;
       // Log completo para diagnóstico — inclui cause/response do SDK do MP
-      console.error('[MP createSubscription] raw error:', JSON.stringify(err, Object.getOwnPropertyNames(err as object)));
+      console.error(
+        '[MP createSubscription] raw error:',
+        JSON.stringify(err, Object.getOwnPropertyNames(err as object)),
+      );
       await this.log(
         MercadoPagoLogEvent.CREATE_SUBSCRIPTION,
         false,

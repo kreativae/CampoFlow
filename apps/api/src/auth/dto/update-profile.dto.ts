@@ -1,5 +1,14 @@
-import { IsEmail, IsOptional, IsString, Matches, MinLength } from 'class-validator';
-import { PASSWORD_POLICY_MESSAGE, PASSWORD_POLICY_REGEX } from './password-policy';
+import {
+  IsEmail,
+  IsOptional,
+  IsString,
+  Matches,
+  MinLength,
+} from 'class-validator';
+import {
+  PASSWORD_POLICY_MESSAGE,
+  PASSWORD_POLICY_REGEX,
+} from './password-policy';
 
 export class UpdateProfileDto {
   @IsOptional()

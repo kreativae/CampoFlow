@@ -66,11 +66,7 @@ describe('Profile (e2e)', () => {
     await prisma.user.deleteMany({
       where: {
         email: {
-          in: [
-            userA.email,
-            userB.email,
-            `updated-${userA.email}`,
-          ],
+          in: [userA.email, userB.email, `updated-${userA.email}`],
         },
       },
     });
@@ -155,7 +151,10 @@ describe('Profile (e2e)', () => {
       await request(app.getHttpServer())
         .post('/auth/me/alterar-senha')
         .set('Authorization', `Bearer ${tokenA}`)
-        .send({ currentPassword: 'wrongPassword1', newPassword: 'novaSenha123' })
+        .send({
+          currentPassword: 'wrongPassword1',
+          newPassword: 'novaSenha123',
+        })
         .expect(400);
     });
 

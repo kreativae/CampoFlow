@@ -87,7 +87,9 @@ export class AdminController {
   }
 
   @Patch('stripe/config')
-  updateStripeConfig(@Body() dto: { secretKey?: string; webhookSecret?: string }) {
+  updateStripeConfig(
+    @Body() dto: { secretKey?: string; webhookSecret?: string },
+  ) {
     return this.adminService.updateStripeConfig(dto);
   }
 

@@ -301,7 +301,12 @@ describe('Properties & Pastures (e2e)', () => {
       await request(app.getHttpServer())
         .post(`/fazendas/${farmId}/animais`)
         .set('Authorization', `Bearer ${ownerToken}`)
-        .send({ earTag, sex: 'FEMALE', category: 'VACA', pastureId: herdPastureId })
+        .send({
+          earTag,
+          sex: 'FEMALE',
+          category: 'VACA',
+          pastureId: herdPastureId,
+        })
         .expect(201);
     }
 
@@ -322,6 +327,9 @@ describe('Properties & Pastures (e2e)', () => {
       animals: { earTag: string }[];
     };
     expect(detail.animalHeadCount).toBe(2);
-    expect(detail.animals.map((a) => a.earTag).sort()).toEqual(['REB-1', 'REB-2']);
+    expect(detail.animals.map((a) => a.earTag).sort()).toEqual([
+      'REB-1',
+      'REB-2',
+    ]);
   });
 });

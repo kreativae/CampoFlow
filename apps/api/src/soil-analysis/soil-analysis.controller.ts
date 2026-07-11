@@ -113,9 +113,15 @@ export class SoilAnalysisController {
     @Body() body: { metadata?: string },
     @UploadedFiles() files: Express.Multer.File[],
   ) {
-    let metadata: { takenAt?: string; latitude?: number; longitude?: number; caption?: string }[] = [];
+    let metadata: {
+      takenAt?: string;
+      latitude?: number;
+      longitude?: number;
+      caption?: string;
+    }[] = [];
     if (body.metadata) {
       try {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         metadata = JSON.parse(body.metadata);
       } catch {
         // ignore parse errors — metadata is optional
@@ -139,7 +145,11 @@ export class SoilAnalysisController {
     @Res() res: Response,
   ) {
     const photo = await this.soilAnalysisService.getPhoto(farmId, id, photoId);
-    await this.storageService.downloadToResponse(photo.storagePath, photo.fileName, res);
+    await this.storageService.downloadToResponse(
+      photo.storagePath,
+      photo.fileName,
+      res,
+    );
   }
 
   @Delete(':id/fotos/:photoId')

@@ -78,7 +78,9 @@ describe('Tickets (e2e)', () => {
   afterAll(async () => {
     delete process.env.PLATFORM_ADMIN_EMAILS;
     const dbUsers = await prisma.user.findMany({
-      where: { email: { in: [admin.email, customer.email, otherCustomer.email] } },
+      where: {
+        email: { in: [admin.email, customer.email, otherCustomer.email] },
+      },
     });
     const accountIds = dbUsers.map((u) => u.accountId);
     // Clear tickets/messages across all involved accounts up front — a staff
@@ -88,13 +90,17 @@ describe('Tickets (e2e)', () => {
     await prisma.ticketMessage.deleteMany({
       where: { ticket: { accountId: { in: accountIds } } },
     });
-    await prisma.ticket.deleteMany({ where: { accountId: { in: accountIds } } });
+    await prisma.ticket.deleteMany({
+      where: { accountId: { in: accountIds } },
+    });
 
     for (const email of [admin.email, customer.email, otherCustomer.email]) {
       const dbUser = await prisma.user.findUnique({ where: { email } });
       if (dbUser) {
         await prisma.membership.deleteMany({ where: { userId: dbUser.id } });
-        await prisma.farm.deleteMany({ where: { accountId: dbUser.accountId } });
+        await prisma.farm.deleteMany({
+          where: { accountId: dbUser.accountId },
+        });
         await prisma.subscription.deleteMany({
           where: { accountId: dbUser.accountId },
         });
@@ -109,7 +115,10 @@ describe('Tickets (e2e)', () => {
     const res = await request(app.getHttpServer())
       .post('/suporte')
       .set('Authorization', `Bearer ${customerToken}`)
-      .send({ subject: 'Problema na cobrança', message: 'Fui cobrado duas vezes.' })
+      .send({
+        subject: 'Problema na cobrança',
+        message: 'Fui cobrado duas vezes.',
+      })
       .expect(201);
 
     const body = res.body as TicketBody;
@@ -120,7 +129,7 @@ describe('Tickets (e2e)', () => {
     ticketId = body.id;
   });
 
-  it('lists tickets only for the caller\'s own account', async () => {
+  it("lists tickets only for the caller's own account", async () => {
     const res = await request(app.getHttpServer())
       .get('/suporte')
       .set('Authorization', `Bearer ${otherCustomerToken}`)

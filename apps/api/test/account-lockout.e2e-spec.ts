@@ -35,7 +35,9 @@ describe('Account lockout & password policy (e2e)', () => {
   });
 
   afterAll(async () => {
-    const dbUser = await prisma.user.findUnique({ where: { email: user.email } });
+    const dbUser = await prisma.user.findUnique({
+      where: { email: user.email },
+    });
     if (dbUser) {
       await prisma.subscription.deleteMany({
         where: { accountId: dbUser.accountId },

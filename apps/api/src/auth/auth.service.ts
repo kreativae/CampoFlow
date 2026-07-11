@@ -326,10 +326,7 @@ export class AuthService {
     return this.toSafeUser(user);
   }
 
-  async updateProfile(
-    userId: string,
-    dto: { name?: string; email?: string },
-  ) {
+  async updateProfile(userId: string, dto: { name?: string; email?: string }) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundException('Usuário não encontrado');
 

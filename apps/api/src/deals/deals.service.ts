@@ -7,7 +7,13 @@ const DEAL_INCLUDE = {
   items: {
     include: {
       animal: {
-        select: { id: true, earTag: true, name: true, breed: true, category: true },
+        select: {
+          id: true,
+          earTag: true,
+          name: true,
+          breed: true,
+          category: true,
+        },
       },
     },
   },
@@ -57,8 +63,10 @@ export class DealsService {
     return this.prisma.deal.findMany({
       where: {
         farmId,
-        ...(query?.type ? { type: query.type as any } : {}),
-        ...(query?.status ? { status: query.status as any } : {}),
+
+        ...(query?.type ? { type: query.type as never } : {}),
+
+        ...(query?.status ? { status: query.status as never } : {}),
       },
       include: DEAL_INCLUDE,
       orderBy: { dealDate: 'desc' },
@@ -159,7 +167,12 @@ export class DealsService {
       const funruralValue = grossValue * ((deal.funruralPercent ?? 0) / 100);
       const senarValue = grossValue * ((deal.senarPercent ?? 0) / 100);
       const commissionValue = grossValue * (deal.commissionPercent / 100);
-      const netTotal = grossValue - funruralValue - senarValue - commissionValue - deal.freightCost;
+      const netTotal =
+        grossValue -
+        funruralValue -
+        senarValue -
+        commissionValue -
+        deal.freightCost;
       return {
         totalAnimals,
         totalWeight,
@@ -167,8 +180,10 @@ export class DealsService {
         carcassWeight,
         subtotal: grossValue,
         freightCost: deal.freightCost,
-        freightPerAnimal: totalAnimals > 0 ? deal.freightCost / totalAnimals : 0,
-        freightPerArroba: carcassArrobas > 0 ? deal.freightCost / carcassArrobas : 0,
+        freightPerAnimal:
+          totalAnimals > 0 ? deal.freightCost / totalAnimals : 0,
+        freightPerArroba:
+          carcassArrobas > 0 ? deal.freightCost / carcassArrobas : 0,
         commissionPercent: deal.commissionPercent,
         commissionValue,
         funruralValue,
@@ -190,10 +205,7 @@ export class DealsService {
     }
 
     const itemsWithPrice = deal.items.filter((i) => i.unitPrice != null);
-    if (
-      itemsWithPrice.length === deal.items.length &&
-      deal.items.length > 0
-    ) {
+    if (itemsWithPrice.length === deal.items.length && deal.items.length > 0) {
       subtotal = itemsWithPrice.reduce((sum, i) => sum + (i.unitPrice ?? 0), 0);
     }
 

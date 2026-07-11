@@ -145,7 +145,9 @@ export class SoilAnalysisService {
     if (analysis.documentPath) {
       await this.storageService.delete(analysis.documentPath);
     }
-    await Promise.all(photos.map((p) => this.storageService.delete(p.storagePath)));
+    await Promise.all(
+      photos.map((p) => this.storageService.delete(p.storagePath)),
+    );
     return { success: true };
   }
 
@@ -246,7 +248,12 @@ export class SoilAnalysisService {
     farmId: string,
     analysisId: string,
     files: Express.Multer.File[],
-    metadata: { takenAt?: string; latitude?: number; longitude?: number; caption?: string }[],
+    metadata: {
+      takenAt?: string;
+      latitude?: number;
+      longitude?: number;
+      caption?: string;
+    }[],
   ) {
     await this.findOne(farmId, analysisId);
 
@@ -254,7 +261,11 @@ export class SoilAnalysisService {
       files.map(async (file, i) => {
         const meta = metadata[i] ?? {};
         const storagePath = `${farmId}/solo/fotos/${randomUUID()}${extname(file.originalname)}`;
-        await this.storageService.upload(storagePath, file.buffer, file.mimetype);
+        await this.storageService.upload(
+          storagePath,
+          file.buffer,
+          file.mimetype,
+        );
 
         return this.prisma.soilAnalysisPhoto.create({
           data: {

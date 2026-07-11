@@ -23,6 +23,7 @@ describe('AppController (e2e)', () => {
       status: 'ok',
       docs: '/docs',
     });
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     expect(typeof res.body.version).toBe('string');
   });
 

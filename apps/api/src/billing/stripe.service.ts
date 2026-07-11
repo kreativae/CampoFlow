@@ -77,7 +77,9 @@ export class StripeService implements OnModuleInit {
     };
   }
 
-  async updateConfig(dto: UpdateStripeConfigInput): Promise<StripeConfigStatus> {
+  async updateConfig(
+    dto: UpdateStripeConfigInput,
+  ): Promise<StripeConfigStatus> {
     await this.prisma.platformSetting.upsert({
       where: { id: SETTING_ID },
       create: {
@@ -137,15 +139,26 @@ export class StripeService implements OnModuleInit {
     }
   }
 
-  constructWebhookEvent(payload: Buffer, signature: string): Stripe.Event | null {
+  constructWebhookEvent(
+    payload: Buffer,
+    signature: string,
+  ): Stripe.Event | null {
     if (!this.client || !this.webhookSecret) {
-      this.logger.warn('Webhook Stripe recebido sem webhookSecret configurado — ignorando verificação');
+      this.logger.warn(
+        'Webhook Stripe recebido sem webhookSecret configurado — ignorando verificação',
+      );
       return null;
     }
     try {
-      return this.client.webhooks.constructEvent(payload, signature, this.webhookSecret);
+      return this.client.webhooks.constructEvent(
+        payload,
+        signature,
+        this.webhookSecret,
+      );
     } catch (err) {
-      this.logger.warn(`Assinatura do webhook Stripe inválida: ${(err as Error).message}`);
+      this.logger.warn(
+        `Assinatura do webhook Stripe inválida: ${(err as Error).message}`,
+      );
       return null;
     }
   }

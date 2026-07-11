@@ -141,7 +141,9 @@ export class BillingService {
 
     if (!event) {
       // Sem webhookSecret configurado — aceitar sem verificar (não ideal em prod)
-      this.logger.warn('Webhook Stripe processado sem verificação de assinatura');
+      this.logger.warn(
+        'Webhook Stripe processado sem verificação de assinatura',
+      );
       return;
     }
 
@@ -153,7 +155,9 @@ export class BillingService {
         };
         const { accountId, planTier } = session.metadata ?? {};
         if (!accountId || !planTier) {
-          this.logger.warn('checkout.session.completed sem metadata accountId/planTier');
+          this.logger.warn(
+            'checkout.session.completed sem metadata accountId/planTier',
+          );
           return;
         }
         await this.prisma.subscription.update({
@@ -164,7 +168,9 @@ export class BillingService {
             stripeSubscriptionId: session.subscription ?? null,
           },
         });
-        this.logger.log(`Assinatura ativada para conta ${accountId} — plano ${planTier}`);
+        this.logger.log(
+          `Assinatura ativada para conta ${accountId} — plano ${planTier}`,
+        );
         break;
       }
 
@@ -202,12 +208,18 @@ export class BillingService {
       }
 
       case 'customer.subscription.deleted': {
-        const sub = event.data.object as { id: string; metadata?: Record<string, string> };
+        const sub = event.data.object as {
+          id: string;
+          metadata?: Record<string, string>;
+        };
         const accountId = sub.metadata?.accountId;
         if (accountId) {
           await this.prisma.subscription.update({
             where: { accountId },
-            data: { status: SubscriptionStatus.CANCELED, canceledAt: new Date() },
+            data: {
+              status: SubscriptionStatus.CANCELED,
+              canceledAt: new Date(),
+            },
           });
         } else {
           const record = await this.prisma.subscription.findFirst({
@@ -216,7 +228,10 @@ export class BillingService {
           if (record) {
             await this.prisma.subscription.update({
               where: { id: record.id },
-              data: { status: SubscriptionStatus.CANCELED, canceledAt: new Date() },
+              data: {
+                status: SubscriptionStatus.CANCELED,
+                canceledAt: new Date(),
+              },
             });
           }
         }

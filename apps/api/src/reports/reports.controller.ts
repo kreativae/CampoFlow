@@ -60,7 +60,9 @@ export class ReportsController {
       );
     }
 
-    const table = await this.reportsService.build(farmId, type as ReportType, { dealId });
+    const table = await this.reportsService.build(farmId, type as ReportType, {
+      dealId,
+    });
 
     const buffer =
       resolvedFormat === 'csv'

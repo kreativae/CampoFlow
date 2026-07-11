@@ -47,8 +47,16 @@ export class AdminService {
       provider: process.env.R2_ACCESS_KEY_ID ? 'r2' : 'local',
     };
 
-    let queue: { connected: boolean; waiting: number; active: number; failed: number } = {
-      connected: false, waiting: 0, active: 0, failed: 0,
+    let queue: {
+      connected: boolean;
+      waiting: number;
+      active: number;
+      failed: number;
+    } = {
+      connected: false,
+      waiting: 0,
+      active: 0,
+      failed: 0,
     };
     try {
       const [waiting, active, failed] = await Promise.all([

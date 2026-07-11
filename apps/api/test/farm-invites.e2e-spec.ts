@@ -195,7 +195,9 @@ describe('Farm invites (e2e)', () => {
       .send({ email: directUser.email, role: 'EMPLOYEE' })
       .expect(201);
 
-    expect((res.body as { userId?: string; invited?: boolean }).invited).toBeUndefined();
+    expect(
+      (res.body as { userId?: string; invited?: boolean }).invited,
+    ).toBeUndefined();
     expect((res.body as { userId?: string }).userId).toBeDefined();
 
     const dbUser = await prisma.user.findUnique({
