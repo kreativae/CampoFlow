@@ -21,6 +21,18 @@ const STATUS_COLOR: Record<DealStatus, string> = {
   CANCELADO: 'bg-red-100 text-red-800',
 };
 
+const TYPE_LABEL: Record<DealType, string> = {
+  VENDA: 'Venda',
+  COMPRA: 'Compra',
+  ABATE: 'Abate',
+};
+
+const TYPE_COLOR: Record<DealType, string> = {
+  VENDA: 'bg-blue-100 text-blue-800',
+  COMPRA: 'bg-purple-100 text-purple-800',
+  ABATE: 'bg-orange-100 text-orange-800',
+};
+
 function computeSummary(
   items: { weightKg: number | null; unitPrice: number | null }[],
   pricePerUnit: number,
@@ -91,7 +103,21 @@ export default function NegociosPage() {
   const [notes, setNotes] = useState('');
   const [draftItems, setDraftItems] = useState<DraftItem[]>([]);
 
-  // Animal selection for VENDA
+  // Compra em lote
+  const [quantity, setQuantity] = useState('');
+  const [isInstallment, setIsInstallment] = useState(false);
+  const [installmentCount, setInstallmentCount] = useState('');
+  const [installmentValue, setInstallmentValue] = useState('');
+  const [totalValue, setTotalValue] = useState('');
+
+  // Abate
+  const [carcassYieldPercent, setCarcassYieldPercent] = useState('52');
+  const [liveWeightPricePerKg, setLiveWeightPricePerKg] = useState('');
+  const [funruralPercent, setFunruralPercent] = useState('1.5');
+  const [senarPercent, setSenarPercent] = useState('0.2');
+  const [slaughterFrequency, setSlaughterFrequency] = useState<'TRIMESTRAL' | 'SEMESTRAL'>('TRIMESTRAL');
+
+  // Animal selection for VENDA and ABATE
   const [showAnimalPicker, setShowAnimalPicker] = useState(false);
   const [animalSearch, setAnimalSearch] = useState('');
 
@@ -120,7 +146,6 @@ export default function NegociosPage() {
     if (!loading && user) loadData();
   }, [loading, user, loadData]);
 
-  // Filtered animals for picker (exclude already selected)
   const selectedAnimalIds = useMemo(() => new Set(draftItems.map((i) => i.animalId).filter(Boolean)), [draftItems]);
   const filteredAnimals = useMemo(() => {
     const q = animalSearch.toLowerCase();
@@ -129,6 +154,7 @@ export default function NegociosPage() {
       .filter((a) => !q || a.earTag.toLowerCase().includes(q) || (a.name ?? '').toLowerCase().includes(q));
   }, [animals, selectedAnimalIds, animalSearch]);
 
+  // Venda summary
   const summary = useMemo(
     () =>
       computeSummary(
@@ -140,6 +166,67 @@ export default function NegociosPage() {
       ),
     [draftItems, pricePerUnit, priceUnit, freightCost, commissionPercent],
   );
+
+  // Compra summary
+  const purchaseSummary = useMemo(() => {
+    const qty = Number(quantity) || draftItems.length;
+    const count = Number(installmentCount) || 0;
+    const parcelaVal = Number(installmentValue) || 0;
+    // Se parcelado, total = parcelas × valor da parcela; senão, total informado direto
+    const total = isInstallment && count > 0 && parcelaVal > 0
+      ? count * parcelaVal
+      : Number(totalValue) || 0;
+    const freight = Number(freightCost) || 0;
+    const commission = total * ((Number(commissionPercent) || 0) / 100);
+    const grandTotal = total + freight + commission;
+    const installment = parcelaVal || (count > 0 ? total / count : 0);
+    return {
+      quantity: qty,
+      installmentCount: count,
+      installment,
+      totalValue: total,
+      commissionValue: commission,
+      grandTotal,
+      costPerAnimal: qty > 0 ? grandTotal / qty : 0,
+    };
+  }, [quantity, totalValue, installmentCount, installmentValue, freightCost, commissionPercent, draftItems.length, isInstallment]);
+
+  // Abate summary
+  const slaughterSummary = useMemo(() => {
+    const yieldPct = (Number(carcassYieldPercent) || 52) / 100;
+    const priceKg = Number(liveWeightPricePerKg) || 0;
+    const freight = Number(freightCost) || 0;
+    const commPct = Number(commissionPercent) || 0;
+    const funPct = Number(funruralPercent) || 0;
+    const senPct = Number(senarPercent) || 0;
+
+    const totalAnimals = draftItems.length;
+    const totalLiveWeight = draftItems.reduce((s, i) => s + (i.weightKg ?? 0), 0);
+    const carcassWeight = totalLiveWeight * yieldPct;
+    const carcassArrobas = carcassWeight / ARROBA_KG;
+    const grossValue = totalLiveWeight * priceKg;
+    const arrobaPrice = carcassArrobas > 0 ? grossValue / carcassArrobas : 0;
+    const funruralValue = grossValue * (funPct / 100);
+    const senarValue = grossValue * (senPct / 100);
+    const commissionValue = grossValue * (commPct / 100);
+    const netTotal = grossValue - funruralValue - senarValue - commissionValue - freight;
+
+    return {
+      totalAnimals,
+      totalLiveWeight,
+      carcassWeight: Number(carcassWeight.toFixed(1)),
+      carcassArrobas: Number(carcassArrobas.toFixed(2)),
+      arrobaPrice: Number(arrobaPrice.toFixed(2)),
+      grossValue: Number(grossValue.toFixed(2)),
+      funruralValue: Number(funruralValue.toFixed(2)),
+      senarValue: Number(senarValue.toFixed(2)),
+      commissionValue: Number(commissionValue.toFixed(2)),
+      freight,
+      netTotal: Number(netTotal.toFixed(2)),
+      netPerAnimal: totalAnimals > 0 ? Number((netTotal / totalAnimals).toFixed(2)) : 0,
+      netPerArroba: carcassArrobas > 0 ? Number((netTotal / carcassArrobas).toFixed(2)) : 0,
+    };
+  }, [draftItems, carcassYieldPercent, liveWeightPricePerKg, freightCost, commissionPercent, funruralPercent, senarPercent]);
 
   function addAnimalToDraft(animal: Animal) {
     setDraftItems((prev) => [
@@ -174,10 +261,18 @@ export default function NegociosPage() {
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
-    if (draftItems.length === 0) {
+    const isCompra = dealType === 'COMPRA';
+    const isAbate = dealType === 'ABATE';
+
+    if (isCompra && !Number(quantity) && draftItems.length === 0) {
+      setError('Informe a quantidade de animais da compra.');
+      return;
+    }
+    if (!isCompra && draftItems.length === 0) {
       setError('Adicione ao menos um animal ao negócio.');
       return;
     }
+
     setCreating(true);
     setError(null);
     try {
@@ -191,6 +286,25 @@ export default function NegociosPage() {
           priceUnit,
           freightCost: Number(freightCost) || 0,
           commissionPercent: Number(commissionPercent) || 0,
+          ...(isCompra
+            ? {
+                quantity: Number(quantity) || undefined,
+                installmentCount: Number(installmentCount) || undefined,
+                installmentValue: Number(installmentValue) || undefined,
+                totalValue: isInstallment
+                  ? (Number(installmentCount) * Number(installmentValue)) || undefined
+                  : Number(totalValue) || undefined,
+              }
+            : {}),
+          ...(isAbate
+            ? {
+                carcassYieldPercent: Number(carcassYieldPercent) || undefined,
+                liveWeightPricePerKg: Number(liveWeightPricePerKg) || undefined,
+                funruralPercent: Number(funruralPercent) || undefined,
+                senarPercent: Number(senarPercent) || undefined,
+                slaughterFrequency,
+              }
+            : {}),
           notes: notes || undefined,
           dealDate,
           items: draftItems.map((i) => ({
@@ -223,6 +337,16 @@ export default function NegociosPage() {
     setDraftItems([]);
     setShowAnimalPicker(false);
     setAnimalSearch('');
+    setQuantity('');
+    setInstallmentCount('');
+    setInstallmentValue('');
+    setTotalValue('');
+    setIsInstallment(false);
+    setCarcassYieldPercent('52');
+    setLiveWeightPricePerKg('');
+    setFunruralPercent('1.5');
+    setSenarPercent('0.2');
+    setSlaughterFrequency('TRIMESTRAL');
   }
 
   async function handleDelete(id: string) {
@@ -248,8 +372,50 @@ export default function NegociosPage() {
     }
   }
 
+  async function handleDownloadReport(dealId: string) {
+    try {
+      await apiDownload(`/fazendas/${farmId}/relatorios/abate?format=pdf&dealId=${dealId}`, {
+        token: accessToken,
+        filename: `abate-${dealId}.pdf`,
+      });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao gerar relatório');
+    }
+  }
+
   function dealSummary(deal: Deal): DealSummary {
-    return computeSummary(deal.items, deal.pricePerUnit, deal.priceUnit, deal.freightCost, deal.commissionPercent);
+    const s = computeSummary(deal.items, deal.pricePerUnit, deal.priceUnit, deal.freightCost, deal.commissionPercent);
+    if (deal.quantity || deal.totalValue) {
+      const totalAnimals = deal.quantity ?? deal.items.length;
+      const subtotal = deal.totalValue ?? s.subtotal;
+      const commissionValue = subtotal * (deal.commissionPercent / 100);
+      const grandTotal = subtotal + deal.freightCost + commissionValue;
+      return {
+        ...s,
+        totalAnimals,
+        subtotal,
+        commissionValue: Number(commissionValue.toFixed(2)),
+        grandTotal: Number(grandTotal.toFixed(2)),
+        freightPerAnimal: totalAnimals > 0 ? Number((deal.freightCost / totalAnimals).toFixed(2)) : 0,
+        pricePerAnimal: totalAnimals > 0 ? Number((grandTotal / totalAnimals).toFixed(2)) : 0,
+      };
+    }
+    return s;
+  }
+
+  function slaughterDealSummary(deal: Deal) {
+    const yieldPct = (deal.carcassYieldPercent ?? 52) / 100;
+    const priceKg = deal.liveWeightPricePerKg ?? 0;
+    const totalAnimals = deal.items.length;
+    const totalLiveWeight = deal.items.reduce((s, i) => s + (i.weightKg ?? 0), 0);
+    const carcassWeight = totalLiveWeight * yieldPct;
+    const carcassArrobas = carcassWeight / ARROBA_KG;
+    const grossValue = totalLiveWeight * priceKg;
+    const funruralValue = grossValue * ((deal.funruralPercent ?? 0) / 100);
+    const senarValue = grossValue * ((deal.senarPercent ?? 0) / 100);
+    const commissionValue = grossValue * (deal.commissionPercent / 100);
+    const netTotal = grossValue - funruralValue - senarValue - commissionValue - deal.freightCost;
+    return { totalAnimals, totalLiveWeight, carcassWeight, carcassArrobas, grossValue, funruralValue, senarValue, commissionValue, netTotal };
   }
 
   const animalsWithoutWeight = useMemo(
@@ -265,15 +431,17 @@ export default function NegociosPage() {
     );
   }
 
+  const showAnimals = dealType !== 'COMPRA';
+
   return (
     <main className="flex-1 overflow-y-auto p-4 sm:p-6">
       <header className="mb-6 flex items-center justify-between">
         <div>
           <Link href={`/fazendas/${farmId}`} className="text-sm text-green-700 hover:underline">
-            ← Dashboard
+            &larr; Dashboard
           </Link>
           <h1 className="text-xl font-bold text-gray-900">Negócios</h1>
-          <p className="text-sm text-gray-500">Compra e venda de animais — cálculo de custos por animal e por arroba</p>
+          <p className="text-sm text-gray-500">Compra, venda e abate de animais — cálculo de custos por animal e por arroba</p>
         </div>
         <button
           onClick={() => { setShowForm(!showForm); if (showForm) resetForm(); }}
@@ -301,6 +469,7 @@ export default function NegociosPage() {
                 >
                   <option value="VENDA">Venda</option>
                   <option value="COMPRA">Compra</option>
+                  <option value="ABATE">Abate</option>
                 </select>
               </div>
               <div>
@@ -314,45 +483,216 @@ export default function NegociosPage() {
                 />
               </div>
               <div className="col-span-2">
-                <label className="text-xs font-medium text-gray-600">Contraparte (comprador/vendedor)</label>
+                <label className="text-xs font-medium text-gray-600">
+                  {dealType === 'ABATE' ? 'Frigorífico' : 'Contraparte (comprador/vendedor)'}
+                </label>
                 <input
                   type="text"
                   value={counterparty}
                   onChange={(e) => setCounterparty(e.target.value)}
-                  placeholder="Nome ou empresa"
+                  placeholder={dealType === 'ABATE' ? 'Nome do frigorífico' : 'Nome ou empresa'}
                   className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
                 />
               </div>
             </div>
 
-            {/* Preço, frete, comissão */}
+            {/* Preço/valores por tipo */}
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <div>
-                <label className="text-xs font-medium text-gray-600">Preço por</label>
-                <select
-                  value={priceUnit}
-                  onChange={(e) => setPriceUnit(e.target.value as 'ANIMAL' | 'ARROBA')}
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
-                >
-                  <option value="ARROBA">Arroba (@)</option>
-                  <option value="ANIMAL">Animal</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray-600">
-                  Valor (R$/{priceUnit === 'ARROBA' ? '@' : 'cab.'})
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={pricePerUnit}
-                  onChange={(e) => setPricePerUnit(e.target.value)}
-                  placeholder="0,00"
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
-                  required
-                />
-              </div>
+              {dealType === 'VENDA' && (
+                <>
+                  <div>
+                    <label className="text-xs font-medium text-gray-600">Preço por</label>
+                    <select
+                      value={priceUnit}
+                      onChange={(e) => setPriceUnit(e.target.value as 'ANIMAL' | 'ARROBA')}
+                      className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                    >
+                      <option value="ARROBA">Arroba (@)</option>
+                      <option value="ANIMAL">Animal</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-600">
+                      Valor (R$/{priceUnit === 'ARROBA' ? '@' : 'cab.'})
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={pricePerUnit}
+                      onChange={(e) => setPricePerUnit(e.target.value)}
+                      placeholder="0,00"
+                      className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                      required
+                    />
+                  </div>
+                </>
+              )}
+
+              {dealType === 'COMPRA' && (
+                <>
+                  <div>
+                    <label className="text-xs font-medium text-gray-600">Quantidade de animais</label>
+                    <input
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={quantity}
+                      onChange={(e) => setQuantity(e.target.value)}
+                      placeholder="0"
+                      className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                      required={draftItems.length === 0}
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <label className="flex items-center gap-2 pb-2 text-xs font-medium text-gray-600">
+                      <input
+                        type="checkbox"
+                        checked={isInstallment}
+                        onChange={(e) => setIsInstallment(e.target.checked)}
+                        className="rounded border-gray-300"
+                      />
+                      Parcelado
+                    </label>
+                  </div>
+                  {isInstallment ? (
+                    <>
+                      <div>
+                        <label className="text-xs font-medium text-gray-600">Nº de parcelas</label>
+                        <input
+                          type="number"
+                          min="1"
+                          step="1"
+                          value={installmentCount}
+                          onChange={(e) => setInstallmentCount(e.target.value)}
+                          placeholder="1"
+                          className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-600">Valor da parcela (R$)</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={installmentValue}
+                          onChange={(e) => setInstallmentValue(e.target.value)}
+                          placeholder="0,00"
+                          className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-600">Valor total (calculado)</label>
+                        <p className="mt-1 rounded border border-gray-100 bg-gray-50 px-2 py-1.5 text-sm font-medium text-gray-700">
+                          {Number(installmentCount) > 0 && Number(installmentValue) > 0
+                            ? formatCurrency(Number(installmentCount) * Number(installmentValue))
+                            : 'R$ —'}
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <div>
+                      <label className="text-xs font-medium text-gray-600">Valor total (R$)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={totalValue}
+                        onChange={(e) => setTotalValue(e.target.value)}
+                        placeholder="0,00"
+                        className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                        required
+                      />
+                    </div>
+                  )}
+                </>
+              )}
+
+              {dealType === 'ABATE' && (
+                <>
+                  <div>
+                    <label className="text-xs font-medium text-gray-600">Valor do kg vivo (R$)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={liveWeightPricePerKg}
+                      onChange={(e) => setLiveWeightPricePerKg(e.target.value)}
+                      placeholder="0,00"
+                      className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-600">Rendimento de carcaça (%)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="100"
+                      value={carcassYieldPercent}
+                      onChange={(e) => setCarcassYieldPercent(e.target.value)}
+                      placeholder="52"
+                      className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-600">Valor da @ (calculado)</label>
+                    <p className="mt-1 rounded border border-gray-100 bg-gray-50 px-2 py-1.5 text-sm font-medium text-gray-700">
+                      {Number(liveWeightPricePerKg) > 0 && Number(carcassYieldPercent) > 0
+                        ? formatCurrency((Number(liveWeightPricePerKg) / (Number(carcassYieldPercent) / 100)) * ARROBA_KG)
+                        : 'R$ —'}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-600">Frequência</label>
+                    <select
+                      value={slaughterFrequency}
+                      onChange={(e) => setSlaughterFrequency(e.target.value as 'TRIMESTRAL' | 'SEMESTRAL')}
+                      className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                    >
+                      <option value="TRIMESTRAL">Trimestral</option>
+                      <option value="SEMESTRAL">Semestral</option>
+                    </select>
+                  </div>
+                </>
+              )}
+
+              {/* Deduções do abate */}
+              {dealType === 'ABATE' && (
+                <>
+                  <div>
+                    <label className="text-xs font-medium text-gray-600">Funrural (%)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="100"
+                      value={funruralPercent}
+                      onChange={(e) => setFunruralPercent(e.target.value)}
+                      placeholder="1.5"
+                      className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-600">SENAR (%)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="100"
+                      value={senarPercent}
+                      onChange={(e) => setSenarPercent(e.target.value)}
+                      placeholder="0.2"
+                      className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                    />
+                  </div>
+                </>
+              )}
+
               <div>
                 <label className="text-xs font-medium text-gray-600">Frete total (R$)</label>
                 <input
@@ -398,7 +738,7 @@ export default function NegociosPage() {
                   Animais ({draftItems.length})
                 </h3>
                 <div className="flex gap-2">
-                  {dealType === 'VENDA' && (
+                  {showAnimals && (
                     <button
                       type="button"
                       onClick={() => setShowAnimalPicker(!showAnimalPicker)}
@@ -476,7 +816,9 @@ export default function NegociosPage() {
               {animalsWithoutWeight.length > 0 && (
                 <p className="mb-2 rounded bg-amber-50 p-2 text-xs text-amber-700">
                   ⚠ {animalsWithoutWeight.length} animal(is) sem peso registrado no rebanho.
-                  O cálculo por arroba pode ficar impreciso.
+                  {dealType === 'ABATE'
+                    ? ' O cálculo de rendimento de carcaça ficará impreciso.'
+                    : ' O cálculo por arroba pode ficar impreciso.'}
                 </p>
               )}
 
@@ -487,60 +829,125 @@ export default function NegociosPage() {
                     <thead>
                       <tr className="border-b text-left text-xs text-gray-500">
                         <th className="py-2">Brinco</th>
-                        <th>Peso (kg)</th>
-                        <th>Arrobas</th>
+                        <th>Peso vivo (kg)</th>
+                        {dealType === 'ABATE' ? (
+                          <>
+                            <th>Carcaça (kg)</th>
+                            <th>Arrobas (carc.)</th>
+                            <th>Valor est.</th>
+                          </>
+                        ) : (
+                          <th>Arrobas</th>
+                        )}
                         <th></th>
                       </tr>
                     </thead>
                     <tbody>
-                      {draftItems.map((item, idx) => (
-                        <tr key={idx} className="border-b border-gray-100">
-                          <td className="py-1.5">
-                            {item.animalId ? (
-                              <span className="font-mono text-sm">{item.earTag}</span>
-                            ) : (
+                      {draftItems.map((item, idx) => {
+                        const yld = (Number(carcassYieldPercent) || 52) / 100;
+                        const carcKg = item.weightKg != null ? item.weightKg * yld : null;
+                        const carcArr = carcKg != null ? carcKg / ARROBA_KG : null;
+                        const estVal = item.weightKg != null ? item.weightKg * (Number(liveWeightPricePerKg) || 0) : null;
+                        return (
+                          <tr key={idx} className="border-b border-gray-100">
+                            <td className="py-1.5">
+                              {item.animalId ? (
+                                <span className="font-mono text-sm">{item.earTag}</span>
+                              ) : (
+                                <input
+                                  type="text"
+                                  value={item.earTag}
+                                  onChange={(e) => updateItem(idx, 'earTag', e.target.value)}
+                                  placeholder="Brinco"
+                                  className="w-28 rounded border border-gray-300 px-2 py-1 text-sm"
+                                  required
+                                />
+                              )}
+                            </td>
+                            <td>
                               <input
-                                type="text"
-                                value={item.earTag}
-                                onChange={(e) => updateItem(idx, 'earTag', e.target.value)}
-                                placeholder="Brinco"
-                                className="w-28 rounded border border-gray-300 px-2 py-1 text-sm"
-                                required
+                                type="number"
+                                step="0.1"
+                                value={item.weightKg ?? ''}
+                                onChange={(e) => updateItem(idx, 'weightKg', e.target.value)}
+                                placeholder="—"
+                                className="w-24 rounded border border-gray-300 px-2 py-1 text-sm"
                               />
+                            </td>
+                            {dealType === 'ABATE' ? (
+                              <>
+                                <td className="text-xs text-gray-500">
+                                  {carcKg != null ? carcKg.toFixed(1) : '—'}
+                                </td>
+                                <td className="text-xs text-gray-500">
+                                  {carcArr != null ? carcArr.toFixed(2) : '—'}
+                                </td>
+                                <td className="text-xs text-gray-500">
+                                  {estVal != null ? formatCurrency(estVal) : '—'}
+                                </td>
+                              </>
+                            ) : (
+                              <td className="text-xs text-gray-500">
+                                {item.weightKg != null ? (item.weightKg / ARROBA_KG).toFixed(2) : '—'}
+                              </td>
                             )}
-                          </td>
-                          <td>
-                            <input
-                              type="number"
-                              step="0.1"
-                              value={item.weightKg ?? ''}
-                              onChange={(e) => updateItem(idx, 'weightKg', e.target.value)}
-                              placeholder="—"
-                              className="w-24 rounded border border-gray-300 px-2 py-1 text-sm"
-                            />
-                          </td>
-                          <td className="text-xs text-gray-500">
-                            {item.weightKg != null ? (item.weightKg / ARROBA_KG).toFixed(2) : '—'}
-                          </td>
-                          <td>
-                            <button
-                              type="button"
-                              onClick={() => removeItem(idx)}
-                              className="text-xs text-red-600 hover:underline"
-                            >
-                              Remover
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                            <td>
+                              <button
+                                type="button"
+                                onClick={() => removeItem(idx)}
+                                className="text-xs text-red-600 hover:underline"
+                              >
+                                Remover
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
               )}
             </div>
 
-            {/* Live summary */}
-            {draftItems.length > 0 && (
+            {/* Live summary — compra em lote */}
+            {dealType === 'COMPRA' && (Number(quantity) > 0 || draftItems.length > 0) && (
+              <div className="rounded bg-gray-50 p-3">
+                <h3 className="mb-2 text-sm font-semibold text-gray-700">Resumo da compra</h3>
+                <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
+                  <div>
+                    <span className="text-xs text-gray-500">Quantidade</span>
+                    <p className="font-medium">{purchaseSummary.quantity} animais</p>
+                  </div>
+                  <div>
+                    <span className="text-xs text-gray-500">Parcelamento</span>
+                    <p className="font-medium">
+                      {purchaseSummary.installmentCount > 0
+                        ? `${purchaseSummary.installmentCount}x de ${formatCurrency(purchaseSummary.installment)}`
+                        : formatCurrency(purchaseSummary.installment)}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-xs text-gray-500">Valor total</span>
+                    <p className="font-medium">{formatCurrency(purchaseSummary.totalValue)}</p>
+                  </div>
+                  <div>
+                    <span className="text-xs text-gray-500">Comissão</span>
+                    <p className="font-medium">{formatCurrency(purchaseSummary.commissionValue)}</p>
+                  </div>
+                  <div>
+                    <span className="text-xs font-semibold text-gray-500">Total geral (c/ frete e comissão)</span>
+                    <p className="font-bold text-green-700">{formatCurrency(purchaseSummary.grandTotal)}</p>
+                  </div>
+                  <div>
+                    <span className="text-xs font-semibold text-gray-500">Custo por animal</span>
+                    <p className="font-bold text-green-700">{formatCurrency(purchaseSummary.costPerAnimal)}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Live summary — venda */}
+            {dealType === 'VENDA' && draftItems.length > 0 && (
               <div className="rounded bg-gray-50 p-3">
                 <h3 className="mb-2 text-sm font-semibold text-gray-700">Resumo do negócio</h3>
                 <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
@@ -573,7 +980,7 @@ export default function NegociosPage() {
                     <p className="font-medium">{formatCurrency(summary.commissionValue)}</p>
                   </div>
                   <div>
-                    <span className="text-xs text-gray-500 font-semibold">Total geral</span>
+                    <span className="text-xs font-semibold text-gray-500">Total geral</span>
                     <p className="font-bold text-green-700">{formatCurrency(summary.grandTotal)}</p>
                   </div>
                 </div>
@@ -586,6 +993,71 @@ export default function NegociosPage() {
                     <div>
                       <span className="text-xs text-gray-500">Custo/arroba (total)</span>
                       <p className="font-semibold">{formatCurrency(summary.pricePerArroba)}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Live summary — abate */}
+            {dealType === 'ABATE' && draftItems.length > 0 && (
+              <div className="rounded bg-orange-50 p-3">
+                <h3 className="mb-2 text-sm font-semibold text-gray-700">Resumo do abate</h3>
+                <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
+                  <div>
+                    <span className="text-xs text-gray-500">Animais</span>
+                    <p className="font-medium">{slaughterSummary.totalAnimals}</p>
+                  </div>
+                  <div>
+                    <span className="text-xs text-gray-500">Peso vivo total</span>
+                    <p className="font-medium">{slaughterSummary.totalLiveWeight.toFixed(1)} kg</p>
+                  </div>
+                  <div>
+                    <span className="text-xs text-gray-500">Peso carcaça</span>
+                    <p className="font-medium">{slaughterSummary.carcassWeight} kg</p>
+                  </div>
+                  <div>
+                    <span className="text-xs text-gray-500">Arrobas (carcaça)</span>
+                    <p className="font-medium">{slaughterSummary.carcassArrobas} @</p>
+                  </div>
+                  <div>
+                    <span className="text-xs text-gray-500">Valor da @</span>
+                    <p className="font-medium">{formatCurrency(slaughterSummary.arrobaPrice)}</p>
+                  </div>
+                  <div>
+                    <span className="text-xs text-gray-500">Valor bruto</span>
+                    <p className="font-medium">{formatCurrency(slaughterSummary.grossValue)}</p>
+                  </div>
+                  <div>
+                    <span className="text-xs text-gray-500">Funrural ({funruralPercent}%)</span>
+                    <p className="font-medium text-red-600">- {formatCurrency(slaughterSummary.funruralValue)}</p>
+                  </div>
+                  <div>
+                    <span className="text-xs text-gray-500">SENAR ({senarPercent}%)</span>
+                    <p className="font-medium text-red-600">- {formatCurrency(slaughterSummary.senarValue)}</p>
+                  </div>
+                  <div>
+                    <span className="text-xs text-gray-500">Comissão ({commissionPercent || '0'}%)</span>
+                    <p className="font-medium text-red-600">- {formatCurrency(slaughterSummary.commissionValue)}</p>
+                  </div>
+                  <div>
+                    <span className="text-xs text-gray-500">Frete</span>
+                    <p className="font-medium text-red-600">- {formatCurrency(slaughterSummary.freight)}</p>
+                  </div>
+                </div>
+                <div className="mt-2 border-t border-orange-200 pt-2">
+                  <div className="flex gap-6 text-sm">
+                    <div>
+                      <span className="text-xs font-semibold text-gray-500">Valor líquido</span>
+                      <p className="font-bold text-green-700">{formatCurrency(slaughterSummary.netTotal)}</p>
+                    </div>
+                    <div>
+                      <span className="text-xs text-gray-500">Líquido/animal</span>
+                      <p className="font-semibold">{formatCurrency(slaughterSummary.netPerAnimal)}</p>
+                    </div>
+                    <div>
+                      <span className="text-xs text-gray-500">Líquido/@</span>
+                      <p className="font-semibold">{formatCurrency(slaughterSummary.netPerArroba)}</p>
                     </div>
                   </div>
                 </div>
@@ -613,6 +1085,7 @@ export default function NegociosPage() {
           <option value="">Todos os tipos</option>
           <option value="VENDA">Vendas</option>
           <option value="COMPRA">Compras</option>
+          <option value="ABATE">Abates</option>
         </select>
         <select
           value={filterStatus}
@@ -631,20 +1104,23 @@ export default function NegociosPage() {
         <div className="rounded border border-dashed border-gray-300 bg-gray-50 p-8 text-center">
           <p className="text-gray-500">Nenhum negócio registrado.</p>
           <p className="mt-1 text-sm text-gray-400">
-            Clique em &quot;Novo negócio&quot; para calcular uma compra ou venda.
+            Clique em &quot;Novo negócio&quot; para calcular uma compra, venda ou abate.
           </p>
         </div>
       ) : (
         <ul className="space-y-4">
           {deals.map((deal) => {
-            const s = dealSummary(deal);
+            const isAbate = deal.type === 'ABATE';
+            const s = isAbate ? null : dealSummary(deal);
+            const sa = isAbate ? slaughterDealSummary(deal) : null;
+
             return (
               <li key={deal.id} className="rounded border border-gray-200 bg-white p-4">
                 <div className="mb-2 flex items-start justify-between">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className={`rounded px-2 py-0.5 text-xs font-medium ${deal.type === 'VENDA' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'}`}>
-                        {deal.type === 'VENDA' ? 'Venda' : 'Compra'}
+                      <span className={`rounded px-2 py-0.5 text-xs font-medium ${TYPE_COLOR[deal.type]}`}>
+                        {TYPE_LABEL[deal.type]}
                       </span>
                       <span className={`rounded px-2 py-0.5 text-xs font-medium ${STATUS_COLOR[deal.status]}`}>
                         {STATUS_LABEL[deal.status]}
@@ -652,12 +1128,25 @@ export default function NegociosPage() {
                       <span className="text-sm text-gray-500">
                         {new Date(deal.dealDate).toLocaleDateString('pt-BR')}
                       </span>
+                      {isAbate && deal.slaughterFrequency && (
+                        <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+                          {deal.slaughterFrequency === 'TRIMESTRAL' ? 'Trimestral' : 'Semestral'}
+                        </span>
+                      )}
                     </div>
                     {deal.counterparty && (
                       <p className="mt-1 text-sm text-gray-600">{deal.counterparty}</p>
                     )}
                   </div>
                   <div className="flex items-center gap-2">
+                    {isAbate && deal.status === 'FINALIZADO' && (
+                      <button
+                        onClick={() => handleDownloadReport(deal.id)}
+                        className="rounded bg-orange-100 px-2 py-1 text-xs font-medium text-orange-700 hover:bg-orange-200"
+                      >
+                        Relatório PDF
+                      </button>
+                    )}
                     {deal.status === 'RASCUNHO' && (
                       <>
                         <button
@@ -683,57 +1172,143 @@ export default function NegociosPage() {
                   </div>
                 </div>
 
-                {/* Deal items summary */}
-                <div className="mb-2 overflow-x-auto">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="border-b text-left text-gray-500">
-                        <th className="py-1">Brinco</th>
-                        <th>Peso (kg)</th>
-                        <th>Arrobas</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {deal.items.map((item) => (
-                        <tr key={item.id} className="border-b border-gray-50">
-                          <td className="py-1 font-mono">{item.earTag}</td>
-                          <td>{item.weightKg != null ? `${item.weightKg}` : <span className="text-amber-600">—</span>}</td>
-                          <td>{item.weightKg != null ? (item.weightKg / ARROBA_KG).toFixed(2) : '—'}</td>
+                {/* Deal items table */}
+                {deal.items.length > 0 && (
+                  <div className="mb-2 overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b text-left text-gray-500">
+                          <th className="py-1">Brinco</th>
+                          <th>Peso vivo (kg)</th>
+                          {isAbate ? (
+                            <>
+                              <th>Carcaça (kg)</th>
+                              <th>Arrobas</th>
+                            </>
+                          ) : (
+                            <th>Arrobas</th>
+                          )}
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {deal.items.map((item) => {
+                          const yld = isAbate ? (deal.carcassYieldPercent ?? 52) / 100 : 1;
+                          const carcKg = item.weightKg != null ? item.weightKg * yld : null;
+                          return (
+                            <tr key={item.id} className="border-b border-gray-50">
+                              <td className="py-1 font-mono">{item.earTag}</td>
+                              <td>{item.weightKg != null ? `${item.weightKg}` : <span className="text-amber-600">—</span>}</td>
+                              {isAbate ? (
+                                <>
+                                  <td>{carcKg != null ? carcKg.toFixed(1) : '—'}</td>
+                                  <td>{carcKg != null ? (carcKg / ARROBA_KG).toFixed(2) : '—'}</td>
+                                </>
+                              ) : (
+                                <td>{item.weightKg != null ? (item.weightKg / ARROBA_KG).toFixed(2) : '—'}</td>
+                              )}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
 
-                {/* Summary numbers */}
-                <div className="grid grid-cols-2 gap-2 rounded bg-gray-50 p-2 text-xs sm:grid-cols-5">
-                  <div>
-                    <span className="text-gray-500">{s.totalAnimals} animais</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Peso: </span>
-                    <span className="font-medium">{s.totalWeightKg.toFixed(1)} kg</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Frete: </span>
-                    <span className="font-medium">{formatCurrency(deal.freightCost)}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Comissão: </span>
-                    <span className="font-medium">{formatCurrency(s.commissionValue)}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Total: </span>
-                    <span className="font-bold text-green-700">{formatCurrency(s.grandTotal)}</span>
-                  </div>
-                </div>
+                {/* Summary numbers — ABATE */}
+                {isAbate && sa && (
+                  <>
+                    <div className="grid grid-cols-2 gap-2 rounded bg-orange-50 p-2 text-xs sm:grid-cols-5">
+                      <div>
+                        <span className="text-gray-500">{sa.totalAnimals} animais</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Carcaça: </span>
+                        <span className="font-medium">{sa.carcassWeight.toFixed(1)} kg ({(((deal.carcassYieldPercent ?? 52))).toFixed(1)}%)</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Bruto: </span>
+                        <span className="font-medium">{formatCurrency(sa.grossValue)}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Deduções: </span>
+                        <span className="font-medium text-red-600">
+                          {formatCurrency(sa.funruralValue + sa.senarValue + sa.commissionValue + deal.freightCost)}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Líquido: </span>
+                        <span className="font-bold text-green-700">{formatCurrency(sa.netTotal)}</span>
+                      </div>
+                    </div>
+                    <div className="mt-1 flex gap-4 text-xs text-gray-500">
+                      <span>Funrural: <strong className="text-gray-700">{formatCurrency(sa.funruralValue)}</strong></span>
+                      <span>SENAR: <strong className="text-gray-700">{formatCurrency(sa.senarValue)}</strong></span>
+                      <span>Comissão: <strong className="text-gray-700">{formatCurrency(sa.commissionValue)}</strong></span>
+                      <span>Frete: <strong className="text-gray-700">{formatCurrency(deal.freightCost)}</strong></span>
+                      <span>Líq/animal: <strong className="text-gray-700">{formatCurrency(sa.totalAnimals > 0 ? sa.netTotal / sa.totalAnimals : 0)}</strong></span>
+                    </div>
+                  </>
+                )}
 
-                {/* Per-unit breakdown */}
-                <div className="mt-1 flex gap-4 text-xs text-gray-500">
-                  <span>R$/{deal.priceUnit === 'ARROBA' ? '@' : 'cab.'}: <strong className="text-gray-700">{formatCurrency(deal.pricePerUnit)}</strong></span>
-                  <span>Custo total/animal: <strong className="text-gray-700">{formatCurrency(s.pricePerAnimal)}</strong></span>
-                  <span>Custo total/@: <strong className="text-gray-700">{formatCurrency(s.pricePerArroba)}</strong></span>
-                </div>
+                {/* Summary numbers — COMPRA/VENDA */}
+                {!isAbate && s && (
+                  <>
+                    <div className="grid grid-cols-2 gap-2 rounded bg-gray-50 p-2 text-xs sm:grid-cols-5">
+                      <div>
+                        <span className="text-gray-500">{s.totalAnimals} animais</span>
+                      </div>
+                      {s.totalWeightKg > 0 && (
+                        <div>
+                          <span className="text-gray-500">Peso: </span>
+                          <span className="font-medium">{s.totalWeightKg.toFixed(1)} kg</span>
+                        </div>
+                      )}
+                      <div>
+                        <span className="text-gray-500">Frete: </span>
+                        <span className="font-medium">{formatCurrency(deal.freightCost)}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Comissão: </span>
+                        <span className="font-medium">{formatCurrency(s.commissionValue)}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Total: </span>
+                        <span className="font-bold text-green-700">{formatCurrency(s.grandTotal)}</span>
+                      </div>
+                    </div>
+
+                    <div className="mt-1 flex gap-4 text-xs text-gray-500">
+                      {deal.quantity || deal.totalValue ? (
+                        <>
+                          {(() => {
+                            const parcela =
+                              deal.installmentValue ||
+                              (deal.installmentCount && deal.totalValue
+                                ? deal.totalValue / deal.installmentCount
+                                : 0);
+                            if (!parcela) return null;
+                            return (
+                              <span>
+                                Parcela:{' '}
+                                <strong className="text-gray-700">
+                                  {deal.installmentCount ? `${deal.installmentCount}x de ` : ''}
+                                  {formatCurrency(parcela)}
+                                </strong>
+                              </span>
+                            );
+                          })()}
+                          <span>Custo por animal: <strong className="text-gray-700">{formatCurrency(s.pricePerAnimal)}</strong></span>
+                        </>
+                      ) : (
+                        <>
+                          <span>R$/{deal.priceUnit === 'ARROBA' ? '@' : 'cab.'}: <strong className="text-gray-700">{formatCurrency(deal.pricePerUnit)}</strong></span>
+                          <span>Custo total/animal: <strong className="text-gray-700">{formatCurrency(s.pricePerAnimal)}</strong></span>
+                          <span>Custo total/@: <strong className="text-gray-700">{formatCurrency(s.pricePerArroba)}</strong></span>
+                        </>
+                      )}
+                    </div>
+                  </>
+                )}
 
                 {deal.notes && <p className="mt-2 text-xs text-gray-400">{deal.notes}</p>}
               </li>

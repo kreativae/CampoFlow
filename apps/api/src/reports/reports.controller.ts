@@ -23,6 +23,7 @@ const VALID_TYPES: ReportType[] = [
   'sanidade',
   'reproducao',
   'custos',
+  'abate',
 ];
 const VALID_FORMATS = ['csv', 'xlsx', 'pdf'] as const;
 type ReportFormat = (typeof VALID_FORMATS)[number];
@@ -44,6 +45,7 @@ export class ReportsController {
     @Param('farmId') farmId: string,
     @Param('type') type: string,
     @Query('format') format: string | undefined,
+    @Query('dealId') dealId: string | undefined,
     @Res() res: Response,
   ) {
     if (!VALID_TYPES.includes(type as ReportType)) {
@@ -58,7 +60,7 @@ export class ReportsController {
       );
     }
 
-    const table = await this.reportsService.build(farmId, type as ReportType);
+    const table = await this.reportsService.build(farmId, type as ReportType, { dealId });
 
     const buffer =
       resolvedFormat === 'csv'

@@ -25,14 +25,23 @@ export class DealsService {
         createdById,
         type: dto.type,
         counterparty: dto.counterparty,
-        pricePerUnit: dto.pricePerUnit,
+        pricePerUnit: dto.pricePerUnit ?? 0,
         priceUnit: dto.priceUnit ?? 'ANIMAL',
         freightCost: dto.freightCost ?? 0,
         commissionPercent: dto.commissionPercent ?? 0,
+        quantity: dto.quantity,
+        installmentCount: dto.installmentCount,
+        installmentValue: dto.installmentValue,
+        totalValue: dto.totalValue,
+        carcassYieldPercent: dto.carcassYieldPercent,
+        liveWeightPricePerKg: dto.liveWeightPricePerKg,
+        funruralPercent: dto.funruralPercent,
+        senarPercent: dto.senarPercent,
+        slaughterFrequency: dto.slaughterFrequency,
         notes: dto.notes,
         dealDate: new Date(dto.dealDate),
         items: {
-          create: dto.items.map((item) => ({
+          create: (dto.items ?? []).map((item) => ({
             animalId: item.animalId,
             earTag: item.earTag,
             weightKg: item.weightKg,
@@ -86,7 +95,7 @@ export class DealsService {
         });
       }
 
-      return tx.deal.update({
+      const updated = await tx.deal.update({
         where: { id },
         data: {
           ...data,
@@ -94,6 +103,24 @@ export class DealsService {
         },
         include: DEAL_INCLUDE,
       });
+
+      // Dar baixa nos animais ao finalizar venda ou abate
+      if (
+        data.status === 'FINALIZADO' &&
+        (updated.type === 'VENDA' || updated.type === 'ABATE')
+      ) {
+        const animalIds = updated.items
+          .map((i) => i.animalId)
+          .filter((id): id is string => id != null);
+        if (animalIds.length > 0) {
+          await tx.animal.updateMany({
+            where: { id: { in: animalIds } },
+            data: { active: false },
+          });
+        }
+      }
+
+      return updated;
     });
   }
 
@@ -103,32 +130,75 @@ export class DealsService {
   }
 
   summary(deal: {
+    type?: string;
     pricePerUnit: number;
     priceUnit: string;
     freightCost: number;
     commissionPercent: number;
+    quantity?: number | null;
+    totalValue?: number | null;
+    carcassYieldPercent?: number | null;
+    liveWeightPricePerKg?: number | null;
+    funruralPercent?: number | null;
+    senarPercent?: number | null;
     items: { weightKg?: number | null; unitPrice?: number | null }[];
   }) {
-    const totalAnimals = deal.items.length;
+    const totalAnimals = deal.quantity ?? deal.items.length;
     const totalWeight = deal.items.reduce(
       (sum, item) => sum + (item.weightKg ?? 0),
       0,
     );
+
+    // Abate: cálculo baseado em rendimento de carcaça
+    if (deal.type === 'ABATE') {
+      const yieldPct = (deal.carcassYieldPercent ?? 52) / 100;
+      const pricePerKg = deal.liveWeightPricePerKg ?? 0;
+      const carcassWeight = totalWeight * yieldPct;
+      const carcassArrobas = carcassWeight / 15;
+      const grossValue = totalWeight * pricePerKg;
+      const funruralValue = grossValue * ((deal.funruralPercent ?? 0) / 100);
+      const senarValue = grossValue * ((deal.senarPercent ?? 0) / 100);
+      const commissionValue = grossValue * (deal.commissionPercent / 100);
+      const netTotal = grossValue - funruralValue - senarValue - commissionValue - deal.freightCost;
+      return {
+        totalAnimals,
+        totalWeight,
+        totalArrobas: carcassArrobas,
+        carcassWeight,
+        subtotal: grossValue,
+        freightCost: deal.freightCost,
+        freightPerAnimal: totalAnimals > 0 ? deal.freightCost / totalAnimals : 0,
+        freightPerArroba: carcassArrobas > 0 ? deal.freightCost / carcassArrobas : 0,
+        commissionPercent: deal.commissionPercent,
+        commissionValue,
+        funruralValue,
+        senarValue,
+        grandTotal: grossValue,
+        netTotal,
+        pricePerAnimal: totalAnimals > 0 ? netTotal / totalAnimals : 0,
+        pricePerArroba: carcassArrobas > 0 ? netTotal / carcassArrobas : 0,
+      };
+    }
+
     const totalArrobas = totalWeight / 15;
 
-    // Calculate subtotal based on price unit
     let subtotal: number;
     if (deal.priceUnit === 'ARROBA') {
       subtotal = deal.pricePerUnit * totalArrobas;
     } else {
-      // ANIMAL
       subtotal = deal.pricePerUnit * totalAnimals;
     }
 
-    // Override with per-item prices if present
     const itemsWithPrice = deal.items.filter((i) => i.unitPrice != null);
-    if (itemsWithPrice.length === totalAnimals && totalAnimals > 0) {
+    if (
+      itemsWithPrice.length === deal.items.length &&
+      deal.items.length > 0
+    ) {
       subtotal = itemsWithPrice.reduce((sum, i) => sum + (i.unitPrice ?? 0), 0);
+    }
+
+    if (deal.totalValue != null && deal.totalValue > 0) {
+      subtotal = deal.totalValue;
     }
 
     const commissionValue = subtotal * (deal.commissionPercent / 100);

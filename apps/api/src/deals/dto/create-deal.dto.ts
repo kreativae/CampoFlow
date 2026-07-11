@@ -2,10 +2,10 @@ import {
   IsArray,
   IsDateString,
   IsEnum,
+  IsInt,
   IsNumber,
   IsOptional,
   IsString,
-  ArrayMinSize,
   ValidateNested,
   Min,
 } from 'class-validator';
@@ -29,20 +29,67 @@ class DealItemDto {
 }
 
 export class CreateDealDto {
-  @IsEnum(['COMPRA', 'VENDA'])
+  @IsEnum(['COMPRA', 'VENDA', 'ABATE'])
   type: 'COMPRA' | 'VENDA';
 
   @IsOptional()
   @IsString()
   counterparty?: string;
 
+  @IsOptional()
   @IsNumber()
   @Min(0)
-  pricePerUnit: number;
+  pricePerUnit?: number;
+
+  // Compra em lote (sem brincos individuais)
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  quantity?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  installmentCount?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  installmentValue?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  totalValue?: number;
 
   @IsOptional()
   @IsString()
   priceUnit?: string;
+
+  // Abate
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  carcassYieldPercent?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  liveWeightPricePerKg?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  funruralPercent?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  senarPercent?: number;
+
+  @IsOptional()
+  @IsString()
+  slaughterFrequency?: string;
 
   @IsOptional()
   @IsNumber()
@@ -61,9 +108,10 @@ export class CreateDealDto {
   @IsDateString()
   dealDate: string;
 
+  // Opcional: compra em lote usa apenas quantity; venda importa brincos.
+  @IsOptional()
   @IsArray()
-  @ArrayMinSize(1)
   @ValidateNested({ each: true })
   @Type(() => DealItemDto)
-  items: DealItemDto[];
+  items?: DealItemDto[];
 }

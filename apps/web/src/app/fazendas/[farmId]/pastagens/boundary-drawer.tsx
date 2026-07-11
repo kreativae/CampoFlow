@@ -24,13 +24,40 @@ function FlyTo({ center, zoom }: { center: [number, number]; zoom: number }) {
 function DrawingLayer({
   points,
   onAddPoint,
+  onMovePoint,
+  draggingIndex,
+  setDraggingIndex,
 }: {
   points: [number, number][];
   onAddPoint: (latlng: LatLng) => void;
+  onMovePoint: (index: number, latlng: LatLng) => void;
+  draggingIndex: number | null;
+  setDraggingIndex: (index: number | null) => void;
 }) {
+  const map = useMap();
+
   useMapEvents({
-    click: (e) => onAddPoint(e.latlng),
+    click: (e) => {
+      if (draggingIndex !== null) return;
+      onAddPoint(e.latlng);
+    },
+    mousemove: (e) => {
+      if (draggingIndex !== null) {
+        onMovePoint(draggingIndex, e.latlng);
+      }
+    },
+    mouseup: () => {
+      if (draggingIndex !== null) {
+        setDraggingIndex(null);
+        map.dragging.enable();
+      }
+    },
   });
+
+  function handleVertexMouseDown(index: number) {
+    setDraggingIndex(index);
+    map.dragging.disable();
+  }
 
   return (
     <>
@@ -50,12 +77,20 @@ function DrawingLayer({
         <CircleMarker
           key={i}
           center={p}
-          radius={5}
+          radius={6}
           pathOptions={{
             color: '#15803d',
-            fillColor: i === 0 ? '#22c55e' : '#fff',
+            fillColor: draggingIndex === i ? '#facc15' : i === 0 ? '#22c55e' : '#fff',
             fillOpacity: 1,
             weight: 2,
+            className: 'cursor-grab',
+          }}
+          eventHandlers={{
+            mousedown: (e) => {
+              e.originalEvent.stopPropagation();
+              e.originalEvent.preventDefault();
+              handleVertexMouseDown(i);
+            },
           }}
         />
       ))}
@@ -76,6 +111,7 @@ export default function BoundaryDrawer({
 }) {
   const [points, setPoints] = useState<[number, number][]>(initial ?? []);
   const [zoom] = useState(initial && initial.length > 0 ? 15 : 14);
+  const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
 
   const [flyTarget, setFlyTarget] = useState<{ center: [number, number]; zoom: number } | null>(null);
 
@@ -86,6 +122,10 @@ export default function BoundaryDrawer({
 
   const handleAddPoint = useCallback((latlng: LatLng) => {
     setPoints((prev) => [...prev, [latlng.lat, latlng.lng]]);
+  }, []);
+
+  const handleMovePoint = useCallback((index: number, latlng: LatLng) => {
+    setPoints((prev) => prev.map((p, i) => (i === index ? [latlng.lat, latlng.lng] : p)));
   }, []);
 
   function handleUndo() {
@@ -185,7 +225,13 @@ export default function BoundaryDrawer({
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          <DrawingLayer points={points} onAddPoint={handleAddPoint} />
+          <DrawingLayer
+            points={points}
+            onAddPoint={handleAddPoint}
+            onMovePoint={handleMovePoint}
+            draggingIndex={draggingIndex}
+            setDraggingIndex={setDraggingIndex}
+          />
           {flyTarget && <FlyTo center={flyTarget.center} zoom={flyTarget.zoom} />}
         </MapContainer>
       </div>
@@ -193,10 +239,10 @@ export default function BoundaryDrawer({
       <div className="flex items-center justify-between">
         <p className="text-xs text-gray-500">
           {points.length === 0
-            ? 'Clique no mapa para adicionar pontos do croqui'
+            ? 'Clique no mapa para adicionar pontos — arraste os vértices para ajustar'
             : points.length < 3
               ? `${points.length} ponto(s) — mínimo 3 para formar o polígono`
-              : `${points.length} pontos — polígono formado`}
+              : `${points.length} pontos — arraste os vértices para ajustar`}
         </p>
         <div className="flex gap-2">
           <button

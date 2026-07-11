@@ -1079,7 +1079,7 @@ export interface Contact {
 
 // --- Negócios (compra/venda) ---
 
-export type DealType = 'COMPRA' | 'VENDA';
+export type DealType = 'COMPRA' | 'VENDA' | 'ABATE';
 export type DealStatus = 'RASCUNHO' | 'FINALIZADO' | 'CANCELADO';
 
 export interface DealItem {
@@ -1102,6 +1102,15 @@ export interface Deal {
   priceUnit: string;
   freightCost: number;
   commissionPercent: number;
+  quantity: number | null;
+  installmentCount: number | null;
+  installmentValue: number | null;
+  totalValue: number | null;
+  carcassYieldPercent: number | null;
+  liveWeightPricePerKg: number | null;
+  funruralPercent: number | null;
+  senarPercent: number | null;
+  slaughterFrequency: string | null;
   notes: string | null;
   dealDate: string;
   createdById: string;

@@ -1059,6 +1059,7 @@ model MercadoPagoLog {
 enum DealType {
   COMPRA
   VENDA
+  ABATE
 }
 
 enum DealStatus {
@@ -1078,6 +1079,18 @@ model Deal {
   priceUnit         String     @default("ANIMAL") // "ANIMAL" or "ARROBA"
   freightCost       Float      @default(0)
   commissionPercent Float      @default(0)
+  // Compra em lote: quantidade informada sem brincos individuais, com valor
+  // total fechado e parcela negociada — o custo/animal deriva desses campos.
+  quantity          Int?
+  installmentCount  Int?
+  installmentValue  Float?
+  totalValue        Float?
+  // Abate
+  carcassYieldPercent   Float?
+  liveWeightPricePerKg  Float?
+  funruralPercent       Float?
+  senarPercent          Float?
+  slaughterFrequency    String?
   notes             String?
   dealDate          DateTime
   createdBy         User       @relation(fields: [createdById], references: [id])
