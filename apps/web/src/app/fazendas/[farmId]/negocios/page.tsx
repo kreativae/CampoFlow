@@ -374,10 +374,7 @@ export default function NegociosPage() {
 
   async function handleDownloadReport(dealId: string) {
     try {
-      await apiDownload(`/fazendas/${farmId}/relatorios/abate?format=pdf&dealId=${dealId}`, {
-        token: accessToken,
-        filename: `abate-${dealId}.pdf`,
-      });
+      await apiDownload(`/fazendas/${farmId}/relatorios/abate?format=pdf&dealId=${dealId}`, `abate-${dealId}.pdf`, accessToken);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao gerar relatório');
     }
