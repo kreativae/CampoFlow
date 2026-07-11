@@ -35,6 +35,7 @@ jobs:
       DATABASE_URL: postgresql://campoflow:campoflow@localhost:5432/campoflow?schema=public
       JWT_ACCESS_SECRET: ci-access-secret
       JWT_REFRESH_SECRET: ci-refresh-secret
+      ENCRYPTION_KEY: 0000000000000000000000000000000000000000000000000000000000000000
 
     steps:
       - uses: actions/checkout@v4
