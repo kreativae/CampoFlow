@@ -3,10 +3,10 @@ import { PlanTier } from '@prisma/client';
 export interface PlanDefinition {
   tier: PlanTier;
   label: string;
-  // Maximum number of farms an account on this plan may own. null = unlimited.
   maxFarms: number | null;
-  // Monthly price in BRL. null = "fale com vendas" (no self-serve checkout).
   priceBRL: number | null;
+  // Stripe Price ID para o plano (configurado em STRIPE_PRICE_ID_BASICO, etc.)
+  stripePriceId: string | null;
 }
 
 // Single source of truth for plan limits/pricing. The user asked specifically for
@@ -18,19 +18,28 @@ export const PLAN_DEFINITIONS: Record<PlanTier, PlanDefinition> = {
     label: 'Teste gratuito (30 dias)',
     maxFarms: 2,
     priceBRL: 0,
+    stripePriceId: null,
   },
-  BASICO: { tier: 'BASICO', label: 'Básico', maxFarms: 2, priceBRL: 99.9 },
+  BASICO: {
+    tier: 'BASICO',
+    label: 'Básico',
+    maxFarms: 2,
+    priceBRL: 99.9,
+    stripePriceId: process.env.STRIPE_PRICE_ID_BASICO ?? null,
+  },
   PROFISSIONAL: {
     tier: 'PROFISSIONAL',
     label: 'Profissional',
     maxFarms: 10,
     priceBRL: 299.9,
+    stripePriceId: process.env.STRIPE_PRICE_ID_PROFISSIONAL ?? null,
   },
   ENTERPRISE: {
     tier: 'ENTERPRISE',
     label: 'Enterprise',
     maxFarms: null,
     priceBRL: null,
+    stripePriceId: null,
   },
 };
 

@@ -5,21 +5,24 @@ import {
   Get,
   Headers,
   Post,
-  Query,
+  RawBodyRequest,
+  Req,
   UseGuards,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/decorators/current-user.decorator';
 import { BillingService } from './billing.service';
-import { MercadoPagoService } from './mercadopago.service';
+import { StripeService } from './stripe.service';
 import { CheckoutDto } from './dto/checkout.dto';
+import { UpdateStripeConfigInput } from './stripe.service';
 
 @Controller('conta/assinatura')
 export class BillingController {
   constructor(
     private readonly billingService: BillingService,
-    private readonly mercadoPagoService: MercadoPagoService,
+    private readonly stripeService: StripeService,
   ) {}
 
   @Get()
@@ -44,40 +47,33 @@ export class BillingController {
     return this.billingService.cancel(user.accountId);
   }
 
-  // Endpoint público: o Mercado Pago chama direto, sem header de auth. Autenticamos
-  // via HMAC (x-signature + x-request-id), conforme especificação do MP. Sem essa
-  // verificação, um POST forjado poderia disparar handleWebhook e mexer no estado
-  // da assinatura. O handler ainda re-consulta o MP pelo id em vez de confiar no
-  // corpo, mas a HMAC é a barreira principal.
-  @Post('webhook/mercadopago')
+  // Endpoint público — o Stripe envia sem header de auth.
+  // Verificamos via assinatura HMAC do Stripe (stripe-signature header).
+  // O body precisa ser raw (Buffer) para a verificação funcionar.
+  @Post('webhook/stripe')
   async webhook(
-    @Query('id') queryId: string,
-    @Query('data.id') queryDataId: string,
-    @Headers('x-signature') signature: string | undefined,
-    @Headers('x-request-id') requestId: string | undefined,
-    @Body() body: Record<string, unknown>,
+    @Req() req: RawBodyRequest<Request>,
+    @Headers('stripe-signature') signature: string | undefined,
   ) {
-    const data = body?.data as { id?: string } | undefined;
-    const preapprovalId = data?.id ?? queryDataId ?? queryId;
-
-    if (
-      !this.mercadoPagoService.verifyWebhookSignature(
-        signature,
-        requestId,
-        preapprovalId,
-      )
-    ) {
-      await this.mercadoPagoService.recordWebhook(
-        preapprovalId ?? 'desconhecido',
-        false,
-        'Assinatura HMAC inválida — webhook rejeitado',
-      );
-      throw new ForbiddenException('Assinatura inválida');
+    const payload = req.rawBody;
+    if (!payload) {
+      throw new ForbiddenException('Payload vazio');
     }
-
-    if (preapprovalId) {
-      await this.billingService.handleWebhook(preapprovalId);
-    }
+    await this.billingService.handleWebhook(payload, signature ?? '');
     return { received: true };
+  }
+
+  // Admin: status da configuração Stripe
+  @Get('admin/stripe')
+  @UseGuards(JwtAuthGuard)
+  getStripeConfig() {
+    return this.stripeService.getConfigStatus();
+  }
+
+  // Admin: salvar chaves do Stripe
+  @Post('admin/stripe')
+  @UseGuards(JwtAuthGuard)
+  updateStripeConfig(@Body() dto: UpdateStripeConfigInput) {
+    return this.stripeService.updateConfig(dto);
   }
 }

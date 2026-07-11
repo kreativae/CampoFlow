@@ -8,7 +8,7 @@ import {
 import { Cron } from '@nestjs/schedule';
 import { PlanTier, SubscriptionStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { MercadoPagoService } from './mercadopago.service';
+import { StripeService } from './stripe.service';
 import {
   ACTIVE_SUBSCRIPTION_STATUSES,
   PLAN_DEFINITIONS,
@@ -21,11 +21,9 @@ export class BillingService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly mercadoPago: MercadoPagoService,
+    private readonly stripe: StripeService,
   ) {}
 
-  // Called once at registration (see AuthService.register) — every account starts
-  // on a 30-day trial capped at 2 farms, same limit as the BASICO plan.
   async createTrialSubscription(accountId: string) {
     return this.prisma.subscription.create({
       data: {
@@ -57,14 +55,11 @@ export class BillingService {
     };
   }
 
-  // Throws if the account's plan does not allow creating another farm. Called from
-  // FarmsService.create() before the insert — the "a partir de 3 fazendas" rule the
-  // user asked for: TRIAL/BASICO cap at 2, so the 3rd farm requires an upgrade.
   async assertCanCreateFarm(accountId: string) {
     const subscription = await this.prisma.subscription.findUnique({
       where: { accountId },
     });
-    if (!subscription) return; // Should not happen outside of tests/seed data.
+    if (!subscription) return;
 
     if (!ACTIVE_SUBSCRIPTION_STATUSES.includes(subscription.status as never)) {
       throw new ForbiddenException(
@@ -73,7 +68,7 @@ export class BillingService {
     }
 
     const plan = PLAN_DEFINITIONS[subscription.planTier];
-    if (plan.maxFarms === null) return; // unlimited (ENTERPRISE)
+    if (plan.maxFarms === null) return;
 
     const farmCount = await this.prisma.farm.count({ where: { accountId } });
     if (farmCount >= plan.maxFarms) {
@@ -84,17 +79,14 @@ export class BillingService {
     }
   }
 
-  // Starts a Mercado Pago recurring subscription (PreApproval) and returns the
-  // checkout URL the frontend should redirect the payer to. The subscription only
-  // becomes ACTIVE once Mercado Pago confirms via webhook (see handleWebhook).
   async startCheckout(
     accountId: string,
     payerEmail: string,
     planTier: 'BASICO' | 'PROFISSIONAL',
   ) {
-    if (!this.mercadoPago.isConfigured()) {
+    if (!this.stripe.isConfigured()) {
       throw new BadRequestException(
-        'Pagamentos não estão configurados neste ambiente (MERCADOPAGO_ACCESS_TOKEN ausente).',
+        'Pagamentos não estão configurados neste ambiente (STRIPE_SECRET_KEY ausente).',
       );
     }
 
@@ -105,35 +97,25 @@ export class BillingService {
       );
     }
 
-    const backUrl =
-      process.env.WEB_BILLING_REDIRECT_URL ||
-      'http://localhost:3100/conta/assinatura';
-    // Em produção, localhost é rejeitado pelo Mercado Pago (400 back_url inválida).
-    // Falhar aqui, com mensagem clara, é melhor do que deixar cada tentativa de
-    // checkout falhar com erro do MP até alguém perceber.
-    if (
-      process.env.NODE_ENV === 'production' &&
-      !process.env.WEB_BILLING_REDIRECT_URL
-    ) {
+    if (!plan.stripePriceId) {
       throw new BadRequestException(
-        'WEB_BILLING_REDIRECT_URL não está definida. Configure a env com a URL pública (https) do painel para habilitar o checkout do Mercado Pago.',
+        `STRIPE_PRICE_ID_${planTier} não está configurado. Defina o Price ID do plano no Stripe.`,
       );
     }
 
-    const result = await this.mercadoPago.createSubscription({
-      reason: `CampoFlow — Plano ${plan.label}`,
-      payerEmail,
-      transactionAmount: plan.priceBRL,
-      externalReference: `${accountId}:${planTier}`,
-      backUrl,
+    const baseUrl =
+      process.env.WEB_BILLING_REDIRECT_URL ||
+      'http://localhost:3100/conta/assinatura';
+
+    const result = await this.stripe.createCheckoutSession({
+      priceId: plan.stripePriceId,
+      customerEmail: payerEmail,
+      metadata: { accountId, planTier },
+      successUrl: `${baseUrl}?checkout=success`,
+      cancelUrl: `${baseUrl}?checkout=cancel`,
     });
 
-    await this.prisma.subscription.update({
-      where: { accountId },
-      data: { mercadoPagoPreapprovalId: result.id },
-    });
-
-    return { checkoutUrl: result.initPoint };
+    return { checkoutUrl: result.url };
   }
 
   async cancel(accountId: string) {
@@ -144,10 +126,8 @@ export class BillingService {
       throw new NotFoundException('Assinatura não encontrada para esta conta');
     }
 
-    if (subscription.mercadoPagoPreapprovalId) {
-      await this.mercadoPago.cancelSubscription(
-        subscription.mercadoPagoPreapprovalId,
-      );
+    if (subscription.stripeSubscriptionId) {
+      await this.stripe.cancelSubscription(subscription.stripeSubscriptionId);
     }
 
     return this.prisma.subscription.update({
@@ -156,81 +136,105 @@ export class BillingService {
     });
   }
 
-  // Mercado Pago notifies asynchronously on every preapproval state change
-  // (authorized, paused, cancelled). We re-fetch the object instead of trusting the
-  // webhook body directly, since MP webhooks only reliably carry the resource id.
-  async handleWebhook(preapprovalId: string) {
-    let remote: Awaited<ReturnType<typeof this.mercadoPago.getSubscription>>;
-    try {
-      remote = await this.mercadoPago.getSubscription(preapprovalId);
-    } catch (err) {
-      this.logger.warn(
-        `Webhook do Mercado Pago: erro ao buscar preapproval ${preapprovalId}: ${(err as Error).message}`,
-      );
-      return;
-    }
-    if (!remote?.external_reference) {
-      this.logger.warn(
-        `Webhook do Mercado Pago sem external_reference: ${preapprovalId}`,
-      );
-      await this.mercadoPago.recordWebhook(
-        preapprovalId,
-        false,
-        'Webhook sem external_reference',
-      );
+  async handleWebhook(payload: Buffer, signature: string) {
+    const event = this.stripe.constructWebhookEvent(payload, signature);
+
+    if (!event) {
+      // Sem webhookSecret configurado — aceitar sem verificar (não ideal em prod)
+      this.logger.warn('Webhook Stripe processado sem verificação de assinatura');
       return;
     }
 
-    const [accountId, planTier] = remote.external_reference.split(':') as [
-      string,
-      PlanTier,
-    ];
-    const subscription = await this.prisma.subscription.findUnique({
-      where: { accountId },
-    });
-    if (
-      !subscription ||
-      subscription.mercadoPagoPreapprovalId !== preapprovalId
-    ) {
-      this.logger.warn(
-        `Webhook do Mercado Pago para preapproval desconhecido: ${preapprovalId}`,
-      );
-      await this.mercadoPago.recordWebhook(
-        preapprovalId,
-        false,
-        'Preapproval desconhecido',
-      );
-      return;
+    switch (event.type) {
+      case 'checkout.session.completed': {
+        const session = event.data.object as {
+          metadata?: Record<string, string>;
+          subscription?: string;
+        };
+        const { accountId, planTier } = session.metadata ?? {};
+        if (!accountId || !planTier) {
+          this.logger.warn('checkout.session.completed sem metadata accountId/planTier');
+          return;
+        }
+        await this.prisma.subscription.update({
+          where: { accountId },
+          data: {
+            status: SubscriptionStatus.ACTIVE,
+            planTier: planTier as PlanTier,
+            stripeSubscriptionId: session.subscription ?? null,
+          },
+        });
+        this.logger.log(`Assinatura ativada para conta ${accountId} — plano ${planTier}`);
+        break;
+      }
+
+      case 'customer.subscription.updated': {
+        const sub = event.data.object as {
+          id: string;
+          status: string;
+          current_period_end: number;
+          metadata?: Record<string, string>;
+        };
+        const accountId = sub.metadata?.accountId;
+        if (!accountId) {
+          // Tenta achar pelo stripeSubscriptionId
+          const record = await this.prisma.subscription.findFirst({
+            where: { stripeSubscriptionId: sub.id },
+          });
+          if (!record) return;
+          await this.prisma.subscription.update({
+            where: { id: record.id },
+            data: {
+              status: this.mapStripeStatus(sub.status),
+              currentPeriodEnd: new Date(sub.current_period_end * 1000),
+            },
+          });
+        } else {
+          await this.prisma.subscription.update({
+            where: { accountId },
+            data: {
+              status: this.mapStripeStatus(sub.status),
+              currentPeriodEnd: new Date(sub.current_period_end * 1000),
+            },
+          });
+        }
+        break;
+      }
+
+      case 'customer.subscription.deleted': {
+        const sub = event.data.object as { id: string; metadata?: Record<string, string> };
+        const accountId = sub.metadata?.accountId;
+        if (accountId) {
+          await this.prisma.subscription.update({
+            where: { accountId },
+            data: { status: SubscriptionStatus.CANCELED, canceledAt: new Date() },
+          });
+        } else {
+          const record = await this.prisma.subscription.findFirst({
+            where: { stripeSubscriptionId: sub.id },
+          });
+          if (record) {
+            await this.prisma.subscription.update({
+              where: { id: record.id },
+              data: { status: SubscriptionStatus.CANCELED, canceledAt: new Date() },
+            });
+          }
+        }
+        break;
+      }
+
+      default:
+        this.logger.log(`Evento Stripe ignorado: ${event.type}`);
     }
-
-    const status = this.mapRemoteStatus(remote.status);
-    await this.prisma.subscription.update({
-      where: { accountId },
-      data: {
-        status,
-        planTier:
-          status === SubscriptionStatus.ACTIVE
-            ? planTier
-            : subscription.planTier,
-        currentPeriodEnd: remote.next_payment_date
-          ? new Date(remote.next_payment_date)
-          : subscription.currentPeriodEnd,
-      },
-    });
-
-    await this.mercadoPago.recordWebhook(
-      preapprovalId,
-      true,
-      `Assinatura da conta ${accountId} atualizada para status ${status}`,
-    );
   }
 
-  private mapRemoteStatus(remoteStatus?: string): SubscriptionStatus {
-    switch (remoteStatus) {
-      case 'authorized':
+  private mapStripeStatus(status: string): SubscriptionStatus {
+    switch (status) {
+      case 'active':
         return SubscriptionStatus.ACTIVE;
-      case 'paused':
+      case 'past_due':
         return SubscriptionStatus.PAST_DUE;
+      case 'canceled':
       case 'cancelled':
         return SubscriptionStatus.CANCELED;
       default:
@@ -238,9 +242,6 @@ export class BillingService {
     }
   }
 
-  // Daily sweep: trials that expired without converting to a paid plan get
-  // suspended (blocks mutating requests — see SubscriptionGuard) until they
-  // subscribe.
   @Cron('0 6 * * *')
   async expireTrials() {
     const result = await this.prisma.subscription.updateMany({
