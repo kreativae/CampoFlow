@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
+import { BarChart3 } from 'lucide-react';
+import PageHeader from '@/components/PageHeader';
 import { useAuth } from '@/lib/auth-context';
 import { apiDownload, ApiError } from '@/lib/api';
 
@@ -70,30 +71,27 @@ export default function ReportsPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
-      <header className="mb-8">
-        <Link href={`/fazendas/${farmId}`} className="text-sm text-green-700 hover:underline">
-          ← Dashboard
-        </Link>
-        <h1 className="text-2xl font-semibold text-green-800">Relatórios</h1>
-        <p className="text-sm text-gray-500">
-          Exportação de dados gerenciais em CSV, Excel ou PDF. Restrito a Proprietário/Gerente.
-        </p>
-      </header>
+    <main className="animate-fade-up mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-8">
+      <PageHeader
+        icon={BarChart3}
+        title="Relatórios"
+        subtitle="Exportação de dados gerenciais"
+        backHref={`/fazendas/${farmId}`}
+      />
 
       {error && (
-        <p className="mb-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+        <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
           {error}
         </p>
       )}
 
-      <div className="mb-8 flex flex-wrap items-end gap-3 rounded border border-gray-200 bg-white p-4">
+      <div className="mb-8 flex flex-wrap items-end gap-3 rounded-xl border border-gray-200/80 bg-white shadow-sm p-4">
         <div>
           <label className="text-xs font-medium text-gray-600">Relatório</label>
           <select
             value={type}
             onChange={(e) => setType(e.target.value as ReportType)}
-            className="mt-1 rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="mt-1 rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           >
             {TYPE_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -108,7 +106,7 @@ export default function ReportsPage() {
           <select
             value={format}
             onChange={(e) => setFormat(e.target.value as ReportFormat)}
-            className="mt-1 rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="mt-1 rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           >
             {FORMAT_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -121,7 +119,7 @@ export default function ReportsPage() {
         <button
           onClick={() => handleDownload(type, format)}
           disabled={downloading === `${type}-${format}`}
-          className="rounded bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+          className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
         >
           {downloading === `${type}-${format}` ? 'Gerando...' : 'Baixar relatório'}
         </button>
@@ -131,7 +129,7 @@ export default function ReportsPage() {
         {TYPE_OPTIONS.map((opt) => (
           <li
             key={opt.value}
-            className="flex items-center justify-between rounded border border-gray-200 bg-white px-4 py-3"
+            className="flex items-center justify-between rounded-xl border border-gray-200/80 bg-white shadow-sm px-4 py-3"
           >
             <span className="font-medium text-gray-900">{opt.label}</span>
             <div className="flex gap-3">
@@ -140,7 +138,7 @@ export default function ReportsPage() {
                   key={fmt.value}
                   onClick={() => handleDownload(opt.value, fmt.value)}
                   disabled={downloading === `${opt.value}-${fmt.value}`}
-                  className="text-xs font-medium text-green-700 hover:underline disabled:opacity-50"
+                  className="text-xs font-medium text-emerald-700 hover:underline disabled:opacity-50"
                 >
                   {downloading === `${opt.value}-${fmt.value}` ? '...' : fmt.label}
                 </button>

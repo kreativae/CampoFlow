@@ -10,7 +10,7 @@ const METHOD_OPTIONS = ['POST', 'PATCH', 'PUT', 'DELETE'];
 
 function methodBadgeClass(method: string) {
   if (method === 'DELETE') return 'bg-red-50 text-red-700';
-  if (method === 'POST') return 'bg-green-50 text-green-700';
+  if (method === 'POST') return 'bg-emerald-50 text-emerald-700';
   return 'bg-blue-50 text-blue-700';
 }
 
@@ -86,7 +86,7 @@ export default function AdminAuditPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-10">
+    <main className="animate-fade-up mx-auto w-full max-w-5xl flex-1 px-4 py-10">
       <header className="mb-6 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">Auditoria</h1>
@@ -100,7 +100,7 @@ export default function AdminAuditPage() {
           onClick={handleClear}
           disabled={clearing}
           title="Botão temporário para limpar os dados de teste"
-          className="shrink-0 rounded border border-red-300 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-40"
+          className="shrink-0 rounded-lg border border-red-300 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-40"
         >
           {clearing ? 'Limpando...' : 'Limpar auditoria'}
         </button>
@@ -120,11 +120,11 @@ export default function AdminAuditPage() {
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Buscar por e-mail do usuário ou caminho (path)"
-            className="w-full max-w-md rounded border border-gray-300 px-3 py-1.5 text-sm focus:border-gray-900 focus:outline-none"
+            className="w-full max-w-md rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-gray-900 focus:outline-none"
           />
           <button
             type="submit"
-            className="rounded bg-gray-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-800"
+            className="rounded-lg bg-gray-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-800"
           >
             Buscar
           </button>
@@ -135,7 +135,7 @@ export default function AdminAuditPage() {
             setPage(1);
             setMethod(e.target.value);
           }}
-          className="rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-gray-900 focus:outline-none"
+          className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-gray-900 focus:outline-none"
         >
           <option value="">Todos os métodos</option>
           {METHOD_OPTIONS.map((m) => (
@@ -147,7 +147,7 @@ export default function AdminAuditPage() {
       </div>
 
       {error && (
-        <p className="mb-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+        <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
           {error}
         </p>
       )}
@@ -209,7 +209,7 @@ export default function AdminAuditPage() {
               type="button"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page <= 1}
-              className="rounded border border-gray-300 px-3 py-1 hover:bg-gray-100 disabled:opacity-40"
+              className="rounded-lg border border-gray-300 px-3 py-1 hover:bg-gray-100 disabled:opacity-40"
             >
               Anterior
             </button>
@@ -217,7 +217,7 @@ export default function AdminAuditPage() {
               type="button"
               onClick={() => setPage((p) => p + 1)}
               disabled={page * pageSize >= total}
-              className="rounded border border-gray-300 px-3 py-1 hover:bg-gray-100 disabled:opacity-40"
+              className="rounded-lg border border-gray-300 px-3 py-1 hover:bg-gray-100 disabled:opacity-40"
             >
               Próxima
             </button>

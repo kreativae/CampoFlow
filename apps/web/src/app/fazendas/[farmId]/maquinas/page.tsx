@@ -1,5 +1,8 @@
 'use client';
 
+import { Tractor } from 'lucide-react';
+import PageHeader from '@/components/PageHeader';
+
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
@@ -161,23 +164,23 @@ export default function MachinesPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
-      <header className="mb-8">
-        <Link href={`/fazendas/${farmId}`} className="text-sm text-green-700 hover:underline">
-          ← Dashboard
-        </Link>
-        <h1 className="text-2xl font-semibold text-green-800">Máquinas</h1>
-      </header>
+    <main className="animate-fade-up mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-8">
+      <PageHeader
+        icon={Tractor}
+        title="Máquinas"
+        subtitle="Frota, manutenções e custos"
+        backHref={`/fazendas/${farmId}`}
+      />
 
       {error && (
-        <p className="mb-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+        <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
           {error}
         </p>
       )}
 
       <form
         onSubmit={handleCreate}
-        className="mb-8 grid grid-cols-2 gap-3 rounded border border-gray-200 bg-white p-4 sm:grid-cols-4"
+        className="mb-8 grid grid-cols-2 gap-3 rounded-xl border border-gray-200/80 bg-white shadow-sm p-4 sm:grid-cols-4"
       >
         <div className="col-span-2">
           <label className="text-xs font-medium text-gray-600">Nome</label>
@@ -186,7 +189,7 @@ export default function MachinesPage() {
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
 
@@ -195,7 +198,7 @@ export default function MachinesPage() {
           <select
             value={type}
             onChange={(e) => setType(e.target.value as MachineType)}
-            className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           >
             {TYPE_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -209,9 +212,11 @@ export default function MachinesPage() {
           <label className="text-xs font-medium text-gray-600">Ano</label>
           <input
             type="number"
+            min="1900"
+            max="2100"
             value={year}
             onChange={(e) => setYear(e.target.value)}
-            className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
 
@@ -221,7 +226,7 @@ export default function MachinesPage() {
             type="text"
             value={brand}
             onChange={(e) => setBrand(e.target.value)}
-            className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
 
@@ -229,7 +234,7 @@ export default function MachinesPage() {
           <button
             type="submit"
             disabled={creating}
-            className="rounded bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+            className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
           >
             {creating ? 'Cadastrando...' : 'Cadastrar máquina'}
           </button>
@@ -251,7 +256,7 @@ export default function MachinesPage() {
               return (
                 <li
                   key={machine.id}
-                  className="grid grid-cols-2 gap-3 rounded border border-green-600 bg-white p-4 sm:grid-cols-4"
+                  className="grid grid-cols-2 gap-3 rounded-lg border border-emerald-600 bg-white p-4 sm:grid-cols-4"
                 >
                   <div className="col-span-2">
                     <label className="text-xs font-medium text-gray-600">Nome</label>
@@ -259,7 +264,7 @@ export default function MachinesPage() {
                       type="text"
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
-                      className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                     />
                   </div>
                   <div>
@@ -267,7 +272,7 @@ export default function MachinesPage() {
                     <select
                       value={editType}
                       onChange={(e) => setEditType(e.target.value as MachineType)}
-                      className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                     >
                       {TYPE_OPTIONS.map((opt) => (
                         <option key={opt.value} value={opt.value}>
@@ -282,7 +287,7 @@ export default function MachinesPage() {
                       type="number"
                       value={editYear}
                       onChange={(e) => setEditYear(e.target.value)}
-                      className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                     />
                   </div>
                   <div className="col-span-2">
@@ -291,7 +296,7 @@ export default function MachinesPage() {
                       type="text"
                       value={editBrand}
                       onChange={(e) => setEditBrand(e.target.value)}
-                      className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                     />
                   </div>
                   <div className="col-span-full flex gap-2">
@@ -299,14 +304,14 @@ export default function MachinesPage() {
                       type="button"
                       disabled={saving}
                       onClick={() => handleSaveEdit(machine.id)}
-                      className="rounded bg-green-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+                      className="rounded-lg bg-emerald-700 px-3 py-1.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
                     >
                       {saving ? 'Salvando...' : 'Salvar'}
                     </button>
                     <button
                       type="button"
                       onClick={() => setEditingId(null)}
-                      className="rounded border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
+                      className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
                     >
                       Cancelar
                     </button>
@@ -317,22 +322,25 @@ export default function MachinesPage() {
             return (
               <li
                 key={machine.id}
-                className="flex items-center justify-between rounded border border-gray-200 bg-white px-4 py-3 hover:border-green-600 hover:shadow-sm"
+                className="flex flex-col gap-2 rounded-xl border border-gray-200/80 bg-white shadow-sm px-4 py-3 transition-all duration-200 hover:border-emerald-200 hover:shadow-md sm:flex-row sm:items-center sm:justify-between"
               >
-                <Link href={`/fazendas/${farmId}/maquinas/${machine.id}`} className="flex-1">
-                  <p className="font-medium text-gray-900">{machine.name}</p>
-                  <p className="text-sm text-gray-500">
-                    {typeLabel(machine.type)} · {machine.currentHourMeter}h
-                  </p>
+                <Link href={`/fazendas/${farmId}/maquinas/${machine.id}`} className="flex min-w-0 flex-1 items-center gap-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700"><Tractor size={18} strokeWidth={1.9} /></span>
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium text-gray-900">{machine.name}</span>
+                    <span className="block truncate text-sm text-gray-500">
+                      {typeLabel(machine.type)} · {machine.currentHourMeter}h
+                    </span>
+                  </span>
                 </Link>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 self-end sm:self-auto">
                   {cost && (
-                    <p className="text-sm text-gray-500">Custo total: {formatCurrency(cost.totalCost)}</p>
+                    <p className="text-sm text-gray-500">Custo: {formatCurrency(cost.totalCost)}</p>
                   )}
                   <button
                     type="button"
                     onClick={() => startEdit(machine)}
-                    className="text-sm font-medium text-green-700 hover:underline"
+                    className="text-sm font-medium text-emerald-700 hover:underline"
                   >
                     Editar
                   </button>

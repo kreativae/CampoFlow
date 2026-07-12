@@ -261,13 +261,13 @@ export default function QuotationsPage() {
     .map((q) => ({ date: q.recordedAt, price: q.price }));
 
   return (
-    <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-10">
+    <main className="animate-fade-up mx-auto w-full max-w-4xl flex-1 px-4 py-10">
       <header className="mb-8 flex items-start justify-between gap-4">
         <div>
-          <Link href="/fazendas" className="text-sm text-green-700 hover:underline">
+          <Link href="/fazendas" className="text-sm text-emerald-700 hover:underline">
             ← Propriedades
           </Link>
-          <h1 className="text-2xl font-semibold text-green-800">Cotações</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Cotações</h1>
           <p className="text-sm text-gray-500">
             Soja, milho e boi gordo são atualizados automaticamente a cada poucas horas (fonte:
             Redação Agro, referência CEPEA/ESALQ — gratuita e não-oficial, sem garantia de
@@ -278,28 +278,28 @@ export default function QuotationsPage() {
         <button
           onClick={handleRefresh}
           disabled={refreshing}
-          className="shrink-0 rounded bg-gray-200 px-3 py-2 text-sm font-medium text-gray-800 hover:bg-gray-300 disabled:opacity-50"
+          className="shrink-0 rounded-lg bg-gray-200 px-3 py-2 text-sm font-medium text-gray-800 hover:bg-gray-300 disabled:opacity-50"
         >
           {refreshing ? 'Atualizando...' : 'Atualizar agora'}
         </button>
       </header>
 
       {error && (
-        <p className="mb-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+        <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
           {error}
         </p>
       )}
 
       <form
         onSubmit={handleCreate}
-        className="mb-8 grid grid-cols-2 gap-3 rounded border border-gray-200 bg-white p-4 sm:grid-cols-5"
+        className="mb-8 grid grid-cols-2 gap-3 rounded-xl border border-gray-200/80 bg-white shadow-sm p-4 sm:grid-cols-5"
       >
         <div>
           <label className="text-xs font-medium text-gray-600">Produto</label>
           <select
             value={formCommodity}
             onChange={(e) => setFormCommodity(e.target.value as Commodity)}
-            className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           >
             {COMMODITY_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -314,7 +314,7 @@ export default function QuotationsPage() {
           <select
             value={formState}
             onChange={(e) => setFormState(e.target.value as BrazilianState | '')}
-            className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           >
             <option value="">Nacional</option>
             {STATE_OPTIONS.map((opt) => (
@@ -333,7 +333,7 @@ export default function QuotationsPage() {
             required
             value={price}
             onChange={(e) => setPrice(e.target.value)}
-            className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
 
@@ -344,7 +344,7 @@ export default function QuotationsPage() {
             required
             value={unit}
             onChange={(e) => setUnit(e.target.value)}
-            className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
 
@@ -354,7 +354,7 @@ export default function QuotationsPage() {
             type="text"
             value={source}
             onChange={(e) => setSource(e.target.value)}
-            className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
 
@@ -362,7 +362,7 @@ export default function QuotationsPage() {
           <button
             type="submit"
             disabled={creating}
-            className="rounded bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+            className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
           >
             {creating ? 'Salvando...' : 'Lançar cotação'}
           </button>
@@ -386,9 +386,9 @@ export default function QuotationsPage() {
                   <button
                     type="button"
                     onClick={() => setSelectedCommodity(opt.value)}
-                    className={`w-full rounded border p-3 text-left hover:border-green-600 ${
+                    className={`w-full rounded-lg border p-3 text-left hover:border-emerald-600 ${
                       selectedCommodity === opt.value
-                        ? 'border-green-600 bg-green-50'
+                        ? 'border-emerald-600 bg-emerald-50'
                         : 'border-gray-200 bg-white'
                     }`}
                   >
@@ -397,7 +397,7 @@ export default function QuotationsPage() {
                       {q.price} {q.unit}
                     </p>
                     {q.changePercent !== 0 && (
-                      <p className={q.changePercent > 0 ? 'text-sm text-green-700' : 'text-sm text-red-600'}>
+                      <p className={q.changePercent > 0 ? 'text-sm text-emerald-700' : 'text-sm text-red-600'}>
                         {q.changePercent > 0 ? '↑' : '↓'} {Math.abs(q.changePercent)}%
                       </p>
                     )}
@@ -412,7 +412,7 @@ export default function QuotationsPage() {
         )}
       </section>
 
-      <section className="mb-8 rounded border border-gray-200 bg-white p-4">
+      <section className="mb-8 rounded-xl border border-gray-200/80 bg-white shadow-sm p-4">
         <h2 className="mb-3 font-semibold text-gray-800">
           Cotação por estado — {commodityLabel(selectedCommodity)}
         </h2>
@@ -438,7 +438,7 @@ export default function QuotationsPage() {
                   </td>
                   <td className="py-2">
                     {q.changePercent !== 0 ? (
-                      <span className={q.changePercent > 0 ? 'text-green-700' : 'text-red-600'}>
+                      <span className={q.changePercent > 0 ? 'text-emerald-700' : 'text-red-600'}>
                         {q.changePercent > 0 ? '↑' : '↓'} {Math.abs(q.changePercent)}%
                       </span>
                     ) : (
@@ -456,14 +456,14 @@ export default function QuotationsPage() {
         )}
       </section>
 
-      <section className="rounded border border-gray-200 bg-white p-4">
+      <section className="rounded-xl border border-gray-200/80 bg-white shadow-sm p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-semibold text-gray-800">Histórico</h2>
           <div className="flex gap-2">
             <select
               value={selectedCommodity}
               onChange={(e) => setSelectedCommodity(e.target.value as Commodity)}
-              className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+              className="rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
             >
               {COMMODITY_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -474,7 +474,7 @@ export default function QuotationsPage() {
             <select
               value={stateFilter}
               onChange={(e) => setStateFilter(e.target.value as StateFilter)}
-              className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+              className="rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
             >
               <option value={ALL_STATES_FILTER}>Todos os estados</option>
               <option value={NATIONAL_FILTER}>Nacional</option>

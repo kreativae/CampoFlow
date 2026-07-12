@@ -1,8 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
+import { Users } from 'lucide-react';
+import PageHeader from '@/components/PageHeader';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, ApiError } from '@/lib/api';
 import { useToast } from '@/lib/toast-context';
@@ -361,20 +362,16 @@ export default function TeamPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-10">
-      <header className="mb-6">
-        <Link href={`/fazendas/${farmId}`} className="text-sm text-green-700 hover:underline">
-          ← Dashboard
-        </Link>
-        <h1 className="text-2xl font-semibold text-green-800">Equipe</h1>
-        <p className="text-sm text-gray-500">
-          Gerencie funcionários (efetivos, chapas, temporários), o banco de horas e o custo
-          total de mão de obra.
-        </p>
-      </header>
+    <main className="animate-fade-up mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-8">
+      <PageHeader
+        icon={Users}
+        title="Equipe"
+        subtitle="Funcionários e banco de horas"
+        backHref={`/fazendas/${farmId}`}
+      />
 
       {error && (
-        <p className="mb-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+        <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
           {error}
         </p>
       )}
@@ -395,7 +392,7 @@ export default function TeamPage() {
       </div>
 
       {/* Calculadora valor-hora / valor */}
-      <section className="mb-6 rounded border border-gray-200 bg-white p-4">
+      <section className="mb-6 rounded-xl border border-gray-200/80 bg-white shadow-sm p-4">
         <h2 className="mb-3 font-semibold text-gray-800">Calculadora de valor / hora</h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
@@ -405,7 +402,7 @@ export default function TeamPage() {
               step="0.01"
               value={calcRate}
               onChange={(e) => setCalcRate(e.target.value)}
-              className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+              className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
             />
           </div>
           <div>
@@ -415,13 +412,13 @@ export default function TeamPage() {
               step="0.1"
               value={calcHours}
               onChange={(e) => setCalcHours(e.target.value)}
-              className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+              className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
             />
           </div>
         </div>
         <p className="mt-3 text-sm text-gray-700">
           Valor total (valor/hora × horas):{' '}
-          <strong className="text-green-700">{calcResultTotal}</strong>
+          <strong className="text-emerald-700">{calcResultTotal}</strong>
         </p>
       </section>
 
@@ -434,18 +431,18 @@ export default function TeamPage() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Buscar por nome..."
-              className="flex-1 rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+              className="flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
             />
             <button
               type="button"
               onClick={selectNew}
-              className="shrink-0 rounded bg-green-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-800"
+              className="shrink-0 rounded-lg bg-emerald-700 px-3 py-1.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800"
             >
               + Novo
             </button>
           </div>
 
-          <div className="mb-3 space-y-3 rounded border border-gray-200 bg-white p-3">
+          <div className="mb-3 space-y-3 rounded-xl border border-gray-200/80 bg-white shadow-sm p-3">
             <div>
               <p className="mb-1 text-xs font-medium text-gray-600">Tipo</p>
               <div className="flex flex-wrap gap-x-4 gap-y-1">
@@ -513,16 +510,16 @@ export default function TeamPage() {
                   <button
                     type="button"
                     onClick={() => selectEmployee(e)}
-                    className={`w-full rounded border px-3 py-2 text-left text-sm hover:border-green-600 ${
+                    className={`w-full rounded-lg border px-3 py-2 text-left text-sm hover:border-emerald-600 ${
                       selectedId === e.id
-                        ? 'border-green-600 bg-green-50'
+                        ? 'border-emerald-600 bg-emerald-50'
                         : 'border-gray-200 bg-white'
                     }`}
                   >
                     <div className="flex items-center justify-between">
                       <p className="font-medium text-gray-900">{e.name}</p>
                       {!e.active && (
-                        <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-500">
+                        <span className="rounded-lg bg-gray-100 px-1.5 py-0.5 text-xs text-gray-500">
                           Inativo
                         </span>
                       )}
@@ -539,7 +536,7 @@ export default function TeamPage() {
         </div>
 
         {/* Right: detail / edit / create + banco de horas */}
-        <div className="rounded border border-gray-200 bg-white p-4">
+        <div className="rounded-xl border border-gray-200/80 bg-white shadow-sm p-4">
           {selectedId === null ? (
             <p className="text-sm text-gray-500">
               Selecione um funcionário à esquerda ou clique em &quot;+ Novo&quot; para
@@ -571,7 +568,7 @@ export default function TeamPage() {
                       required
                       value={form.name}
                       onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                      className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                     />
                   </div>
                   <div>
@@ -581,7 +578,7 @@ export default function TeamPage() {
                       onChange={(e) =>
                         setForm((f) => ({ ...f, type: e.target.value as EmployeeType }))
                       }
-                      className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                     >
                       {TYPE_OPTIONS.map((opt) => (
                         <option key={opt.value} value={opt.value}>
@@ -597,7 +594,7 @@ export default function TeamPage() {
                       value={form.role}
                       onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
                       placeholder="Ex.: Tratorista"
-                      className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                     />
                   </div>
                   <div>
@@ -609,7 +606,7 @@ export default function TeamPage() {
                       onChange={(e) =>
                         setForm((f) => ({ ...f, hourlyRate: e.target.value }))
                       }
-                      className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                     />
                   </div>
                   <div>
@@ -618,7 +615,7 @@ export default function TeamPage() {
                       type="text"
                       value={form.document}
                       onChange={(e) => setForm((f) => ({ ...f, document: e.target.value }))}
-                      className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                     />
                   </div>
                   <div>
@@ -627,7 +624,7 @@ export default function TeamPage() {
                       type="text"
                       value={form.phone}
                       onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-                      className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                     />
                   </div>
                   <label className="col-span-2 flex items-center gap-2 text-sm text-gray-700">
@@ -644,7 +641,7 @@ export default function TeamPage() {
                       type="text"
                       value={form.notes}
                       onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-                      className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                     />
                   </div>
                 </div>
@@ -656,14 +653,14 @@ export default function TeamPage() {
                       setSelectedId(null);
                       setDetail(null);
                     }}
-                    className="rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
                     disabled={saving}
-                    className="rounded bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+                    className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
                   >
                     {saving ? 'Salvando...' : 'Salvar'}
                   </button>
@@ -701,7 +698,7 @@ export default function TeamPage() {
                       placeholder="Descrição"
                       value={entryDescription}
                       onChange={(e) => setEntryDescription(e.target.value)}
-                      className="col-span-2 rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                      className="col-span-2 rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                     />
                     <input
                       type="number"
@@ -710,13 +707,13 @@ export default function TeamPage() {
                       placeholder="Horas (+/-)"
                       value={entryHours}
                       onChange={(e) => setEntryHours(e.target.value)}
-                      className="rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                      className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                     />
                     <input
                       type="date"
                       value={entryDate}
                       onChange={(e) => setEntryDate(e.target.value)}
-                      className="rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                      className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                     />
                     <label className="col-span-2 flex items-center gap-1.5 text-sm text-gray-700 sm:col-span-3">
                       <input
@@ -729,7 +726,7 @@ export default function TeamPage() {
                     <button
                       type="submit"
                       disabled={savingEntry}
-                      className="col-span-2 rounded bg-green-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50 sm:col-span-1"
+                      className="col-span-2 rounded-lg bg-emerald-700 px-3 py-1.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50 sm:col-span-1"
                     >
                       {savingEntry ? 'Salvando...' : 'Registrar horas'}
                     </button>
@@ -750,26 +747,26 @@ export default function TeamPage() {
                         editingEntryId === entry.id ? (
                           <li
                             key={entry.id}
-                            className="flex flex-wrap items-center gap-2 rounded border border-green-600 p-2"
+                            className="flex flex-wrap items-center gap-2 rounded-lg border border-emerald-600 p-2"
                           >
                             <input
                               type="text"
                               value={editEntryDescription}
                               onChange={(e) => setEditEntryDescription(e.target.value)}
-                              className="flex-1 rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+                              className="flex-1 rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                             />
                             <input
                               type="number"
                               step="0.1"
                               value={editEntryHours}
                               onChange={(e) => setEditEntryHours(e.target.value)}
-                              className="w-20 rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+                              className="w-20 rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                             />
                             <input
                               type="date"
                               value={editEntryDate}
                               onChange={(e) => setEditEntryDate(e.target.value)}
-                              className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+                              className="rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                             />
                             <label className="flex items-center gap-1 text-xs text-gray-700">
                               <input
@@ -782,14 +779,14 @@ export default function TeamPage() {
                             <button
                               type="button"
                               onClick={() => handleSaveEntry(entry.id)}
-                              className="rounded bg-green-700 px-2 py-1 text-xs font-medium text-white hover:bg-green-800"
+                              className="rounded-lg bg-emerald-700 px-2 py-1 text-xs font-semibold text-white transition-colors duration-150 hover:bg-emerald-800"
                             >
                               Salvar
                             </button>
                             <button
                               type="button"
                               onClick={() => setEditingEntryId(null)}
-                              className="rounded border border-gray-300 px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50"
+                              className="rounded-lg border border-gray-300 px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50"
                             >
                               Cancelar
                             </button>
@@ -811,7 +808,7 @@ export default function TeamPage() {
                               <span className="text-xs text-gray-500">
                                 {formatCurrency(entry.hours * detail.hourlyRate)}
                                 {entry.paid && (
-                                  <span className="ml-2 rounded bg-green-100 px-1.5 py-0.5 text-xs font-medium text-green-700">
+                                  <span className="ml-2 rounded-lg bg-emerald-100 px-1.5 py-0.5 text-xs font-medium text-emerald-700">
                                     Paga
                                   </span>
                                 )}
@@ -828,7 +825,7 @@ export default function TeamPage() {
                               <button
                                 type="button"
                                 onClick={() => startEditEntry(entry)}
-                                className="text-xs font-medium text-green-700 hover:underline"
+                                className="text-xs font-medium text-emerald-700 hover:underline"
                               >
                                 Editar
                               </button>
@@ -849,7 +846,7 @@ export default function TeamPage() {
                     <button
                       type="button"
                       onClick={() => setShowAllEntries((v) => !v)}
-                      className="mt-3 text-sm font-medium text-green-700 hover:underline"
+                      className="mt-3 text-sm font-medium text-emerald-700 hover:underline"
                     >
                       {showAllEntries
                         ? 'Mostrar menos'
@@ -876,7 +873,7 @@ function SummaryCard({
   sub?: string;
 }) {
   return (
-    <div className="rounded border border-gray-200 bg-white p-3">
+    <div className="rounded-xl border border-gray-200/80 bg-white shadow-sm p-3">
       <p className="text-xs uppercase tracking-wide text-gray-500">{label}</p>
       <p className="mt-1 text-lg font-semibold text-gray-900">{value}</p>
       {sub && <p className="text-xs text-gray-400">{sub}</p>}

@@ -91,8 +91,8 @@ export default function ProfilePage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-xl flex-1 px-4 py-10">
-      <Link href="/fazendas" className="mb-6 inline-block text-sm text-green-700 hover:underline">
+    <main className="animate-fade-up mx-auto w-full max-w-xl flex-1 px-4 py-10">
+      <Link href="/fazendas" className="mb-6 inline-block text-sm text-emerald-700 hover:underline">
         ← Voltar
       </Link>
 
@@ -105,10 +105,10 @@ export default function ProfilePage() {
         </h2>
 
         {error && (
-          <p className="mb-3 rounded bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+          <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
         )}
         {message && (
-          <p className="mb-3 rounded bg-green-50 px-3 py-2 text-sm text-green-700">{message}</p>
+          <p className="mb-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{message}</p>
         )}
 
         <form onSubmit={handleSaveProfile} className="space-y-3">
@@ -120,7 +120,7 @@ export default function ProfilePage() {
               onChange={(e) => setName(e.target.value)}
               required
               minLength={2}
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-green-600 focus:outline-none"
+              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
             />
           </div>
           <div>
@@ -130,13 +130,13 @@ export default function ProfilePage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-green-600 focus:outline-none"
+              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
             />
           </div>
           <button
             type="submit"
             disabled={saving}
-            className="rounded bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+            className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
           >
             {saving ? 'Salvando...' : 'Salvar'}
           </button>
@@ -150,12 +150,12 @@ export default function ProfilePage() {
         </h2>
 
         {passwordError && (
-          <p className="mb-3 rounded bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
             {passwordError}
           </p>
         )}
         {passwordMessage && (
-          <p className="mb-3 rounded bg-green-50 px-3 py-2 text-sm text-green-700">
+          <p className="mb-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
             {passwordMessage}
           </p>
         )}
@@ -168,7 +168,7 @@ export default function ProfilePage() {
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
               required
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-green-600 focus:outline-none"
+              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
             />
           </div>
           <div>
@@ -179,7 +179,7 @@ export default function ProfilePage() {
               onChange={(e) => setNewPassword(e.target.value)}
               required
               minLength={8}
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-green-600 focus:outline-none"
+              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
             />
             <p className="mt-1 text-xs text-gray-400">Mínimo 8 caracteres, com letras e números</p>
           </div>
@@ -191,13 +191,13 @@ export default function ProfilePage() {
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
               minLength={8}
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-green-600 focus:outline-none"
+              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
             />
           </div>
           <button
             type="submit"
             disabled={savingPassword}
-            className="rounded bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+            className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
           >
             {savingPassword ? 'Alterando...' : 'Alterar senha'}
           </button>

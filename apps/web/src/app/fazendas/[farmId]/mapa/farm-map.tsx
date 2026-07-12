@@ -72,12 +72,12 @@ function QuickCreatePopup({
           placeholder="Nome"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+          className="w-full rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
         />
         <select
           value={type}
           onChange={(e) => setType(e.target.value as MapFeatureType)}
-          className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+          className="w-full rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
         >
           {QUICK_TYPE_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -90,7 +90,7 @@ function QuickCreatePopup({
           type="button"
           disabled={saving}
           onClick={handleSubmit}
-          className="w-full rounded bg-green-700 px-2 py-1 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+          className="w-full rounded-lg bg-emerald-700 px-2 py-1 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
         >
           {saving ? 'Salvando...' : 'Criar'}
         </button>

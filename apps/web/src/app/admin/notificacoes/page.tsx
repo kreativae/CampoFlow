@@ -70,7 +70,7 @@ export default function AdminNotificationsPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
+    <main className="animate-fade-up mx-auto w-full max-w-3xl flex-1 px-4 py-10">
       <header className="mb-8">
         <h1 className="text-2xl font-semibold text-gray-900">Notificações</h1>
         <p className="text-sm text-gray-500">
@@ -80,22 +80,22 @@ export default function AdminNotificationsPage() {
       </header>
 
       {error && (
-        <p className="mb-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+        <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
           {error}
         </p>
       )}
       {message && (
-        <p className="mb-4 rounded bg-green-50 px-3 py-2 text-sm text-green-700">{message}</p>
+        <p className="mb-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{message}</p>
       )}
 
-      <section className="rounded border border-gray-200 p-4">
+      <section className="rounded-lg border border-gray-200 p-4">
         <form onSubmit={handleSave} className="space-y-4">
           <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
             <input
               type="checkbox"
               checked={enabled}
               onChange={(e) => setEnabled(e.target.checked)}
-              className="h-4 w-4 rounded border-gray-300"
+              className="h-4 w-4 rounded-lg border-gray-300"
             />
             Geração automática ativada
           </label>
@@ -106,7 +106,7 @@ export default function AdminNotificationsPage() {
               value={frequency}
               disabled={!enabled}
               onChange={(e) => setFrequency(e.target.value)}
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-green-600 focus:outline-none disabled:bg-gray-100 disabled:text-gray-400"
+              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15 disabled:bg-gray-100 disabled:text-gray-400"
             >
               {config?.options.map((opt) => (
                 <option key={opt.key} value={opt.key}>
@@ -123,7 +123,7 @@ export default function AdminNotificationsPage() {
           <button
             type="submit"
             disabled={saving}
-            className="rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+            className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
           >
             {saving ? 'Salvando...' : 'Salvar configuração'}
           </button>

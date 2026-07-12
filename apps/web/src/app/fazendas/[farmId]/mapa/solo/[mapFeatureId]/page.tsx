@@ -275,12 +275,12 @@ export default function SoilAnalysisPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
+    <main className="animate-fade-up mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-8">
       <header className="mb-8">
-        <Link href={`/fazendas/${farmId}/mapa`} className="text-sm text-green-700 hover:underline">
+        <Link href={`/fazendas/${farmId}/mapa`} className="text-sm text-emerald-700 hover:underline">
           ← Mapa da Fazenda
         </Link>
-        <h1 className="text-2xl font-semibold text-green-800">
+        <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
           Análises de solo — {feature?.name ?? '...'}
         </h1>
         <p className="text-sm text-gray-500">
@@ -290,14 +290,14 @@ export default function SoilAnalysisPage() {
       </header>
 
       {error && (
-        <p className="mb-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+        <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
           {error}
         </p>
       )}
 
       <form
         onSubmit={handleCreate}
-        className="mb-8 grid grid-cols-2 gap-3 rounded border border-gray-200 bg-white p-4 sm:grid-cols-3"
+        className="mb-8 grid grid-cols-2 gap-3 rounded-xl border border-gray-200/80 bg-white shadow-sm p-4 sm:grid-cols-3"
       >
         <div>
           <label className="text-xs font-medium text-gray-600">Data da coleta</label>
@@ -306,7 +306,7 @@ export default function SoilAnalysisPage() {
             required
             value={collectedAt}
             onChange={(e) => setCollectedAt(e.target.value)}
-            className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
         <div>
@@ -316,7 +316,7 @@ export default function SoilAnalysisPage() {
             value={areaLabel}
             onChange={(e) => setAreaLabel(e.target.value)}
             placeholder="Ex.: Talhão 3"
-            className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
         {FIELD_DEFS.map(({ key, label }) => (
@@ -327,7 +327,7 @@ export default function SoilAnalysisPage() {
               step="0.01"
               value={form[key] ?? ''}
               onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
-              className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+              className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
             />
           </div>
         ))}
@@ -344,7 +344,7 @@ export default function SoilAnalysisPage() {
           <button
             type="submit"
             disabled={creating}
-            className="rounded bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+            className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
           >
             {creating ? 'Salvando...' : 'Registrar análise'}
           </button>
@@ -352,13 +352,13 @@ export default function SoilAnalysisPage() {
       </form>
 
       {history.length >= 2 && (
-        <section className="mb-8 rounded border border-gray-200 bg-white p-4">
+        <section className="mb-8 rounded-xl border border-gray-200/80 bg-white shadow-sm p-4">
           <div className="mb-2 flex items-center justify-between">
             <h2 className="font-semibold text-gray-800">Evolução dos valores</h2>
             <select
               value={chartField}
               onChange={(e) => setChartField(e.target.value as keyof SoilAnalysis)}
-              className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+              className="rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
             >
               {FIELD_DEFS.map(({ key, label }) => (
                 <option key={key} value={key}>
@@ -382,7 +382,7 @@ export default function SoilAnalysisPage() {
               const rec = recommendations[a.id];
               const photos = a.photos ?? [];
               return (
-                <li key={a.id} className="rounded border border-gray-200 bg-white p-4">
+                <li key={a.id} className="rounded-xl border border-gray-200/80 bg-white shadow-sm p-4">
                   {editingId === a.id ? (
                     <div className="space-y-3">
                       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -392,7 +392,7 @@ export default function SoilAnalysisPage() {
                             type="date"
                             value={editCollectedAt}
                             onChange={(e) => setEditCollectedAt(e.target.value)}
-                            className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                           />
                         </div>
                         <div>
@@ -401,7 +401,7 @@ export default function SoilAnalysisPage() {
                             type="text"
                             value={editAreaLabel}
                             onChange={(e) => setEditAreaLabel(e.target.value)}
-                            className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                           />
                         </div>
                         {FIELD_DEFS.map(({ key, label }) => (
@@ -414,7 +414,7 @@ export default function SoilAnalysisPage() {
                               onChange={(e) =>
                                 setEditForm((f) => ({ ...f, [key]: e.target.value }))
                               }
-                              className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                              className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                             />
                           </div>
                         ))}
@@ -424,7 +424,7 @@ export default function SoilAnalysisPage() {
                             type="text"
                             value={editNotes}
                             onChange={(e) => setEditNotes(e.target.value)}
-                            className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                           />
                         </div>
                       </div>
@@ -433,14 +433,14 @@ export default function SoilAnalysisPage() {
                           type="button"
                           disabled={saving}
                           onClick={() => handleSaveEdit(a.id)}
-                          className="rounded bg-green-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+                          className="rounded-lg bg-emerald-700 px-3 py-1.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
                         >
                           {saving ? 'Salvando...' : 'Salvar'}
                         </button>
                         <button
                           type="button"
                           onClick={() => setEditingId(null)}
-                          className="rounded border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
+                          className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
                         >
                           Cancelar
                         </button>
@@ -457,14 +457,14 @@ export default function SoilAnalysisPage() {
                           {a.documentFileName && (
                             <button
                               onClick={() => handleDownload(a)}
-                              className="text-sm text-green-700 hover:underline"
+                              className="text-sm text-emerald-700 hover:underline"
                             >
                               Baixar laudo
                             </button>
                           )}
                           <button
                             onClick={() => startEdit(a)}
-                            className="text-sm text-green-700 hover:underline"
+                            className="text-sm text-emerald-700 hover:underline"
                           >
                             Editar
                           </button>
@@ -489,7 +489,7 @@ export default function SoilAnalysisPage() {
                       {a.notes && <p className="mt-2 text-sm text-gray-600">{a.notes}</p>}
 
                       {rec && (
-                        <div className="mt-3 rounded bg-amber-50 p-3 text-sm text-amber-900">
+                        <div className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
                           <p className="font-medium">
                             {rec.limingNeeded
                               ? `Calagem recomendada: ${rec.limestoneTonPerHa} t/ha (meta V% ${rec.targetBaseSaturationPercent}%)`
@@ -512,14 +512,14 @@ export default function SoilAnalysisPage() {
                           <button
                             type="button"
                             onClick={() => { setUploadingPhotosFor(uploadingPhotosFor === a.id ? null : a.id); setSelectedPhotoCount(0); }}
-                            className="text-xs font-medium text-green-700 hover:underline"
+                            className="text-xs font-medium text-emerald-700 hover:underline"
                           >
                             {uploadingPhotosFor === a.id ? 'Cancelar' : 'Anexar fotos'}
                           </button>
                         </div>
 
                         {uploadingPhotosFor === a.id && (
-                          <div className="mb-3 rounded border border-gray-200 bg-gray-50 p-3">
+                          <div className="mb-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
                             <input
                               ref={photoInputRef}
                               type="file"
@@ -535,7 +535,7 @@ export default function SoilAnalysisPage() {
                               type="button"
                               disabled={uploadingPhotos}
                               onClick={() => handleUploadPhotos(a.id)}
-                              className="mt-2 rounded bg-green-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-800 disabled:opacity-50"
+                              className="mt-2 rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
                             >
                               {uploadingPhotos ? 'Enviando...' : selectedPhotoCount > 0 ? `Enviar ${selectedPhotoCount} foto${selectedPhotoCount > 1 ? 's' : ''}` : 'Enviar fotos'}
                             </button>
@@ -547,7 +547,7 @@ export default function SoilAnalysisPage() {
                             {photos.map((photo) => (
                               <div
                                 key={photo.id}
-                                className="group relative overflow-hidden rounded border border-gray-200 bg-gray-100"
+                                className="group relative overflow-hidden rounded-lg border border-gray-200 bg-gray-100"
                               >
                                 <PhotoThumbnail
                                   url={`${API_URL}/fazendas/${farmId}/analises-solo/${a.id}/fotos/${photo.id}/baixar`}
@@ -584,14 +584,14 @@ export default function SoilAnalysisPage() {
                                   <button
                                     type="button"
                                     onClick={() => handleDownloadPhoto(a.id, photo)}
-                                    className="rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-medium text-green-700 shadow-sm hover:bg-white"
+                                    className="rounded-lg bg-white/90 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 shadow-sm hover:bg-white"
                                   >
                                     Baixar
                                   </button>
                                   <button
                                     type="button"
                                     onClick={() => handleDeletePhoto(a.id, photo.id)}
-                                    className="rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-medium text-red-600 shadow-sm hover:bg-white"
+                                    className="rounded-lg bg-white/90 px-1.5 py-0.5 text-[10px] font-medium text-red-600 shadow-sm hover:bg-white"
                                   >
                                     Excluir
                                   </button>

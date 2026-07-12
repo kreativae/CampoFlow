@@ -8,7 +8,7 @@ import type { PlatformHealth } from '@/lib/types';
 function StatusDot({ ok }: { ok: boolean }) {
   return (
     <span
-      className={`inline-block h-2.5 w-2.5 rounded-full ${ok ? 'bg-green-500' : 'bg-red-500'}`}
+      className={`inline-block h-2.5 w-2.5 rounded-full ${ok ? 'bg-emerald-500' : 'bg-red-500'}`}
       aria-label={ok ? 'Operacional' : 'Indisponível'}
     />
   );
@@ -29,8 +29,8 @@ function ServiceCard({
         <StatusDot ok={ok} />
         <h3 className="text-sm font-semibold text-gray-800">{title}</h3>
         <span
-          className={`ml-auto rounded px-2 py-0.5 text-xs font-medium ${
-            ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+          className={`ml-auto rounded-lg px-2 py-0.5 text-xs font-medium ${
+            ok ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'
           }`}
         >
           {ok ? 'OK' : 'Atenção'}
@@ -88,8 +88,8 @@ export default function AdminSaudePage() {
 
   if (error || !health) {
     return (
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
-        <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+      <main className="animate-fade-up mx-auto w-full max-w-3xl flex-1 px-4 py-10">
+        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
       </main>
     );
   }
@@ -102,7 +102,7 @@ export default function AdminSaudePage() {
     services.mercadoPago.configured;
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
+    <main className="animate-fade-up mx-auto w-full max-w-3xl flex-1 px-4 py-10">
       <header className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">
@@ -115,14 +115,14 @@ export default function AdminSaudePage() {
         <div className="flex items-center gap-3">
           <span
             className={`rounded-full px-3 py-1 text-xs font-semibold ${
-              allOk ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+              allOk ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
             }`}
           >
             {allOk ? 'Tudo operacional' : 'Atenção necessária'}
           </span>
           <button
             onClick={() => void load()}
-            className="rounded border border-gray-300 px-3 py-1 text-xs text-gray-600 hover:bg-gray-50"
+            className="rounded-lg border border-gray-300 px-3 py-1 text-xs text-gray-600 hover:bg-gray-50"
           >
             Atualizar
           </button>

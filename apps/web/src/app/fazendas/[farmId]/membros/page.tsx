@@ -1,8 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
+import { UserPlus } from 'lucide-react';
+import PageHeader from '@/components/PageHeader';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, ApiError } from '@/lib/api';
 import { useConfirm } from '@/lib/confirm-context';
@@ -211,37 +212,33 @@ export default function MembersPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
-      <header className="mb-6">
-        <Link href={`/fazendas/${farmId}`} className="text-sm text-green-700 hover:underline">
-          ← Dashboard
-        </Link>
-        <h1 className="text-2xl font-semibold text-green-800">Membros da propriedade</h1>
-        <p className="text-sm text-gray-500">
-          Convide pessoas, defina o papel de cada uma e, se quiser, limite quais páginas cada
-          membro pode acessar.
-        </p>
-      </header>
+    <main className="animate-fade-up mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-8">
+      <PageHeader
+        icon={UserPlus}
+        title="Membros"
+        subtitle="Acessos, papéis e convites"
+        backHref={`/fazendas/${farmId}`}
+      />
 
       {forbidden ? (
-        <p className="rounded border border-gray-200 bg-white px-4 py-3 text-sm text-gray-500">
+        <p className="rounded-xl border border-gray-200/80 bg-white shadow-sm px-4 py-3 text-sm text-gray-500">
           Apenas o proprietário ou gerente da propriedade pode gerenciar membros.
         </p>
       ) : (
         <>
           {error && (
-            <p className="mb-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+            <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
               {error}
             </p>
           )}
           {message && (
-            <p className="mb-4 rounded bg-green-50 px-3 py-2 text-sm text-green-700">{message}</p>
+            <p className="mb-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{message}</p>
           )}
 
           {/* Convidar / adicionar membro */}
           <form
             onSubmit={handleAdd}
-            className="mb-8 rounded border border-gray-200 bg-white p-4"
+            className="mb-8 rounded-xl border border-gray-200/80 bg-white shadow-sm p-4"
           >
             <h2 className="mb-3 font-semibold text-gray-800">Convidar membro</h2>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_200px_auto]">
@@ -253,7 +250,7 @@ export default function MembersPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="pessoa@exemplo.com"
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 />
               </div>
               <div>
@@ -261,7 +258,7 @@ export default function MembersPage() {
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value as Role)}
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 >
                   {ROLE_OPTIONS.map((r) => (
                     <option key={r} value={r}>
@@ -274,7 +271,7 @@ export default function MembersPage() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="w-full rounded bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50 sm:w-auto"
+                  className="w-full rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50 sm:w-auto"
                 >
                   {saving ? 'Enviando...' : 'Convidar'}
                 </button>
@@ -283,13 +280,13 @@ export default function MembersPage() {
             <p className="mt-2 text-xs text-gray-400">{ROLE_HINT[role]}</p>
 
             {/* Limite de acesso por módulo (opcional) */}
-            <div className="mt-3 rounded border border-gray-100 bg-gray-50 p-3">
+            <div className="mt-3 rounded-lg border border-gray-100 bg-gray-50 p-3">
               <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
                 <input
                   type="checkbox"
                   checked={restrict}
                   onChange={(e) => setRestrict(e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300 text-green-700 focus:ring-green-600"
+                  className="h-4 w-4 rounded-lg border-gray-300 text-emerald-700 focus:ring-emerald-600"
                 />
                 Limitar as páginas que este membro pode acessar
               </label>
@@ -311,7 +308,7 @@ export default function MembersPage() {
                           onChange={() =>
                             setModuleAccess((prev) => toggle(prev, opt.key))
                           }
-                          className="h-4 w-4 rounded border-gray-300 text-green-700 focus:ring-green-600"
+                          className="h-4 w-4 rounded-lg border-gray-300 text-emerald-700 focus:ring-emerald-600"
                         />
                         {opt.label}
                       </label>
@@ -336,7 +333,7 @@ export default function MembersPage() {
               {members.map((m) => (
                 <li
                   key={m.userId}
-                  className="rounded border border-gray-200 bg-white px-4 py-3"
+                  className="rounded-xl border border-gray-200/80 bg-white shadow-sm px-4 py-3"
                 >
                   <div className="flex items-center justify-between">
                     <div>
@@ -352,7 +349,7 @@ export default function MembersPage() {
                       <span
                         className={`rounded px-2 py-0.5 text-xs font-medium ${
                           m.role === 'OWNER'
-                            ? 'bg-green-100 text-green-800'
+                            ? 'bg-emerald-100 text-emerald-800'
                             : 'bg-gray-100 text-gray-700'
                         }`}
                       >
@@ -365,7 +362,7 @@ export default function MembersPage() {
                             onClick={() =>
                               editingId === m.userId ? setEditingId(null) : startEdit(m)
                             }
-                            className="text-sm font-medium text-green-700 hover:underline"
+                            className="text-sm font-medium text-emerald-700 hover:underline"
                           >
                             {editingId === m.userId ? 'Cancelar' : 'Acesso'}
                           </button>
@@ -397,7 +394,7 @@ export default function MembersPage() {
 
                   {/* Edição de acesso por módulo */}
                   {editingId === m.userId && (
-                    <div className="mt-3 rounded border border-gray-100 bg-gray-50 p-3">
+                    <div className="mt-3 rounded-lg border border-gray-100 bg-gray-50 p-3">
                       <p className="text-xs text-gray-500">
                         Marque os módulos liberados. Sem nenhum marcado, o membro terá acesso
                         total (conforme o papel).
@@ -414,7 +411,7 @@ export default function MembersPage() {
                               onChange={() =>
                                 setEditModules((prev) => toggle(prev, opt.key))
                               }
-                              className="h-4 w-4 rounded border-gray-300 text-green-700 focus:ring-green-600"
+                              className="h-4 w-4 rounded-lg border-gray-300 text-emerald-700 focus:ring-emerald-600"
                             />
                             {opt.label}
                           </label>
@@ -425,14 +422,14 @@ export default function MembersPage() {
                           type="button"
                           disabled={editSaving}
                           onClick={() => handleSaveAccess(m)}
-                          className="rounded bg-green-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+                          className="rounded-lg bg-emerald-700 px-3 py-1.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
                         >
                           {editSaving ? 'Salvando...' : 'Salvar acesso'}
                         </button>
                         <button
                           type="button"
                           onClick={() => setEditModules([])}
-                          className="rounded border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100"
+                          className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100"
                         >
                           Liberar tudo
                         </button>
@@ -456,7 +453,7 @@ export default function MembersPage() {
                 {invites.map((inv) => (
                   <li
                     key={inv.id}
-                    className="flex items-center justify-between rounded border border-amber-200 bg-amber-50 px-4 py-3"
+                    className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-4 py-3"
                   >
                     <div>
                       <p className="font-medium text-gray-900">{inv.email}</p>

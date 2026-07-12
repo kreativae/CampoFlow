@@ -30,7 +30,7 @@ const STATUS_OPTIONS: SubscriptionStatus[] = [
 ];
 
 function statusBadgeClass(status: SubscriptionStatus | null) {
-  if (status === 'ACTIVE' || status === 'TRIALING') return 'bg-green-50 text-green-700';
+  if (status === 'ACTIVE' || status === 'TRIALING') return 'bg-emerald-50 text-emerald-700';
   if (status === 'PAST_DUE') return 'bg-amber-50 text-amber-700';
   return 'bg-red-50 text-red-700';
 }
@@ -46,14 +46,14 @@ function MetricCard({
 }) {
   const valueColor =
     accent === 'green'
-      ? 'text-green-700'
+      ? 'text-emerald-700'
       : accent === 'amber'
         ? 'text-amber-700'
         : accent === 'red'
           ? 'text-red-700'
           : 'text-gray-900';
   return (
-    <div className="rounded border border-gray-200 bg-white px-3 py-3">
+    <div className="rounded-xl border border-gray-200/80 bg-white shadow-sm px-3 py-3">
       <p className="text-xs text-gray-500">{label}</p>
       <p className={`mt-1 text-xl font-semibold ${valueColor}`}>{value}</p>
     </div>
@@ -240,7 +240,7 @@ export default function AdminAccountsPage() {
   const allSelected = accounts.length > 0 && selected.size === accounts.length;
 
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-10">
+    <main className="animate-fade-up mx-auto w-full max-w-5xl flex-1 px-4 py-10">
       <header className="mb-8 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">Contas e assinaturas</h1>
@@ -255,7 +255,7 @@ export default function AdminAccountsPage() {
             type="button"
             onClick={handleBulkDelete}
             disabled={deletingBulk}
-            className="shrink-0 rounded bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+            className="shrink-0 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
           >
             {deletingBulk ? 'Excluindo...' : `Excluir selecionadas (${selected.size})`}
           </button>
@@ -304,19 +304,19 @@ export default function AdminAccountsPage() {
               type="button"
               onClick={handleRefreshQuotations}
               disabled={refreshingQuotations}
-              className="rounded border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-40"
+              className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-40"
             >
               {refreshingQuotations ? 'Atualizando...' : 'Atualizar cotações agora'}
             </button>
             {quotationsMsg && (
-              <span className="text-xs text-green-700">{quotationsMsg}</span>
+              <span className="text-xs text-emerald-700">{quotationsMsg}</span>
             )}
           </div>
         </section>
       )}
 
       {error && (
-        <p className="mb-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+        <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
           {error}
         </p>
       )}
@@ -336,11 +336,11 @@ export default function AdminAccountsPage() {
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Buscar por nome, e-mail de cobrança ou de usuário"
-            className="w-full max-w-md rounded border border-gray-300 px-3 py-1.5 text-sm focus:border-gray-900 focus:outline-none"
+            className="w-full max-w-md rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-gray-900 focus:outline-none"
           />
           <button
             type="submit"
-            className="rounded bg-gray-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-800"
+            className="rounded-lg bg-gray-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-800"
           >
             Buscar
           </button>
@@ -351,7 +351,7 @@ export default function AdminAccountsPage() {
             setPage(1);
             setStatusFilter(e.target.value as SubscriptionStatus | '');
           }}
-          className="rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-gray-900 focus:outline-none"
+          className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-gray-900 focus:outline-none"
         >
           <option value="">Todos os status</option>
           {STATUS_OPTIONS.map((s) => (
@@ -366,7 +366,7 @@ export default function AdminAccountsPage() {
             setPage(1);
             setPlanFilter(e.target.value as PlanTier | '');
           }}
-          className="rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-gray-900 focus:outline-none"
+          className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-gray-900 focus:outline-none"
         >
           <option value="">Todos os planos</option>
           {PLAN_OPTIONS.map((p) => (
@@ -384,6 +384,7 @@ export default function AdminAccountsPage() {
             : 'Nenhuma conta cadastrada ainda.'}
         </p>
       ) : (
+        <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-500">
@@ -430,7 +431,7 @@ export default function AdminAccountsPage() {
                       value={account.planTier ?? ''}
                       disabled={savingId === account.id}
                       onChange={(e) => handleUpdate(account.id, 'planTier', e.target.value)}
-                      className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+                      className="rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                     >
                       {PLAN_OPTIONS.map((opt) => (
                         <option key={opt} value={opt}>
@@ -444,7 +445,7 @@ export default function AdminAccountsPage() {
                       value={account.status ?? ''}
                       disabled={savingId === account.id}
                       onChange={(e) => handleUpdate(account.id, 'status', e.target.value)}
-                      className={`rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none ${statusBadgeClass(account.status)}`}
+                      className={`rounded border border-gray-300 px-2 py-1 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15 ${statusBadgeClass(account.status)}`}
                     >
                       {STATUS_OPTIONS.map((opt) => (
                         <option key={opt} value={opt}>
@@ -460,7 +461,7 @@ export default function AdminAccountsPage() {
                     <button
                       type="button"
                       onClick={() => toggleExpanded(account.id)}
-                      className="text-xs font-medium text-green-700 hover:underline"
+                      className="text-xs font-medium text-emerald-700 hover:underline"
                     >
                       {expandedId === account.id ? 'Ocultar' : 'Visualizar'}
                     </button>
@@ -520,6 +521,7 @@ export default function AdminAccountsPage() {
             ))}
           </tbody>
         </table>
+        </div>
       )}
 
       {total > 0 && (
@@ -532,7 +534,7 @@ export default function AdminAccountsPage() {
               type="button"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page <= 1}
-              className="rounded border border-gray-300 px-3 py-1 hover:bg-gray-100 disabled:opacity-40"
+              className="rounded-lg border border-gray-300 px-3 py-1 hover:bg-gray-100 disabled:opacity-40"
             >
               Anterior
             </button>
@@ -540,7 +542,7 @@ export default function AdminAccountsPage() {
               type="button"
               onClick={() => setPage((p) => p + 1)}
               disabled={page * pageSize >= total}
-              className="rounded border border-gray-300 px-3 py-1 hover:bg-gray-100 disabled:opacity-40"
+              className="rounded-lg border border-gray-300 px-3 py-1 hover:bg-gray-100 disabled:opacity-40"
             >
               Próxima
             </button>

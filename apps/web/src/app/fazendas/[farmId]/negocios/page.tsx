@@ -1,8 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { Handshake } from 'lucide-react';
+import PageHeader from '@/components/PageHeader';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, apiDownload, ApiError } from '@/lib/api';
 import type { Animal, Deal, DealItem, DealSummary, DealType, DealStatus } from '@/lib/types';
@@ -17,7 +18,7 @@ const STATUS_LABEL: Record<DealStatus, string> = {
 
 const STATUS_COLOR: Record<DealStatus, string> = {
   RASCUNHO: 'bg-yellow-100 text-yellow-800',
-  FINALIZADO: 'bg-green-100 text-green-800',
+  FINALIZADO: 'bg-emerald-100 text-emerald-800',
   CANCELADO: 'bg-red-100 text-red-800',
 };
 
@@ -432,27 +433,26 @@ export default function NegociosPage() {
 
   return (
     <main className="flex-1 overflow-y-auto p-4 sm:p-6">
-      <header className="mb-6 flex items-center justify-between">
-        <div>
-          <Link href={`/fazendas/${farmId}`} className="text-sm text-green-700 hover:underline">
-            &larr; Dashboard
-          </Link>
-          <h1 className="text-xl font-bold text-gray-900">Negócios</h1>
-          <p className="text-sm text-gray-500">Compra, venda e abate de animais — cálculo de custos por animal e por arroba</p>
-        </div>
-        <button
-          onClick={() => { setShowForm(!showForm); if (showForm) resetForm(); }}
-          className="rounded bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800"
-        >
-          {showForm ? 'Cancelar' : 'Novo negócio'}
-        </button>
-      </header>
+      <PageHeader
+        icon={Handshake}
+        title="Negócios"
+        subtitle="Compra, venda e abate — custos por animal e por arroba"
+        backHref={`/fazendas/${farmId}`}
+        actions={
+          <button
+            onClick={() => { setShowForm(!showForm); if (showForm) resetForm(); }}
+            className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors duration-150 hover:bg-emerald-800"
+          >
+            {showForm ? 'Cancelar' : 'Novo negócio'}
+          </button>
+        }
+      />
 
-      {error && <p className="mb-4 rounded bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+      {error && <p className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
 
       {/* --- Formulário de criação --- */}
       {showForm && (
-        <section className="mb-8 rounded border border-gray-200 bg-white p-4">
+        <section className="mb-8 rounded-xl border border-gray-200/80 bg-white shadow-sm p-4">
           <h2 className="mb-4 font-semibold text-gray-800">Novo negócio</h2>
           <form onSubmit={handleCreate} className="space-y-4">
             {/* Tipo + data */}
@@ -462,7 +462,7 @@ export default function NegociosPage() {
                 <select
                   value={dealType}
                   onChange={(e) => setDealType(e.target.value as DealType)}
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
                 >
                   <option value="VENDA">Venda</option>
                   <option value="COMPRA">Compra</option>
@@ -475,7 +475,7 @@ export default function NegociosPage() {
                   type="date"
                   value={dealDate}
                   onChange={(e) => setDealDate(e.target.value)}
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
                   required
                 />
               </div>
@@ -488,7 +488,7 @@ export default function NegociosPage() {
                   value={counterparty}
                   onChange={(e) => setCounterparty(e.target.value)}
                   placeholder={dealType === 'ABATE' ? 'Nome do frigorífico' : 'Nome ou empresa'}
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
                 />
               </div>
             </div>
@@ -502,7 +502,7 @@ export default function NegociosPage() {
                     <select
                       value={priceUnit}
                       onChange={(e) => setPriceUnit(e.target.value as 'ANIMAL' | 'ARROBA')}
-                      className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
                     >
                       <option value="ARROBA">Arroba (@)</option>
                       <option value="ANIMAL">Animal</option>
@@ -519,7 +519,7 @@ export default function NegociosPage() {
                       value={pricePerUnit}
                       onChange={(e) => setPricePerUnit(e.target.value)}
                       placeholder="0,00"
-                      className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
                       required
                     />
                   </div>
@@ -537,7 +537,7 @@ export default function NegociosPage() {
                       value={quantity}
                       onChange={(e) => setQuantity(e.target.value)}
                       placeholder="0"
-                      className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
                       required={draftItems.length === 0}
                     />
                   </div>
@@ -547,7 +547,7 @@ export default function NegociosPage() {
                         type="checkbox"
                         checked={isInstallment}
                         onChange={(e) => setIsInstallment(e.target.checked)}
-                        className="rounded border-gray-300"
+                        className="rounded-lg border-gray-300"
                       />
                       Parcelado
                     </label>
@@ -563,7 +563,7 @@ export default function NegociosPage() {
                           value={installmentCount}
                           onChange={(e) => setInstallmentCount(e.target.value)}
                           placeholder="1"
-                          className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                          className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
                           required
                         />
                       </div>
@@ -576,13 +576,13 @@ export default function NegociosPage() {
                           value={installmentValue}
                           onChange={(e) => setInstallmentValue(e.target.value)}
                           placeholder="0,00"
-                          className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                          className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
                           required
                         />
                       </div>
                       <div>
                         <label className="text-xs font-medium text-gray-600">Valor total (calculado)</label>
-                        <p className="mt-1 rounded border border-gray-100 bg-gray-50 px-2 py-1.5 text-sm font-medium text-gray-700">
+                        <p className="mt-1 rounded-lg border border-gray-100 bg-gray-50 px-2 py-1.5 text-sm font-medium text-gray-700">
                           {Number(installmentCount) > 0 && Number(installmentValue) > 0
                             ? formatCurrency(Number(installmentCount) * Number(installmentValue))
                             : 'R$ —'}
@@ -599,7 +599,7 @@ export default function NegociosPage() {
                         value={totalValue}
                         onChange={(e) => setTotalValue(e.target.value)}
                         placeholder="0,00"
-                        className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                        className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
                         required
                       />
                     </div>
@@ -618,7 +618,7 @@ export default function NegociosPage() {
                       value={liveWeightPricePerKg}
                       onChange={(e) => setLiveWeightPricePerKg(e.target.value)}
                       placeholder="0,00"
-                      className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
                       required
                     />
                   </div>
@@ -632,13 +632,13 @@ export default function NegociosPage() {
                       value={carcassYieldPercent}
                       onChange={(e) => setCarcassYieldPercent(e.target.value)}
                       placeholder="52"
-                      className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
                       required
                     />
                   </div>
                   <div>
                     <label className="text-xs font-medium text-gray-600">Valor da @ (calculado)</label>
-                    <p className="mt-1 rounded border border-gray-100 bg-gray-50 px-2 py-1.5 text-sm font-medium text-gray-700">
+                    <p className="mt-1 rounded-lg border border-gray-100 bg-gray-50 px-2 py-1.5 text-sm font-medium text-gray-700">
                       {Number(liveWeightPricePerKg) > 0 && Number(carcassYieldPercent) > 0
                         ? formatCurrency((Number(liveWeightPricePerKg) / (Number(carcassYieldPercent) / 100)) * ARROBA_KG)
                         : 'R$ —'}
@@ -649,7 +649,7 @@ export default function NegociosPage() {
                     <select
                       value={slaughterFrequency}
                       onChange={(e) => setSlaughterFrequency(e.target.value as 'TRIMESTRAL' | 'SEMESTRAL')}
-                      className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
                     >
                       <option value="TRIMESTRAL">Trimestral</option>
                       <option value="SEMESTRAL">Semestral</option>
@@ -671,7 +671,7 @@ export default function NegociosPage() {
                       value={funruralPercent}
                       onChange={(e) => setFunruralPercent(e.target.value)}
                       placeholder="1.5"
-                      className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
                     />
                   </div>
                   <div>
@@ -684,7 +684,7 @@ export default function NegociosPage() {
                       value={senarPercent}
                       onChange={(e) => setSenarPercent(e.target.value)}
                       placeholder="0.2"
-                      className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
                     />
                   </div>
                 </>
@@ -699,7 +699,7 @@ export default function NegociosPage() {
                   value={freightCost}
                   onChange={(e) => setFreightCost(e.target.value)}
                   placeholder="0,00"
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
                 />
               </div>
               <div>
@@ -712,7 +712,7 @@ export default function NegociosPage() {
                   value={commissionPercent}
                   onChange={(e) => setCommissionPercent(e.target.value)}
                   placeholder="0"
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
                 />
               </div>
             </div>
@@ -724,7 +724,7 @@ export default function NegociosPage() {
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={2}
-                className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
               />
             </div>
 
@@ -739,7 +739,7 @@ export default function NegociosPage() {
                     <button
                       type="button"
                       onClick={() => setShowAnimalPicker(!showAnimalPicker)}
-                      className="rounded border border-green-600 px-3 py-1 text-xs font-medium text-green-700 hover:bg-green-50"
+                      className="rounded-lg border border-emerald-600 px-3 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50"
                     >
                       {showAnimalPicker ? 'Fechar seletor' : 'Importar do rebanho'}
                     </button>
@@ -747,7 +747,7 @@ export default function NegociosPage() {
                   <button
                     type="button"
                     onClick={addManualItem}
-                    className="rounded border border-gray-300 px-3 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50"
+                    className="rounded-lg border border-gray-300 px-3 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50"
                   >
                     Adicionar manualmente
                   </button>
@@ -756,15 +756,15 @@ export default function NegociosPage() {
 
               {/* Animal picker */}
               {showAnimalPicker && (
-                <div className="mb-3 rounded border border-green-200 bg-green-50 p-3">
+                <div className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
                   <input
                     type="text"
                     value={animalSearch}
                     onChange={(e) => setAnimalSearch(e.target.value)}
                     placeholder="Buscar por brinco ou nome..."
-                    className="mb-2 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+                    className="mb-2 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
                   />
-                  <div className="max-h-48 overflow-y-auto">
+                  <div className="max-h-48 overflow-x-auto overflow-y-auto">
                     {filteredAnimals.length === 0 ? (
                       <p className="text-xs text-gray-400">Nenhum animal disponível</p>
                     ) : (
@@ -780,7 +780,7 @@ export default function NegociosPage() {
                         </thead>
                         <tbody>
                           {filteredAnimals.map((a) => (
-                            <tr key={a.id} className="border-b border-gray-100 hover:bg-green-100">
+                            <tr key={a.id} className="border-b border-gray-100 hover:bg-emerald-100">
                               <td className="py-1 font-mono">{a.earTag}</td>
                               <td>{a.name ?? '—'}</td>
                               <td>{a.category}</td>
@@ -795,7 +795,7 @@ export default function NegociosPage() {
                                 <button
                                   type="button"
                                   onClick={() => addAnimalToDraft(a)}
-                                  className="text-green-700 hover:underline"
+                                  className="text-emerald-700 hover:underline"
                                 >
                                   Selecionar
                                 </button>
@@ -811,7 +811,7 @@ export default function NegociosPage() {
 
               {/* Warning: animals without weight */}
               {animalsWithoutWeight.length > 0 && (
-                <p className="mb-2 rounded bg-amber-50 p-2 text-xs text-amber-700">
+                <p className="mb-2 rounded-lg bg-amber-50 p-2 text-xs text-amber-700">
                   ⚠ {animalsWithoutWeight.length} animal(is) sem peso registrado no rebanho.
                   {dealType === 'ABATE'
                     ? ' O cálculo de rendimento de carcaça ficará impreciso.'
@@ -856,7 +856,7 @@ export default function NegociosPage() {
                                   value={item.earTag}
                                   onChange={(e) => updateItem(idx, 'earTag', e.target.value)}
                                   placeholder="Brinco"
-                                  className="w-28 rounded border border-gray-300 px-2 py-1 text-sm"
+                                  className="w-28 rounded-lg border border-gray-300 px-2 py-1 text-sm"
                                   required
                                 />
                               )}
@@ -868,7 +868,7 @@ export default function NegociosPage() {
                                 value={item.weightKg ?? ''}
                                 onChange={(e) => updateItem(idx, 'weightKg', e.target.value)}
                                 placeholder="—"
-                                className="w-24 rounded border border-gray-300 px-2 py-1 text-sm"
+                                className="w-24 rounded-lg border border-gray-300 px-2 py-1 text-sm"
                               />
                             </td>
                             {dealType === 'ABATE' ? (
@@ -908,7 +908,7 @@ export default function NegociosPage() {
 
             {/* Live summary — compra em lote */}
             {dealType === 'COMPRA' && (Number(quantity) > 0 || draftItems.length > 0) && (
-              <div className="rounded bg-gray-50 p-3">
+              <div className="rounded-lg bg-gray-50 p-3">
                 <h3 className="mb-2 text-sm font-semibold text-gray-700">Resumo da compra</h3>
                 <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
                   <div>
@@ -933,11 +933,11 @@ export default function NegociosPage() {
                   </div>
                   <div>
                     <span className="text-xs font-semibold text-gray-500">Total geral (c/ frete e comissão)</span>
-                    <p className="font-bold text-green-700">{formatCurrency(purchaseSummary.grandTotal)}</p>
+                    <p className="font-bold text-emerald-700">{formatCurrency(purchaseSummary.grandTotal)}</p>
                   </div>
                   <div>
                     <span className="text-xs font-semibold text-gray-500">Custo por animal</span>
-                    <p className="font-bold text-green-700">{formatCurrency(purchaseSummary.costPerAnimal)}</p>
+                    <p className="font-bold text-emerald-700">{formatCurrency(purchaseSummary.costPerAnimal)}</p>
                   </div>
                 </div>
               </div>
@@ -945,7 +945,7 @@ export default function NegociosPage() {
 
             {/* Live summary — venda */}
             {dealType === 'VENDA' && draftItems.length > 0 && (
-              <div className="rounded bg-gray-50 p-3">
+              <div className="rounded-lg bg-gray-50 p-3">
                 <h3 className="mb-2 text-sm font-semibold text-gray-700">Resumo do negócio</h3>
                 <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
                   <div>
@@ -978,7 +978,7 @@ export default function NegociosPage() {
                   </div>
                   <div>
                     <span className="text-xs font-semibold text-gray-500">Total geral</span>
-                    <p className="font-bold text-green-700">{formatCurrency(summary.grandTotal)}</p>
+                    <p className="font-bold text-emerald-700">{formatCurrency(summary.grandTotal)}</p>
                   </div>
                 </div>
                 <div className="mt-2 border-t border-gray-200 pt-2">
@@ -998,7 +998,7 @@ export default function NegociosPage() {
 
             {/* Live summary — abate */}
             {dealType === 'ABATE' && draftItems.length > 0 && (
-              <div className="rounded bg-orange-50 p-3">
+              <div className="rounded-lg bg-orange-50 p-3">
                 <h3 className="mb-2 text-sm font-semibold text-gray-700">Resumo do abate</h3>
                 <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
                   <div>
@@ -1046,7 +1046,7 @@ export default function NegociosPage() {
                   <div className="flex gap-6 text-sm">
                     <div>
                       <span className="text-xs font-semibold text-gray-500">Valor líquido</span>
-                      <p className="font-bold text-green-700">{formatCurrency(slaughterSummary.netTotal)}</p>
+                      <p className="font-bold text-emerald-700">{formatCurrency(slaughterSummary.netTotal)}</p>
                     </div>
                     <div>
                       <span className="text-xs text-gray-500">Líquido/animal</span>
@@ -1064,7 +1064,7 @@ export default function NegociosPage() {
             <button
               type="submit"
               disabled={creating}
-              className="rounded bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+              className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
             >
               {creating ? 'Salvando...' : 'Salvar negócio'}
             </button>
@@ -1077,7 +1077,7 @@ export default function NegociosPage() {
         <select
           value={filterType}
           onChange={(e) => setFilterType(e.target.value as DealType | '')}
-          className="rounded border border-gray-300 px-2 py-1 text-sm"
+          className="rounded-lg border border-gray-300 px-2 py-1 text-sm"
         >
           <option value="">Todos os tipos</option>
           <option value="VENDA">Vendas</option>
@@ -1087,7 +1087,7 @@ export default function NegociosPage() {
         <select
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value as DealStatus | '')}
-          className="rounded border border-gray-300 px-2 py-1 text-sm"
+          className="rounded-lg border border-gray-300 px-2 py-1 text-sm"
         >
           <option value="">Todos os status</option>
           <option value="RASCUNHO">Rascunho</option>
@@ -1098,7 +1098,7 @@ export default function NegociosPage() {
 
       {/* --- Lista de negócios --- */}
       {deals.length === 0 ? (
-        <div className="rounded border border-dashed border-gray-300 bg-gray-50 p-8 text-center">
+        <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-8 text-center">
           <p className="text-gray-500">Nenhum negócio registrado.</p>
           <p className="mt-1 text-sm text-gray-400">
             Clique em &quot;Novo negócio&quot; para calcular uma compra, venda ou abate.
@@ -1112,7 +1112,7 @@ export default function NegociosPage() {
             const sa = isAbate ? slaughterDealSummary(deal) : null;
 
             return (
-              <li key={deal.id} className="rounded border border-gray-200 bg-white p-4">
+              <li key={deal.id} className="rounded-xl border border-gray-200/80 bg-white shadow-sm p-4">
                 <div className="mb-2 flex items-start justify-between">
                   <div>
                     <div className="flex items-center gap-2">
@@ -1126,7 +1126,7 @@ export default function NegociosPage() {
                         {new Date(deal.dealDate).toLocaleDateString('pt-BR')}
                       </span>
                       {isAbate && deal.slaughterFrequency && (
-                        <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+                        <span className="rounded-lg bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
                           {deal.slaughterFrequency === 'TRIMESTRAL' ? 'Trimestral' : 'Semestral'}
                         </span>
                       )}
@@ -1139,7 +1139,7 @@ export default function NegociosPage() {
                     {isAbate && deal.status === 'FINALIZADO' && (
                       <button
                         onClick={() => handleDownloadReport(deal.id)}
-                        className="rounded bg-orange-100 px-2 py-1 text-xs font-medium text-orange-700 hover:bg-orange-200"
+                        className="rounded-lg bg-orange-100 px-2 py-1 text-xs font-medium text-orange-700 hover:bg-orange-200"
                       >
                         Relatório PDF
                       </button>
@@ -1148,13 +1148,13 @@ export default function NegociosPage() {
                       <>
                         <button
                           onClick={() => handleStatusChange(deal.id, 'FINALIZADO')}
-                          className="rounded bg-green-100 px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-200"
+                          className="rounded-lg bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-200"
                         >
                           Finalizar
                         </button>
                         <button
                           onClick={() => handleStatusChange(deal.id, 'CANCELADO')}
-                          className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-600 hover:bg-gray-200"
+                          className="rounded-lg bg-gray-100 px-2 py-1 text-xs text-gray-600 hover:bg-gray-200"
                         >
                           Cancelar
                         </button>
@@ -1214,7 +1214,7 @@ export default function NegociosPage() {
                 {/* Summary numbers — ABATE */}
                 {isAbate && sa && (
                   <>
-                    <div className="grid grid-cols-2 gap-2 rounded bg-orange-50 p-2 text-xs sm:grid-cols-5">
+                    <div className="grid grid-cols-2 gap-2 rounded-lg bg-orange-50 p-2 text-xs sm:grid-cols-5">
                       <div>
                         <span className="text-gray-500">{sa.totalAnimals} animais</span>
                       </div>
@@ -1234,7 +1234,7 @@ export default function NegociosPage() {
                       </div>
                       <div>
                         <span className="text-gray-500">Líquido: </span>
-                        <span className="font-bold text-green-700">{formatCurrency(sa.netTotal)}</span>
+                        <span className="font-bold text-emerald-700">{formatCurrency(sa.netTotal)}</span>
                       </div>
                     </div>
                     <div className="mt-1 flex gap-4 text-xs text-gray-500">
@@ -1250,7 +1250,7 @@ export default function NegociosPage() {
                 {/* Summary numbers — COMPRA/VENDA */}
                 {!isAbate && s && (
                   <>
-                    <div className="grid grid-cols-2 gap-2 rounded bg-gray-50 p-2 text-xs sm:grid-cols-5">
+                    <div className="grid grid-cols-2 gap-2 rounded-lg bg-gray-50 p-2 text-xs sm:grid-cols-5">
                       <div>
                         <span className="text-gray-500">{s.totalAnimals} animais</span>
                       </div>
@@ -1270,7 +1270,7 @@ export default function NegociosPage() {
                       </div>
                       <div>
                         <span className="text-gray-500">Total: </span>
-                        <span className="font-bold text-green-700">{formatCurrency(s.grandTotal)}</span>
+                        <span className="font-bold text-emerald-700">{formatCurrency(s.grandTotal)}</span>
                       </div>
                     </div>
 

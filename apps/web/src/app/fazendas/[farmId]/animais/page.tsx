@@ -1,5 +1,8 @@
 'use client';
 
+import { Beef } from 'lucide-react';
+import PageHeader from '@/components/PageHeader';
+
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
@@ -367,23 +370,23 @@ export default function AnimalsPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
-      <header className="mb-8">
-        <Link href={`/fazendas/${farmId}`} className="text-sm text-green-700 hover:underline">
-          ← Dashboard
-        </Link>
-        <h1 className="text-2xl font-semibold text-green-800">Rebanho</h1>
-      </header>
+    <main className="animate-fade-up mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-8">
+      <PageHeader
+        icon={Beef}
+        title="Rebanho"
+        subtitle="Gerencie o rebanho da propriedade"
+        backHref={`/fazendas/${farmId}`}
+      />
 
       {error && (
-        <p className="mb-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+        <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
           {error}
         </p>
       )}
 
       <form
         onSubmit={handleCreate}
-        className="mb-8 grid grid-cols-2 gap-3 rounded border border-gray-200 bg-white p-4 sm:grid-cols-3"
+        className="mb-8 grid grid-cols-2 gap-3 rounded-xl border border-gray-200/80 bg-white shadow-sm p-4 sm:grid-cols-3"
       >
         <div className="col-span-2 sm:col-span-1">
           <label className="text-xs font-medium text-gray-600">Brinco</label>
@@ -392,7 +395,7 @@ export default function AnimalsPage() {
             required
             value={earTag}
             onChange={(e) => setEarTag(e.target.value)}
-            className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
 
@@ -401,7 +404,7 @@ export default function AnimalsPage() {
           <select
             value={sex}
             onChange={(e) => setSex(e.target.value as AnimalSex)}
-            className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           >
             {SEX_OPTIONS.map((opt) => (
               <option key={opt} value={opt}>
@@ -416,7 +419,7 @@ export default function AnimalsPage() {
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value as AnimalCategory)}
-            className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           >
             {CATEGORY_OPTIONS.map((opt) => (
               <option key={opt} value={opt}>
@@ -432,7 +435,7 @@ export default function AnimalsPage() {
             type="text"
             value={breed}
             onChange={(e) => setBreed(e.target.value)}
-            className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
 
@@ -441,7 +444,7 @@ export default function AnimalsPage() {
           <select
             value={pastureId}
             onChange={(e) => setPastureId(e.target.value)}
-            className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           >
             <option value="">— Sem pasto —</option>
             {pastures.map((p) => (
@@ -456,7 +459,7 @@ export default function AnimalsPage() {
           <button
             type="submit"
             disabled={creating}
-            className="rounded bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+            className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
           >
             {creating ? 'Cadastrando...' : 'Cadastrar animal'}
           </button>
@@ -472,7 +475,7 @@ export default function AnimalsPage() {
         </div>
       ) : (
         <>
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded border border-gray-200 bg-gray-50 px-3 py-2 text-sm">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm">
             <label className="flex items-center gap-2 text-gray-600">
               <input
                 type="checkbox"
@@ -495,7 +498,7 @@ export default function AnimalsPage() {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Buscar por brinco..."
-                  className="w-44 rounded border border-gray-300 py-1.5 pl-7 pr-2 text-sm focus:border-green-600 focus:outline-none"
+                  className="w-44 rounded-lg border border-gray-300 py-1.5 pl-7 pr-2 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 />
               </div>
               <button
@@ -503,7 +506,7 @@ export default function AnimalsPage() {
                 onClick={() => setShowFilters((v) => !v)}
                 className={`rounded border px-3 py-1.5 text-sm font-medium ${
                   hasActiveFilters
-                    ? 'border-green-600 bg-green-50 text-green-700'
+                    ? 'border-emerald-600 bg-emerald-50 text-emerald-700'
                     : 'border-gray-300 text-gray-600 hover:bg-gray-100'
                 }`}
               >
@@ -513,7 +516,7 @@ export default function AnimalsPage() {
           </div>
 
           {showFilters && (
-            <div className="mb-3 space-y-4 rounded border border-gray-200 bg-white p-3">
+            <div className="mb-3 space-y-4 rounded-xl border border-gray-200/80 bg-white shadow-sm p-3">
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
                 <div>
                   <p className="mb-1 text-xs font-medium text-gray-600">Categoria</p>
@@ -643,7 +646,7 @@ export default function AnimalsPage() {
                   setMovePastureId('');
                   setMoveModalOpen(true);
                 }}
-                className="rounded bg-green-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-800"
+                className="rounded-lg bg-emerald-700 px-3 py-1.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800"
               >
                 Mover de pasto
               </button>
@@ -657,30 +660,35 @@ export default function AnimalsPage() {
             {filteredAnimals.map((animal) => (
               <li
                 key={animal.id}
-                className="flex items-center justify-between rounded border border-gray-200 bg-white px-4 py-3 hover:border-green-600 hover:shadow-sm"
+                className="flex flex-col gap-2 rounded-xl border border-gray-200/80 bg-white shadow-sm px-4 py-3 transition-all duration-200 hover:border-emerald-200 hover:shadow-md sm:flex-row sm:items-center sm:justify-between"
               >
-                <input
-                  type="checkbox"
-                  checked={selected.has(animal.id)}
-                  onChange={(e) => toggleSelected(animal.id, e.target.checked)}
-                  className="mr-3"
-                />
-                <Link href={`/fazendas/${farmId}/animais/${animal.id}`} className="flex-1">
-                  <p className="font-medium text-gray-900">{animal.earTag}</p>
-                  <p className="text-sm text-gray-500">
-                    {animal.category} · {animal.breed ?? 'Raça não informada'}
-                  </p>
-                </Link>
-                <div className="flex items-center gap-3">
+                <div className="flex min-w-0 items-center">
+                  <input
+                    type="checkbox"
+                    checked={selected.has(animal.id)}
+                    onChange={(e) => toggleSelected(animal.id, e.target.checked)}
+                    className="mr-3 shrink-0"
+                  />
+                  <Link href={`/fazendas/${farmId}/animais/${animal.id}`} className="flex min-w-0 flex-1 items-center gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700"><Beef size={18} strokeWidth={1.9} /></span>
+                    <span className="min-w-0">
+                      <span className="block truncate font-medium text-gray-900">{animal.earTag}</span>
+                      <span className="block truncate text-sm text-gray-500">
+                        {animal.category} · {animal.breed ?? 'Raça não informada'}
+                      </span>
+                    </span>
+                  </Link>
+                </div>
+                <div className="flex items-center gap-3 self-end sm:self-auto">
                   <p className="text-sm text-gray-500">
                     {animal.currentWeightKg ? `${animal.currentWeightKg} kg` : '—'}
                   </p>
                   <button
                     type="button"
                     onClick={() => startEdit(animal)}
-                    className="text-sm font-medium text-green-700 hover:underline"
+                    className="text-sm font-medium text-emerald-700 hover:underline"
                   >
-                    Visualização rápida
+                    Editar
                   </button>
                   <button
                     type="button"
@@ -723,7 +731,7 @@ export default function AnimalsPage() {
             <select
               value={movePastureId}
               onChange={(e) => setMovePastureId(e.target.value)}
-              className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+              className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
             >
               <option value="">— Sem pasto —</option>
               {pastures.map((p) => (
@@ -736,7 +744,7 @@ export default function AnimalsPage() {
               <button
                 type="button"
                 onClick={() => setMoveModalOpen(false)}
-                className="rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
               >
                 Cancelar
               </button>
@@ -744,7 +752,7 @@ export default function AnimalsPage() {
                 type="button"
                 disabled={moving}
                 onClick={handleMovePasture}
-                className="rounded bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+                className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
               >
                 {moving ? 'Movendo...' : 'Mover'}
               </button>
@@ -782,7 +790,7 @@ export default function AnimalsPage() {
                   type="text"
                   value={editEarTag}
                   onChange={(e) => setEditEarTag(e.target.value)}
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 />
               </div>
               <div>
@@ -790,7 +798,7 @@ export default function AnimalsPage() {
                 <select
                   value={editCategory}
                   onChange={(e) => setEditCategory(e.target.value as AnimalCategory)}
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 >
                   {CATEGORY_OPTIONS.map((opt) => (
                     <option key={opt} value={opt}>
@@ -805,7 +813,7 @@ export default function AnimalsPage() {
                   type="text"
                   value={editBreed}
                   onChange={(e) => setEditBreed(e.target.value)}
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 />
               </div>
               <div>
@@ -813,7 +821,7 @@ export default function AnimalsPage() {
                 <select
                   value={editPastureId}
                   onChange={(e) => setEditPastureId(e.target.value)}
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 >
                   <option value="">— Sem pasto —</option>
                   {pastures.map((p) => (
@@ -829,7 +837,7 @@ export default function AnimalsPage() {
                   type="text"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 />
               </div>
               <div>
@@ -838,7 +846,7 @@ export default function AnimalsPage() {
                   type="text"
                   value={editRfid}
                   onChange={(e) => setEditRfid(e.target.value)}
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 />
               </div>
               <div>
@@ -846,7 +854,7 @@ export default function AnimalsPage() {
                 <select
                   value={editSex}
                   onChange={(e) => setEditSex(e.target.value as AnimalSex)}
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 >
                   {SEX_OPTIONS.map((opt) => (
                     <option key={opt} value={opt}>
@@ -863,7 +871,7 @@ export default function AnimalsPage() {
                   type="date"
                   value={editBirthDate}
                   onChange={(e) => setEditBirthDate(e.target.value)}
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 />
               </div>
               <div>
@@ -875,7 +883,7 @@ export default function AnimalsPage() {
                   step="0.1"
                   value={editCurrentWeightKg}
                   onChange={(e) => setEditCurrentWeightKg(e.target.value)}
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 />
               </div>
             </div>
@@ -883,7 +891,7 @@ export default function AnimalsPage() {
             <div className="mt-6 flex items-center justify-between">
               <Link
                 href={`/fazendas/${farmId}/animais/${editingId}`}
-                className="text-sm font-medium text-green-700 hover:underline"
+                className="text-sm font-medium text-emerald-700 hover:underline"
               >
                 Ver detalhes completos →
               </Link>
@@ -891,7 +899,7 @@ export default function AnimalsPage() {
                 <button
                   type="button"
                   onClick={() => setEditingId(null)}
-                  className="rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                 >
                   Cancelar
                 </button>
@@ -899,7 +907,7 @@ export default function AnimalsPage() {
                   type="button"
                   disabled={saving}
                   onClick={() => handleSaveEdit(editingId)}
-                  className="rounded bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+                  className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
                 >
                   {saving ? 'Salvando...' : 'Salvar'}
                 </button>

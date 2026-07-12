@@ -15,7 +15,7 @@ import {
 
 const STATUS_COLOR: Record<SubscriptionStatus, string> = {
   TRIALING: 'bg-blue-100 text-blue-800',
-  ACTIVE: 'bg-green-100 text-green-800',
+  ACTIVE: 'bg-emerald-100 text-emerald-800',
   PAST_DUE: 'bg-amber-100 text-amber-800',
   CANCELED: 'bg-gray-100 text-gray-700',
   SUSPENDED: 'bg-red-100 text-red-800',
@@ -165,30 +165,30 @@ function SubscriptionContent() {
   const isTrial = sub?.planTier === 'TRIAL';
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
+    <main className="animate-fade-up mx-auto w-full max-w-3xl flex-1 px-4 py-10">
       <header className="mb-6">
-        <Link href="/fazendas" className="text-sm text-green-700 hover:underline">
+        <Link href="/fazendas" className="text-sm text-emerald-700 hover:underline">
           ← Propriedades
         </Link>
-        <h1 className="text-2xl font-semibold text-green-800">Minha assinatura</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Minha assinatura</h1>
         <p className="text-sm text-gray-500">
           Gerencie seu plano, pagamento e limites da conta.
         </p>
       </header>
 
       {error && (
-        <p className="mb-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+        <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
           {error}
         </p>
       )}
       {message && (
-        <p className="mb-4 rounded bg-green-50 px-3 py-2 text-sm text-green-700">{message}</p>
+        <p className="mb-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{message}</p>
       )}
 
       {sub && (
         <>
           {/* Situação atual */}
-          <section className="mb-8 rounded border border-gray-200 bg-white p-4">
+          <section className="mb-8 rounded-xl border border-gray-200/80 bg-white shadow-sm p-4">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="font-semibold text-gray-800">Plano atual</h2>
               <span
@@ -222,12 +222,12 @@ function SubscriptionContent() {
             </div>
 
             {sub.status === 'PAST_DUE' && (
-              <p className="mt-3 rounded bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
                 Há um pagamento pendente. Renove abaixo para manter o acesso completo.
               </p>
             )}
             {(sub.status === 'CANCELED' || sub.status === 'SUSPENDED') && (
-              <p className="mt-3 rounded bg-red-50 px-3 py-2 text-sm text-red-700">
+              <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
                 Sua assinatura não está ativa — o cadastro de novos dados está bloqueado.
                 Escolha um plano abaixo para reativar.
               </p>
@@ -257,11 +257,11 @@ function SubscriptionContent() {
                 return (
                   <div
                     key={p.tier}
-                    className={`flex flex-col rounded border p-4 ${
-                      isCurrent ? 'border-green-600 bg-green-50' : 'border-gray-200 bg-white'
+                    className={`flex flex-col rounded-lg border p-4 ${
+                      isCurrent ? 'border-emerald-600 bg-emerald-50' : 'border-gray-200 bg-white'
                     }`}
                   >
-                    <p className="font-semibold text-green-800">{p.label}</p>
+                    <p className="font-semibold text-emerald-800">{p.label}</p>
                     <p className="mt-1 text-xl font-bold text-gray-900">{p.priceLabel}</p>
                     <p className="text-xs text-gray-500">{p.farms}</p>
                     <ul className="mt-3 flex-1 space-y-1 text-sm text-gray-600">
@@ -271,7 +271,7 @@ function SubscriptionContent() {
                     </ul>
                     <div className="mt-4">
                       {isCurrent && sub.status !== 'CANCELED' && sub.status !== 'SUSPENDED' ? (
-                        <span className="block rounded border border-green-600 px-3 py-2 text-center text-sm font-medium text-green-700">
+                        <span className="block rounded-lg border border-emerald-600 px-3 py-2 text-center text-sm font-medium text-emerald-700">
                           Plano atual
                         </span>
                       ) : p.checkout ? (
@@ -279,7 +279,7 @@ function SubscriptionContent() {
                           type="button"
                           onClick={() => handleCheckout(p.tier)}
                           disabled={busyTier !== null}
-                          className="w-full rounded bg-green-700 px-3 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+                          className="w-full rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
                         >
                           {busyTier === p.tier
                             ? 'Redirecionando...'
@@ -290,7 +290,7 @@ function SubscriptionContent() {
                       ) : (
                         <Link
                           href="/suporte"
-                          className="block rounded border border-gray-300 px-3 py-2 text-center text-sm font-medium text-gray-700 hover:bg-gray-50"
+                          className="block rounded-lg border border-gray-300 px-3 py-2 text-center text-sm font-medium text-gray-700 hover:bg-gray-50"
                         >
                           Falar com vendas
                         </Link>
@@ -327,7 +327,7 @@ export default function SubscriptionPage() {
 
 function Info({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded border border-gray-200 p-2">
+    <div className="rounded-lg border border-gray-200 p-2">
       <p className="text-xs uppercase tracking-wide text-gray-500">{label}</p>
       <p className="mt-1 font-semibold text-gray-900">{value}</p>
     </div>

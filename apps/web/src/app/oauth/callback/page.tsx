@@ -32,7 +32,7 @@ function OAuthCallbackContent() {
           <p className="text-sm text-red-600">{error}</p>
           <button
             onClick={() => router.replace('/entrar')}
-            className="mt-4 text-sm font-medium text-green-700 hover:underline"
+            className="mt-4 text-sm font-medium text-emerald-700 hover:underline"
           >
             Voltar para o login
           </button>

@@ -1,7 +1,9 @@
 'use client';
 
+import { Wallet } from 'lucide-react';
+import PageHeader from '@/components/PageHeader';
+
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, ApiError } from '@/lib/api';
@@ -196,36 +198,36 @@ export default function FinancePage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
-      <header className="mb-8">
-        <Link href={`/fazendas/${farmId}`} className="text-sm text-green-700 hover:underline">
-          ← Dashboard
-        </Link>
-        <h1 className="text-2xl font-semibold text-green-800">Financeiro</h1>
-      </header>
+    <main className="animate-fade-up mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-8">
+      <PageHeader
+        icon={Wallet}
+        title="Financeiro"
+        subtitle="Lançamentos e fluxo de caixa"
+        backHref={`/fazendas/${farmId}`}
+      />
 
       {error && (
-        <p className="mb-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+        <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
           {error}
         </p>
       )}
 
       {forbidden ? (
-        <p className="rounded border border-gray-200 bg-white px-4 py-3 text-sm text-gray-500">
+        <p className="rounded-xl border border-gray-200/80 bg-white shadow-sm px-4 py-3 text-sm text-gray-500">
           Seu perfil não tem permissão para visualizar os dados financeiros desta propriedade.
         </p>
       ) : (
         <>
           <form
             onSubmit={handleCreate}
-            className="mb-8 grid grid-cols-2 gap-3 rounded border border-gray-200 bg-white p-4 sm:grid-cols-4"
+            className="mb-8 grid grid-cols-2 gap-3 rounded-xl border border-gray-200/80 bg-white shadow-sm p-4 sm:grid-cols-4"
           >
             <div>
               <label className="text-xs font-medium text-gray-600">Tipo</label>
               <select
                 value={type}
                 onChange={(e) => setType(e.target.value as TransactionType)}
-                className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
               >
                 {TYPE_OPTIONS.map((opt) => (
                   <option key={opt} value={opt}>
@@ -240,7 +242,7 @@ export default function FinancePage() {
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value as TransactionCategory)}
-                className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
               >
                 {CATEGORY_OPTIONS.map((opt) => (
                   <option key={opt} value={opt}>
@@ -258,7 +260,7 @@ export default function FinancePage() {
                 required
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
               />
             </div>
 
@@ -269,7 +271,7 @@ export default function FinancePage() {
                 required
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
-                className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
               />
             </div>
 
@@ -279,7 +281,7 @@ export default function FinancePage() {
                 type="text"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
               />
             </div>
 
@@ -291,7 +293,7 @@ export default function FinancePage() {
                 <select
                   value={cropCycleId}
                   onChange={(e) => setCropCycleId(e.target.value)}
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 >
                   <option value="">Sem vínculo</option>
                   {cropCycles.map((c) => (
@@ -322,7 +324,7 @@ export default function FinancePage() {
               <button
                 type="submit"
                 disabled={creating}
-                className="rounded bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+                className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
               >
                 {creating ? 'Salvando...' : 'Lançar'}
               </button>
@@ -341,7 +343,7 @@ export default function FinancePage() {
                 {transactions.map((t) => (
                   <li
                     key={t.id}
-                    className="flex items-center justify-between rounded border border-gray-200 bg-white px-4 py-3"
+                    className="flex items-center justify-between rounded-xl border border-gray-200/80 bg-white shadow-sm px-4 py-3"
                   >
                     <div>
                       <p className="font-medium text-gray-900">
@@ -358,7 +360,7 @@ export default function FinancePage() {
                       {!t.paidAt && (
                         <button
                           onClick={() => handleMarkPaid(t.id)}
-                          className="text-xs font-medium text-green-700 hover:underline"
+                          className="text-xs font-medium text-emerald-700 hover:underline"
                         >
                           Marcar como pago
                         </button>
@@ -376,13 +378,13 @@ export default function FinancePage() {
             )}
           </section>
 
-          <section className="rounded border border-gray-200 bg-white p-4">
+          <section className="rounded-xl border border-gray-200/80 bg-white shadow-sm p-4">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="font-semibold text-gray-800">Fluxo de caixa</h2>
               <select
                 value={granularity}
                 onChange={(e) => setGranularity(e.target.value as 'daily' | 'weekly' | 'monthly')}
-                className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+                className="rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
               >
                 {GRANULARITY_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -394,6 +396,7 @@ export default function FinancePage() {
             {cashFlow.length === 0 ? (
               <p className="text-sm text-gray-500">Sem dados para o período.</p>
             ) : (
+              <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="text-xs uppercase text-gray-500">
@@ -407,13 +410,14 @@ export default function FinancePage() {
                   {cashFlow.map((bucket) => (
                     <tr key={bucket.period} className="border-t border-gray-100">
                       <td className="py-1.5">{bucket.period}</td>
-                      <td className="py-1.5 text-green-700">{formatCurrency(bucket.receita)}</td>
+                      <td className="py-1.5 text-emerald-700">{formatCurrency(bucket.receita)}</td>
                       <td className="py-1.5 text-red-600">{formatCurrency(bucket.despesa)}</td>
                       <td className="py-1.5 font-medium">{formatCurrency(bucket.saldo)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </section>
         </>

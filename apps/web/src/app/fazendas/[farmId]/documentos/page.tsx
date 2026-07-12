@@ -1,8 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
-import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
+import { FileText } from 'lucide-react';
+import PageHeader from '@/components/PageHeader';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, apiUpload, apiDownload, ApiError } from '@/lib/api';
 import { useToast } from '@/lib/toast-context';
@@ -124,34 +125,30 @@ export default function DocumentsPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
-      <header className="mb-8">
-        <Link href={`/fazendas/${farmId}`} className="text-sm text-green-700 hover:underline">
-          ← Dashboard
-        </Link>
-        <h1 className="text-2xl font-semibold text-green-800">Documentos</h1>
-        <p className="text-sm text-gray-500">
-          Armazenamento local de arquivos. Integração com armazenamento em nuvem (AWS S3,
-          Cloudflare R2) é uma evolução futura.
-        </p>
-      </header>
+    <main className="animate-fade-up mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-8">
+      <PageHeader
+        icon={FileText}
+        title="Documentos"
+        subtitle="Arquivos da propriedade"
+        backHref={`/fazendas/${farmId}`}
+      />
 
       {error && (
-        <p className="mb-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+        <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
           {error}
         </p>
       )}
 
       <form
         onSubmit={handleUpload}
-        className="mb-8 flex flex-wrap items-end gap-3 rounded border border-gray-200 bg-white p-4"
+        className="mb-8 flex flex-wrap items-end gap-3 rounded-xl border border-gray-200/80 bg-white shadow-sm p-4"
       >
         <div>
           <label className="text-xs font-medium text-gray-600">Categoria</label>
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value as DocumentCategory)}
-            className="mt-1 rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="mt-1 rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           >
             {CATEGORY_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -174,7 +171,7 @@ export default function DocumentsPage() {
         <button
           type="submit"
           disabled={uploading}
-          className="rounded bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+          className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
         >
           {uploading ? 'Enviando...' : 'Enviar documento'}
         </button>
@@ -190,7 +187,7 @@ export default function DocumentsPage() {
           {documents.map((doc) => (
             <li
               key={doc.id}
-              className="flex items-center justify-between rounded border border-gray-200 bg-white px-4 py-3"
+              className="flex items-center justify-between rounded-xl border border-gray-200/80 bg-white shadow-sm px-4 py-3"
             >
               <div>
                 <p className="font-medium text-gray-900">{doc.fileName}</p>
@@ -202,7 +199,7 @@ export default function DocumentsPage() {
               <div className="flex gap-3">
                 <button
                   onClick={() => handleDownload(doc)}
-                  className="text-xs font-medium text-green-700 hover:underline"
+                  className="text-xs font-medium text-emerald-700 hover:underline"
                 >
                   Baixar
                 </button>

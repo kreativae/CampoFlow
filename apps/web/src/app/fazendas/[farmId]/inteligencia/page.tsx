@@ -1,8 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
+import { Sparkles } from 'lucide-react';
+import PageHeader from '@/components/PageHeader';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, ApiError } from '@/lib/api';
 import type { BiOverview } from '@/lib/types';
@@ -62,27 +63,22 @@ export default function BiPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
-      <header className="mb-8">
-        <Link href={`/fazendas/${farmId}`} className="text-sm text-green-700 hover:underline">
-          ← Dashboard
-        </Link>
-        <h1 className="text-2xl font-semibold text-green-800">IA &amp; Inteligência de Dados</h1>
-        <p className="text-sm text-gray-500">
-          KPIs calculados a partir de dados reais. Previsões e sugestões usam heurísticas
-          estatísticas/baseadas em regras — não há infraestrutura de IA/ML treinada disponível
-          neste ambiente.
-        </p>
-      </header>
+    <main className="animate-fade-up mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-8">
+      <PageHeader
+        icon={Sparkles}
+        title="Inteligência"
+        subtitle="Análises e recomendações IA"
+        backHref={`/fazendas/${farmId}`}
+      />
 
       {error && (
-        <p className="mb-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+        <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
           {error}
         </p>
       )}
 
       {forbidden ? (
-        <p className="rounded border border-gray-200 bg-white px-4 py-3 text-sm text-gray-500">
+        <p className="rounded-xl border border-gray-200/80 bg-white shadow-sm px-4 py-3 text-sm text-gray-500">
           Seu perfil não tem permissão para visualizar a IA desta propriedade.
         </p>
       ) : data ? (
@@ -101,7 +97,7 @@ export default function BiPage() {
             </div>
           </section>
 
-          <section className="mb-8 rounded border border-gray-200 bg-white p-4">
+          <section className="mb-8 rounded-xl border border-gray-200/80 bg-white shadow-sm p-4">
             <h2 className="mb-3 font-semibold text-gray-800">
               Previsão de ganho de peso (próximos {data.forecastWeightGain.windowDays} dias)
             </h2>
@@ -114,7 +110,7 @@ export default function BiPage() {
             </p>
           </section>
 
-          <section className="mb-8 rounded border border-gray-200 bg-white p-4">
+          <section className="mb-8 rounded-xl border border-gray-200/80 bg-white shadow-sm p-4">
             <h2 className="mb-3 font-semibold text-gray-800">Previsão de vendas (próximo mês)</h2>
             <p className="text-sm text-gray-700">
               Receita projetada:{' '}
@@ -123,7 +119,7 @@ export default function BiPage() {
             </p>
           </section>
 
-          <section className="mb-8 rounded border border-gray-200 bg-white p-4">
+          <section className="mb-8 rounded-xl border border-gray-200/80 bg-white shadow-sm p-4">
             <h2 className="mb-3 font-semibold text-gray-800">Dados de outros módulos</h2>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <KpiCard
@@ -157,7 +153,7 @@ export default function BiPage() {
 
 function KpiCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded border border-gray-200 bg-white p-3">
+    <div className="rounded-xl border border-gray-200/80 bg-white shadow-sm p-3">
       <p className="text-xs uppercase tracking-wide text-gray-500">{label}</p>
       <p className="mt-1 text-lg font-semibold text-gray-900">{value}</p>
     </div>

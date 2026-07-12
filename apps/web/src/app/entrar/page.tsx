@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { Leaf } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { ApiError } from '@/lib/api';
 import GoogleLoginButton from '@/components/GoogleLoginButton';
@@ -35,19 +36,27 @@ export default function LoginPage() {
     }
   }
 
+  const inputClass =
+    'w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm transition-colors duration-150 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15 disabled:bg-gray-100';
+
   return (
     <main className="flex flex-1 items-center justify-center px-4">
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-sm space-y-4 rounded-lg border border-gray-200 bg-white p-8 shadow-sm"
+        className="animate-fade-up w-full max-w-sm space-y-4 rounded-2xl border border-gray-200/80 bg-white p-8 shadow-sm"
       >
-        <div>
-          <h1 className="text-2xl font-semibold text-green-800">CampoFlow</h1>
-          <p className="text-sm text-gray-500">Entre na sua conta</p>
+        <div className="space-y-3">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-600">
+            <Leaf size={22} strokeWidth={2} className="text-white" />
+          </span>
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-gray-900">CampoFlow</h1>
+            <p className="text-sm text-gray-500">Entre na sua conta</p>
+          </div>
         </div>
 
         {error && (
-          <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+          <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
             {error}
           </p>
         )}
@@ -62,7 +71,7 @@ export default function LoginPage() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-green-600 focus:outline-none"
+            className={inputClass}
           />
         </div>
 
@@ -77,13 +86,13 @@ export default function LoginPage() {
             disabled={mfaRequired}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-green-600 focus:outline-none disabled:bg-gray-100"
+            className={inputClass}
           />
           {!mfaRequired && (
             <p className="text-right">
               <Link
                 href="/esqueci-senha"
-                className="text-xs font-medium text-green-700 hover:underline"
+                className="text-xs font-medium text-emerald-700 hover:underline"
               >
                 Esqueci minha senha
               </Link>
@@ -105,7 +114,7 @@ export default function LoginPage() {
               autoFocus
               value={mfaCode}
               onChange={(e) => setMfaCode(e.target.value)}
-              className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-green-600 focus:outline-none"
+              className={inputClass}
             />
           </div>
         )}
@@ -113,7 +122,7 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={submitting}
-          className="w-full rounded bg-green-700 px-3 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+          className="w-full rounded-lg bg-emerald-700 px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-150 hover:bg-emerald-800 active:scale-[0.99] disabled:opacity-50"
         >
           {submitting ? 'Entrando...' : mfaRequired ? 'Confirmar código' : 'Entrar'}
         </button>
@@ -128,7 +137,7 @@ export default function LoginPage() {
 
         <p className="text-center text-sm text-gray-500">
           Não tem conta?{' '}
-          <Link href="/cadastrar" className="font-medium text-green-700 hover:underline">
+          <Link href="/cadastrar" className="font-medium text-emerald-700 hover:underline">
             Cadastre-se
           </Link>
         </p>

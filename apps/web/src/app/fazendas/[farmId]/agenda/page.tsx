@@ -1,7 +1,9 @@
 'use client';
 
+import { Calendar } from 'lucide-react';
+import PageHeader from '@/components/PageHeader';
+
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, ApiError } from '@/lib/api';
@@ -156,22 +158,22 @@ export default function AgendaPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
-      <header className="mb-8">
-        <Link href={`/fazendas/${farmId}`} className="text-sm text-green-700 hover:underline">
-          ← Dashboard
-        </Link>
-        <h1 className="text-2xl font-semibold text-green-800">Agenda</h1>
-      </header>
+    <main className="animate-fade-up mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-8">
+      <PageHeader
+        icon={Calendar}
+        title="Agenda"
+        subtitle="Eventos, alertas e calendário"
+        backHref={`/fazendas/${farmId}`}
+      />
 
       {error && (
-        <p className="mb-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+        <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
           {error}
         </p>
       )}
 
       {alerts.length > 0 && (
-        <div className="mb-8 rounded border border-amber-200 bg-amber-50 p-4">
+        <div className="mb-8 rounded-lg border border-amber-200 bg-amber-50 p-4">
           <h2 className="mb-2 text-sm font-semibold text-amber-800">
             Pendentes (próximos 7 dias ou atrasados)
           </h2>
@@ -189,7 +191,7 @@ export default function AgendaPage() {
 
       <form
         onSubmit={handleCreate}
-        className="mb-8 grid grid-cols-2 gap-3 rounded border border-gray-200 bg-white p-4 sm:grid-cols-4"
+        className="mb-8 grid grid-cols-2 gap-3 rounded-xl border border-gray-200/80 bg-white shadow-sm p-4 sm:grid-cols-4"
       >
         <div className="col-span-2">
           <label className="text-xs font-medium text-gray-600">Título</label>
@@ -198,7 +200,7 @@ export default function AgendaPage() {
             required
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
 
@@ -207,7 +209,7 @@ export default function AgendaPage() {
           <select
             value={type}
             onChange={(e) => setType(e.target.value as AgendaEventType)}
-            className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           >
             {TYPE_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -224,7 +226,7 @@ export default function AgendaPage() {
             required
             value={scheduledDate}
             onChange={(e) => setScheduledDate(e.target.value)}
-            className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
 
@@ -232,7 +234,7 @@ export default function AgendaPage() {
           <button
             type="submit"
             disabled={creating}
-            className="rounded bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+            className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
           >
             {creating ? 'Salvando...' : 'Criar evento'}
           </button>
@@ -244,7 +246,7 @@ export default function AgendaPage() {
           type="button"
           onClick={() => setView('lista')}
           className={`rounded px-3 py-1.5 text-sm font-medium ${
-            view === 'lista' ? 'bg-green-700 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            view === 'lista' ? 'bg-emerald-700 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
           }`}
         >
           Lista
@@ -253,7 +255,7 @@ export default function AgendaPage() {
           type="button"
           onClick={() => setView('calendario')}
           className={`rounded px-3 py-1.5 text-sm font-medium ${
-            view === 'calendario' ? 'bg-green-700 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            view === 'calendario' ? 'bg-emerald-700 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
           }`}
         >
           Calendário
@@ -261,7 +263,7 @@ export default function AgendaPage() {
       </div>
 
       {view === 'calendario' && (
-        <div className="mb-8 rounded border border-gray-200 bg-white p-4">
+        <div className="mb-8 overflow-x-auto rounded-xl border border-gray-200/80 bg-white shadow-sm p-4">
           <div className="mb-3 flex items-center justify-between">
             <button
               type="button"
@@ -270,7 +272,7 @@ export default function AgendaPage() {
                 setCalendarMonth(prev.getMonth());
                 setCalendarYear(prev.getFullYear());
               }}
-              className="rounded px-2 py-1 text-sm font-medium text-gray-600 hover:bg-gray-100"
+              className="rounded-lg px-2 py-1 text-sm font-medium text-gray-600 hover:bg-gray-100"
             >
               ← Anterior
             </button>
@@ -287,7 +289,7 @@ export default function AgendaPage() {
                 setCalendarMonth(next.getMonth());
                 setCalendarYear(next.getFullYear());
               }}
-              className="rounded px-2 py-1 text-sm font-medium text-gray-600 hover:bg-gray-100"
+              className="rounded-lg px-2 py-1 text-sm font-medium text-gray-600 hover:bg-gray-100"
             >
               Próximo →
             </button>
@@ -308,9 +310,9 @@ export default function AgendaPage() {
               return (
                 <div
                   key={i}
-                  className={`min-h-20 rounded border p-1 text-xs ${
+                  className={`min-h-20 rounded-lg border p-1 text-xs ${
                     date ? 'border-gray-200 bg-white' : 'border-transparent'
-                  } ${isToday ? 'ring-2 ring-green-600' : ''}`}
+                  } ${isToday ? 'ring-2 ring-emerald-600' : ''}`}
                 >
                   {date && (
                     <>
@@ -320,10 +322,10 @@ export default function AgendaPage() {
                           <li
                             key={e.id}
                             title={`${typeLabel(e.type)}: ${e.title}`}
-                            className={`truncate rounded px-1 ${
+                            className={`truncate rounded-lg px-1 ${
                               e.completedAt
                                 ? 'bg-gray-100 text-gray-500'
-                                : 'bg-green-100 text-green-800'
+                                : 'bg-emerald-100 text-emerald-800'
                             }`}
                           >
                             {e.title}
@@ -349,7 +351,7 @@ export default function AgendaPage() {
           {events.map((e) => (
             <li
               key={e.id}
-              className="flex items-center justify-between rounded border border-gray-200 bg-white px-4 py-3"
+              className="flex items-center justify-between rounded-xl border border-gray-200/80 bg-white shadow-sm px-4 py-3"
             >
               <div>
                 <p className="font-medium text-gray-900">{e.title}</p>
@@ -362,7 +364,7 @@ export default function AgendaPage() {
                 {!e.completedAt && (
                   <button
                     onClick={() => handleComplete(e.id)}
-                    className="text-xs font-medium text-green-700 hover:underline"
+                    className="text-xs font-medium text-emerald-700 hover:underline"
                   >
                     Marcar como concluído
                   </button>

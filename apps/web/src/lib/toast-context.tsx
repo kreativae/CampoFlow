@@ -27,7 +27,7 @@ interface ToastContextValue {
 const ToastContext = createContext<ToastContextValue | undefined>(undefined);
 
 const KIND_STYLE: Record<ToastKind, string> = {
-  success: 'border-green-200 bg-green-50 text-green-800',
+  success: 'border-emerald-200 bg-emerald-50 text-emerald-800',
   error: 'border-red-200 bg-red-50 text-red-700',
   info: 'border-gray-200 bg-white text-gray-800',
 };
@@ -67,7 +67,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <div
             key={t.id}
             role="status"
-            className={`pointer-events-auto flex items-start gap-2 rounded border px-3 py-2 text-sm shadow-sm ${KIND_STYLE[t.kind]}`}
+            className={`pointer-events-auto flex items-start gap-2 rounded-lg border px-3 py-2 text-sm shadow-sm ${KIND_STYLE[t.kind]}`}
           >
             <span className="mt-0.5 font-bold">{KIND_ICON[t.kind]}</span>
             <span className="flex-1">{t.message}</span>

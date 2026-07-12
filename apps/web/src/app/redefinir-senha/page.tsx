@@ -42,14 +42,14 @@ function ResetPasswordContent() {
 
   return (
     <main className="flex flex-1 items-center justify-center px-4">
-      <div className="w-full max-w-sm space-y-4 rounded-lg border border-gray-200 bg-white p-8 shadow-sm">
+      <div className="w-full max-w-sm space-y-4 rounded-xl border border-gray-200/80 bg-white shadow-sm p-8">
         <div>
-          <h1 className="text-2xl font-semibold text-green-800">CampoFlow</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-gray-900">CampoFlow</h1>
           <p className="text-sm text-gray-500">Criar nova senha</p>
         </div>
 
         {!token ? (
-          <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+          <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
             Link inválido. Solicite um novo link em{' '}
             <Link href="/esqueci-senha" className="font-medium underline">
               Esqueci minha senha
@@ -57,13 +57,13 @@ function ResetPasswordContent() {
             .
           </p>
         ) : done ? (
-          <p className="rounded bg-green-50 px-3 py-2 text-sm text-green-800" role="status">
+          <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800" role="status">
             Senha redefinida com sucesso. Redirecionando para o login...
           </p>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+              <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
                 {error}
               </p>
             )}
@@ -81,7 +81,7 @@ function ResetPasswordContent() {
                 title="Pelo menos 8 caracteres, incluindo letras e números"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-green-600 focus:outline-none"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
               />
               <p className="text-xs text-gray-400">
                 Pelo menos 8 caracteres, incluindo letras e números.
@@ -99,14 +99,14 @@ function ResetPasswordContent() {
                 minLength={8}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-green-600 focus:outline-none"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
               />
             </div>
 
             <button
               type="submit"
               disabled={submitting}
-              className="w-full rounded bg-green-700 px-3 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+              className="w-full rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
             >
               {submitting ? 'Salvando...' : 'Redefinir senha'}
             </button>
@@ -114,7 +114,7 @@ function ResetPasswordContent() {
         )}
 
         <p className="text-center text-sm text-gray-500">
-          <Link href="/entrar" className="font-medium text-green-700 hover:underline">
+          <Link href="/entrar" className="font-medium text-emerald-700 hover:underline">
             Voltar para o login
           </Link>
         </p>

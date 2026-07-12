@@ -17,7 +17,7 @@ const STATUS_LABEL: Record<Ticket['status'], string> = {
 const STATUS_BADGE: Record<Ticket['status'], string> = {
   ABERTO: 'bg-amber-50 text-amber-700',
   EM_ANDAMENTO: 'bg-blue-50 text-blue-700',
-  RESOLVIDO: 'bg-green-50 text-green-700',
+  RESOLVIDO: 'bg-emerald-50 text-emerald-700',
   FECHADO: 'bg-gray-100 text-gray-600',
 };
 
@@ -87,14 +87,14 @@ export default function SupportPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
+    <main className="animate-fade-up mx-auto w-full max-w-3xl flex-1 px-4 py-10">
       <header className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-green-800">Suporte</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Suporte</h1>
           <p className="text-sm text-gray-500">Olá, {user.name}</p>
         </div>
         <div className="flex items-center gap-4">
-          <Link href="/fazendas" className="text-sm font-medium text-green-700 hover:underline">
+          <Link href="/fazendas" className="text-sm font-medium text-emerald-700 hover:underline">
             Painel
           </Link>
           <button
@@ -107,12 +107,12 @@ export default function SupportPage() {
       </header>
 
       {error && (
-        <p className="mb-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+        <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
           {error}
         </p>
       )}
 
-      <form onSubmit={handleCreate} className="mb-8 space-y-3 rounded border border-gray-200 p-4">
+      <form onSubmit={handleCreate} className="mb-8 space-y-3 rounded-lg border border-gray-200 p-4">
         <h2 className="text-sm font-semibold text-gray-700">Abrir novo ticket</h2>
         <input
           type="text"
@@ -120,7 +120,7 @@ export default function SupportPage() {
           onChange={(e) => setSubject(e.target.value)}
           placeholder="Assunto"
           required
-          className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-green-600 focus:outline-none"
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
         />
         <textarea
           value={message}
@@ -128,13 +128,13 @@ export default function SupportPage() {
           placeholder="Descreva o problema ou dúvida"
           required
           rows={3}
-          className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-green-600 focus:outline-none"
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
         />
         <div className="flex items-center justify-between">
           <select
             value={priority}
             onChange={(e) => setPriority(e.target.value as Ticket['priority'])}
-            className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+            className="rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           >
             <option value="BAIXA">Prioridade baixa</option>
             <option value="MEDIA">Prioridade média</option>
@@ -143,7 +143,7 @@ export default function SupportPage() {
           <button
             type="submit"
             disabled={creating}
-            className="rounded bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+            className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
           >
             {creating ? 'Enviando...' : 'Abrir ticket'}
           </button>
@@ -164,7 +164,7 @@ export default function SupportPage() {
             <li key={ticket.id}>
               <Link
                 href={`/suporte/${ticket.id}`}
-                className="flex items-center justify-between rounded border border-gray-200 px-4 py-3 hover:border-green-600"
+                className="flex items-center justify-between rounded-lg border border-gray-200 px-4 py-3 hover:border-emerald-600"
               >
                 <div>
                   <p className="font-medium text-gray-900">{ticket.subject}</p>

@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { Leaf } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { ApiError } from '@/lib/api';
 import GoogleLoginButton from '@/components/GoogleLoginButton';
@@ -34,15 +35,20 @@ export default function RegisterPage() {
     <main className="flex flex-1 items-center justify-center px-4">
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-sm space-y-4 rounded-lg border border-gray-200 bg-white p-8 shadow-sm"
+        className="animate-fade-up w-full max-w-sm space-y-4 rounded-2xl border border-gray-200/80 bg-white p-8 shadow-sm"
       >
-        <div>
-          <h1 className="text-2xl font-semibold text-green-800">CampoFlow</h1>
-          <p className="text-sm text-gray-500">Crie sua conta</p>
+        <div className="space-y-3">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-600">
+            <Leaf size={22} strokeWidth={2} className="text-white" />
+          </span>
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-gray-900">CampoFlow</h1>
+            <p className="text-sm text-gray-500">Crie sua conta</p>
+          </div>
         </div>
 
         {error && (
-          <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+          <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
             {error}
           </p>
         )}
@@ -57,7 +63,7 @@ export default function RegisterPage() {
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-green-600 focus:outline-none"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
 
@@ -71,7 +77,7 @@ export default function RegisterPage() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-green-600 focus:outline-none"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
 
@@ -88,7 +94,7 @@ export default function RegisterPage() {
             title="Pelo menos 8 caracteres, incluindo letras e números"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-green-600 focus:outline-none"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
           <p className="text-xs text-gray-400">Pelo menos 8 caracteres, incluindo letras e números.</p>
         </div>
@@ -96,7 +102,7 @@ export default function RegisterPage() {
         <button
           type="submit"
           disabled={submitting}
-          className="w-full rounded bg-green-700 px-3 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+          className="w-full rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
         >
           {submitting ? 'Cadastrando...' : 'Cadastrar'}
         </button>
@@ -111,7 +117,7 @@ export default function RegisterPage() {
 
         <p className="text-center text-sm text-gray-500">
           Já tem conta?{' '}
-          <Link href="/entrar" className="font-medium text-green-700 hover:underline">
+          <Link href="/entrar" className="font-medium text-emerald-700 hover:underline">
             Entrar
           </Link>
         </p>

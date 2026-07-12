@@ -1,8 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
+import { Bell } from 'lucide-react';
+import PageHeader from '@/components/PageHeader';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, ApiError } from '@/lib/api';
 import type { AppNotification, NotificationSource } from '@/lib/types';
@@ -104,30 +105,30 @@ export default function NotificationsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl p-8">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <Link href={`/fazendas/${farmId}`} className="text-sm text-blue-600 hover:underline">
-            &larr; Voltar para a fazenda
-          </Link>
-          <h1 className="mt-2 text-2xl font-bold">Notificações</h1>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={handleGenerate}
-            disabled={generating}
-            className="rounded bg-gray-200 px-3 py-2 text-sm hover:bg-gray-300 disabled:opacity-50"
-          >
-            {generating ? 'Gerando...' : 'Verificar alertas'}
-          </button>
-          <button
-            onClick={handleMarkAllRead}
-            className="rounded bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700"
-          >
-            Marcar todas como lidas
-          </button>
-        </div>
-      </div>
+    <div className="mx-auto w-full max-w-6xl p-8">
+      <PageHeader
+        icon={Bell}
+        title="Notificações"
+        subtitle="Alertas e avisos da propriedade"
+        backHref={`/fazendas/${farmId}`}
+        actions={
+          <div className="flex gap-2">
+            <button
+              onClick={handleGenerate}
+              disabled={generating}
+              className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors duration-150 hover:bg-gray-50 disabled:opacity-50"
+            >
+              {generating ? 'Gerando...' : 'Verificar alertas'}
+            </button>
+            <button
+              onClick={handleMarkAllRead}
+              className="rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-colors duration-150 hover:bg-emerald-800"
+            >
+              Marcar todas como lidas
+            </button>
+          </div>
+        }
+      />
 
       <p className="mb-4 text-xs text-gray-500">
         Apenas o canal de notificações no app é realmente entregue. Não há provedor de
@@ -161,11 +162,11 @@ export default function NotificationsPage() {
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+                    <span className="rounded-lg bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
                       {SOURCE_LABELS[n.source]}
                     </span>
                     {!n.read && (
-                      <span className="rounded bg-blue-600 px-2 py-0.5 text-xs text-white">
+                      <span className="rounded-lg bg-blue-600 px-2 py-0.5 text-xs text-white">
                         Nova
                       </span>
                     )}
@@ -177,7 +178,7 @@ export default function NotificationsPage() {
                 {!n.read && (
                   <button
                     onClick={() => handleMarkRead(n.id)}
-                    className="shrink-0 rounded bg-gray-200 px-3 py-1 text-xs hover:bg-gray-300"
+                    className="shrink-0 rounded-lg bg-gray-200 px-3 py-1 text-xs hover:bg-gray-300"
                   >
                     Marcar como lida
                   </button>

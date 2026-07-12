@@ -1,5 +1,8 @@
 'use client';
 
+import { Map } from 'lucide-react';
+import PageHeader from '@/components/PageHeader';
+
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
@@ -260,22 +263,22 @@ export default function FarmMapPage() {
       : DEFAULT_CENTER;
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
-      <header className="mb-8">
-        <Link href={`/fazendas/${farmId}`} className="text-sm text-green-700 hover:underline">
-          ← Dashboard
-        </Link>
-        <h1 className="text-2xl font-semibold text-green-800">Solo</h1>
-      </header>
+    <main className="animate-fade-up mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-8">
+      <PageHeader
+        icon={Map}
+        title="Mapa e Solo"
+        subtitle="Mapa da propriedade e análises de solo"
+        backHref={`/fazendas/${farmId}`}
+      />
 
       {error && (
-        <p className="mb-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+        <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
           {error}
         </p>
       )}
 
       {/* --- Bloco unificado: Localização + Mapa + Cadastro --- */}
-      <section className="mb-8 rounded border border-gray-200 bg-white p-4">
+      <section className="mb-8 rounded-xl border border-gray-200/80 bg-white shadow-sm p-4">
         <h2 className="mb-1 font-semibold text-gray-800">Localização da fazenda</h2>
         <p className="mb-3 text-sm text-gray-500">
           Busque a cidade/estado para posicionar o mapa na região correta.
@@ -287,17 +290,17 @@ export default function FarmMapPage() {
             value={cityQuery}
             onChange={(e) => handleCityQueryChange(e.target.value)}
             placeholder="Ex.: Uberaba, MG"
-            className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
           {citySearching && <p className="mt-1 text-xs text-gray-400">Buscando...</p>}
           {cityResults.length > 0 && (
-            <ul className="absolute z-[1000] mt-1 w-full max-h-48 overflow-y-auto rounded border border-gray-200 bg-white p-1 shadow-md">
+            <ul className="absolute z-[1000] mt-1 w-full max-h-48 overflow-y-auto rounded-xl border border-gray-200/80 bg-white shadow-sm p-1 shadow-md">
               {cityResults.map((r, i) => (
                 <li key={i}>
                   <button
                     type="button"
                     onClick={() => selectCityResult(r)}
-                    className="w-full rounded px-2 py-1.5 text-left text-sm text-gray-700 hover:bg-green-50"
+                    className="w-full rounded-lg px-2 py-1.5 text-left text-sm text-gray-700 hover:bg-emerald-50"
                   >
                     {r.label}
                   </button>
@@ -310,7 +313,7 @@ export default function FarmMapPage() {
 
         {showMap ? (
           <>
-            <div ref={mapRef} className="overflow-hidden rounded border border-gray-200">
+            <div ref={mapRef} className="overflow-hidden rounded-lg border border-gray-200">
               <FarmMap
                 center={center}
                 features={features}
@@ -326,7 +329,7 @@ export default function FarmMapPage() {
           <button
             type="button"
             onClick={() => setShowMap(true)}
-            className="rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
           >
             Mostrar mapa
           </button>
@@ -334,7 +337,7 @@ export default function FarmMapPage() {
       </section>
 
       {/* --- Cadastrar novo registro de solo --- */}
-      <section className="mb-8 rounded border border-gray-200 bg-white p-4">
+      <section className="mb-8 rounded-xl border border-gray-200/80 bg-white shadow-sm p-4">
         <h2 className="mb-3 font-semibold text-gray-800">Cadastrar novo registro de solo</h2>
 
         <form onSubmit={handleCreate} className="space-y-3">
@@ -347,7 +350,7 @@ export default function FarmMapPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Ex.: Talhão Norte"
-                className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
               />
             </div>
 
@@ -356,7 +359,7 @@ export default function FarmMapPage() {
               <select
                 value={type}
                 onChange={(e) => setType(e.target.value as MapFeatureType)}
-                className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
               >
                 {TYPE_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -372,7 +375,7 @@ export default function FarmMapPage() {
                 <select
                   value={geometryType}
                   onChange={(e) => setGeometryType(e.target.value as GeometryType)}
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 >
                   <option value="PONTO">Ponto</option>
                   <option value="POLIGONO">Polígono</option>
@@ -389,7 +392,7 @@ export default function FarmMapPage() {
                 <button
                   type="button"
                   onClick={() => setDrawingNewFeature(true)}
-                  className="text-xs font-medium text-green-700 hover:underline"
+                  className="text-xs font-medium text-emerald-700 hover:underline"
                 >
                   Desenhar croqui no mapa
                 </button>
@@ -407,14 +410,14 @@ export default function FarmMapPage() {
             {drawingNewFeature ? (
               <div>
                 {drawnPoints && drawnPoints.length >= 3 ? (
-                  <div className="rounded border border-green-200 bg-green-50 p-3">
-                    <p className="text-sm text-green-800">
+                  <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                    <p className="text-sm text-emerald-800">
                       Croqui definido com {drawnPoints.length} pontos.
                     </p>
                     <button
                       type="button"
                       onClick={() => { setDrawnPoints(null); setDrawingNewFeature(true); }}
-                      className="mt-1 text-xs font-medium text-green-700 hover:underline"
+                      className="mt-1 text-xs font-medium text-emerald-700 hover:underline"
                     >
                       Redesenhar
                     </button>
@@ -435,7 +438,7 @@ export default function FarmMapPage() {
                 value={coordinatesText}
                 onChange={(e) => setCoordinatesText(e.target.value)}
                 placeholder={geometryType === 'PONTO' ? '-15.793889, -47.882778' : '-15.79, -47.88\n-15.80, -47.87\n-15.79, -47.86'}
-                className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
               />
             )}
           </div>
@@ -443,7 +446,7 @@ export default function FarmMapPage() {
           <button
             type="submit"
             disabled={creating}
-            className="rounded bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+            className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
           >
             {creating ? 'Salvando...' : 'Adicionar ao mapa'}
           </button>
@@ -464,7 +467,7 @@ export default function FarmMapPage() {
               editingId === f.id ? (
                 <li
                   key={f.id}
-                  className="grid grid-cols-2 gap-3 rounded border border-green-600 bg-white p-4 sm:grid-cols-4"
+                  className="grid grid-cols-2 gap-3 rounded-lg border border-emerald-600 bg-white p-4 sm:grid-cols-4"
                 >
                   <div className="col-span-2">
                     <label className="text-xs font-medium text-gray-600">Nome</label>
@@ -472,7 +475,7 @@ export default function FarmMapPage() {
                       type="text"
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
-                      className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                     />
                   </div>
                   <div>
@@ -480,7 +483,7 @@ export default function FarmMapPage() {
                     <select
                       value={editType}
                       onChange={(e) => setEditType(e.target.value as MapFeatureType)}
-                      className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                     >
                       {TYPE_OPTIONS.map((opt) => (
                         <option key={opt.value} value={opt.value}>
@@ -494,7 +497,7 @@ export default function FarmMapPage() {
                     <select
                       value={editGeometryType}
                       onChange={(e) => setEditGeometryType(e.target.value as GeometryType)}
-                      className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                     >
                       <option value="PONTO">Ponto</option>
                       <option value="POLIGONO">Polígono</option>
@@ -506,7 +509,7 @@ export default function FarmMapPage() {
                       rows={3}
                       value={editCoordinatesText}
                       onChange={(e) => setEditCoordinatesText(e.target.value)}
-                      className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                     />
                   </div>
                   <div className="col-span-full flex gap-2">
@@ -514,14 +517,14 @@ export default function FarmMapPage() {
                       type="button"
                       disabled={saving}
                       onClick={() => handleSaveEdit(f.id)}
-                      className="rounded bg-green-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+                      className="rounded-lg bg-emerald-700 px-3 py-1.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
                     >
                       {saving ? 'Salvando...' : 'Salvar'}
                     </button>
                     <button
                       type="button"
                       onClick={() => setEditingId(null)}
-                      className="rounded border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
+                      className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
                     >
                       Cancelar
                     </button>
@@ -530,7 +533,7 @@ export default function FarmMapPage() {
               ) : (
                 <li
                   key={f.id}
-                  className="flex items-center justify-between rounded border border-gray-200 bg-white px-4 py-3"
+                  className="flex items-center justify-between rounded-xl border border-gray-200/80 bg-white shadow-sm px-4 py-3"
                 >
                   <div>
                     <p className="font-medium text-gray-900">{f.name}</p>
@@ -542,21 +545,21 @@ export default function FarmMapPage() {
                   <div className="flex items-center gap-3">
                     <Link
                       href={`/fazendas/${farmId}/mapa/solo/${f.id}`}
-                      className="shrink-0 text-sm font-medium text-green-700 hover:underline"
+                      className="shrink-0 text-sm font-medium text-emerald-700 hover:underline"
                     >
                       Análises de solo →
                     </Link>
                     <button
                       type="button"
                       onClick={() => handleViewOnMap(f)}
-                      className="text-sm font-medium text-green-700 hover:underline"
+                      className="text-sm font-medium text-emerald-700 hover:underline"
                     >
                       Ver no mapa
                     </button>
                     <button
                       type="button"
                       onClick={() => startEdit(f)}
-                      className="text-sm font-medium text-green-700 hover:underline"
+                      className="text-sm font-medium text-emerald-700 hover:underline"
                     >
                       Editar
                     </button>

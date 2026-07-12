@@ -195,17 +195,17 @@ export default function BoundaryDrawer({
           value={searchQuery}
           onChange={(e) => handleSearchChange(e.target.value)}
           placeholder="Buscar cidade ou região..."
-          className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+          className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
         />
         {searching && <p className="mt-1 text-xs text-gray-400">Buscando...</p>}
         {searchResults.length > 0 && (
-          <ul className="absolute z-[1000] mt-1 w-full max-h-48 overflow-y-auto rounded border border-gray-200 bg-white p-1 shadow-md">
+          <ul className="absolute z-[1000] mt-1 w-full max-h-48 overflow-y-auto rounded-xl border border-gray-200/80 bg-white shadow-sm p-1 shadow-md">
             {searchResults.map((r, i) => (
               <li key={i}>
                 <button
                   type="button"
                   onClick={() => selectResult(r)}
-                  className="w-full rounded px-2 py-1.5 text-left text-sm text-gray-700 hover:bg-green-50"
+                  className="w-full rounded-lg px-2 py-1.5 text-left text-sm text-gray-700 hover:bg-emerald-50"
                 >
                   {r.label}
                 </button>
@@ -249,7 +249,7 @@ export default function BoundaryDrawer({
             type="button"
             onClick={handleUndo}
             disabled={points.length === 0}
-            className="rounded border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+            className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40"
           >
             Desfazer ponto
           </button>
@@ -257,21 +257,21 @@ export default function BoundaryDrawer({
             type="button"
             onClick={handleClear}
             disabled={points.length === 0}
-            className="rounded border border-gray-300 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-40"
+            className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-40"
           >
             Limpar
           </button>
           <button
             type="button"
             onClick={onCancel}
-            className="rounded border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+            className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
           >
             Cancelar
           </button>
           <button
             type="button"
             onClick={handleSave}
-            className="rounded bg-green-700 px-4 py-1.5 text-xs font-medium text-white hover:bg-green-800"
+            className="rounded-lg bg-emerald-700 px-4 py-1.5 text-xs font-semibold text-white transition-colors duration-150 hover:bg-emerald-800"
           >
             Salvar croqui
           </button>

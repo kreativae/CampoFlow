@@ -1,5 +1,8 @@
 'use client';
 
+import { Leaf } from 'lucide-react';
+import PageHeader from '@/components/PageHeader';
+
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
@@ -156,23 +159,23 @@ export default function PasturesPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
-      <header className="mb-8">
-        <Link href={`/fazendas/${farmId}`} className="text-sm text-green-700 hover:underline">
-          ← Dashboard
-        </Link>
-        <h1 className="text-2xl font-semibold text-green-800">Pastagens</h1>
-      </header>
+    <main className="animate-fade-up mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-8">
+      <PageHeader
+        icon={Leaf}
+        title="Pastagens"
+        subtitle="Pastos, áreas e capacidade"
+        backHref={`/fazendas/${farmId}`}
+      />
 
       {error && (
-        <p className="mb-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+        <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
           {error}
         </p>
       )}
 
       <form
         onSubmit={handleCreate}
-        className="mb-8 grid grid-cols-2 gap-3 rounded border border-gray-200 bg-white p-4 sm:grid-cols-4"
+        className="mb-8 grid grid-cols-2 gap-3 rounded-xl border border-gray-200/80 bg-white shadow-sm p-4 sm:grid-cols-4"
       >
         <div className="col-span-2">
           <label className="text-xs font-medium text-gray-600">Nome</label>
@@ -181,7 +184,7 @@ export default function PasturesPage() {
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
 
@@ -190,10 +193,11 @@ export default function PasturesPage() {
           <input
             type="number"
             step="0.01"
+            min="0"
             required
             value={areaHectares}
             onChange={(e) => setAreaHectares(e.target.value)}
-            className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
 
@@ -201,10 +205,11 @@ export default function PasturesPage() {
           <label className="text-xs font-medium text-gray-600">Capacidade (animais)</label>
           <input
             type="number"
+            min="1"
             required
             value={animalCapacity}
             onChange={(e) => setAnimalCapacity(e.target.value)}
-            className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
 
@@ -214,7 +219,7 @@ export default function PasturesPage() {
             type="text"
             value={grassType}
             onChange={(e) => setGrassType(e.target.value)}
-            className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
 
@@ -222,7 +227,7 @@ export default function PasturesPage() {
           <button
             type="submit"
             disabled={creating}
-            className="rounded bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+            className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
           >
             {creating ? 'Cadastrando...' : 'Cadastrar pasto'}
           </button>
@@ -243,24 +248,27 @@ export default function PasturesPage() {
             return (
               <li
                 key={pasture.id}
-                className="flex items-center justify-between rounded border border-gray-200 bg-white px-4 py-3 hover:border-green-600 hover:shadow-sm"
+                className="flex flex-col gap-2 rounded-xl border border-gray-200/80 bg-white shadow-sm px-4 py-3 transition-all duration-200 hover:border-emerald-200 hover:shadow-md sm:flex-row sm:items-center sm:justify-between"
               >
-                <Link href={`/fazendas/${farmId}/pastagens/${pasture.id}`} className="flex-1">
-                  <p className="font-medium text-gray-900">{pasture.name}</p>
-                  <p className="text-sm text-gray-500">
-                    {pasture.areaHectares} ha · {pasture.grassType ?? 'Capim não informado'}
-                  </p>
+                <Link href={`/fazendas/${farmId}/pastagens/${pasture.id}`} className="flex min-w-0 flex-1 items-center gap-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700"><Leaf size={18} strokeWidth={1.9} /></span>
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium text-gray-900">{pasture.name}</span>
+                    <span className="block truncate text-sm text-gray-500">
+                      {pasture.areaHectares} ha · {pasture.grassType ?? 'Capim não informado'}
+                    </span>
+                  </span>
                 </Link>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 self-end sm:self-auto">
                   <p className="text-sm text-gray-500">
                     {occupiedHeadCount}/{pasture.animalCapacity} animais
                   </p>
                   <button
                     type="button"
                     onClick={() => startEdit(pasture)}
-                    className="text-sm font-medium text-green-700 hover:underline"
+                    className="text-sm font-medium text-emerald-700 hover:underline"
                   >
-                    Visualização rápida
+                    Editar
                   </button>
                   <button
                     type="button"
@@ -305,7 +313,7 @@ export default function PasturesPage() {
                   type="text"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 />
               </div>
               <div>
@@ -313,18 +321,20 @@ export default function PasturesPage() {
                 <input
                   type="number"
                   step="0.01"
+                  min="0"
                   value={editAreaHectares}
                   onChange={(e) => setEditAreaHectares(e.target.value)}
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 />
               </div>
               <div>
                 <label className="text-xs font-medium text-gray-600">Capacidade</label>
                 <input
                   type="number"
+                  min="1"
                   value={editAnimalCapacity}
                   onChange={(e) => setEditAnimalCapacity(e.target.value)}
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 />
               </div>
               <div className="col-span-2">
@@ -333,7 +343,7 @@ export default function PasturesPage() {
                   type="text"
                   value={editGrassType}
                   onChange={(e) => setEditGrassType(e.target.value)}
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 />
               </div>
             </div>
@@ -341,7 +351,7 @@ export default function PasturesPage() {
             <div className="mt-6 flex items-center justify-between">
               <Link
                 href={`/fazendas/${farmId}/pastagens/${editingId}`}
-                className="text-sm font-medium text-green-700 hover:underline"
+                className="text-sm font-medium text-emerald-700 hover:underline"
               >
                 Ver detalhes completos →
               </Link>
@@ -349,7 +359,7 @@ export default function PasturesPage() {
                 <button
                   type="button"
                   onClick={() => setEditingId(null)}
-                  className="rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                 >
                   Cancelar
                 </button>
@@ -357,7 +367,7 @@ export default function PasturesPage() {
                   type="button"
                   disabled={saving}
                   onClick={() => handleSaveEdit(editingId)}
-                  className="rounded bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+                  className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
                 >
                   {saving ? 'Salvando...' : 'Salvar'}
                 </button>
