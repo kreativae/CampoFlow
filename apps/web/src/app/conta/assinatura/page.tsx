@@ -204,9 +204,9 @@ function SubscriptionContent() {
                 value={`${sub.farmsUsed}${sub.farmsLimit != null ? ` / ${sub.farmsLimit}` : ' (ilimitado)'}`}
               />
               {isTrial ? (
-                <Info label="Teste termina em" value={formatDate(sub.trialEndsAt)} />
+                <Info label="Teste termina em" value={sub.trialEndsAt ? formatDate(sub.trialEndsAt) : 'Sem limite'} />
               ) : (
-                <Info label="Próxima cobrança" value={formatDate(sub.currentPeriodEnd)} />
+                <Info label="Próxima cobrança" value={sub.currentPeriodEnd ? formatDate(sub.currentPeriodEnd) : 'Sem cobrança ativa'} />
               )}
               <Info
                 label="Mensalidade"
