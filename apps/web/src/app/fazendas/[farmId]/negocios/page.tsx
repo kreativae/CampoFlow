@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { Handshake, Pencil } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
@@ -94,6 +94,7 @@ export default function NegociosPage() {
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const formRef = useRef<HTMLElement>(null);
   const [editingDealId, setEditingDealId] = useState<string | null>(null);
   const [createTransaction, setCreateTransaction] = useState(false);
   const [filterType, setFilterType] = useState<DealType | ''>('');
@@ -547,6 +548,7 @@ export default function NegociosPage() {
     setSelectedCropCycleId(deal.cropCycleId ?? '');
     setCreateTransaction(false);
     setShowForm(true);
+    setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
   }
 
   async function handleDelete(id: string) {
@@ -651,7 +653,7 @@ export default function NegociosPage() {
 
       {/* --- Formulário de criação --- */}
       {showForm && (
-        <section className="mb-8 rounded-xl border border-gray-200/80 bg-white shadow-sm p-4">
+        <section ref={formRef} className="mb-8 rounded-xl border border-gray-200/80 bg-white shadow-sm p-4">
           <h2 className="mb-4 font-semibold text-gray-800">{editingDealId ? 'Editar negócio' : 'Novo negócio'}</h2>
           <form onSubmit={handleCreate} className="space-y-4">
             {/* Tipo + data */}
