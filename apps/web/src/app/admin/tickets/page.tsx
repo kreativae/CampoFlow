@@ -17,7 +17,7 @@ const STATUS_OPTIONS: { value: TicketStatus | 'TODOS'; label: string }[] = [
 const STATUS_BADGE: Record<TicketStatus, string> = {
   ABERTO: 'bg-amber-50 text-amber-700',
   EM_ANDAMENTO: 'bg-blue-50 text-blue-700',
-  RESOLVIDO: 'bg-green-50 text-green-700',
+  RESOLVIDO: 'bg-emerald-50 text-emerald-700',
   FECHADO: 'bg-gray-100 text-gray-600',
 };
 
@@ -50,7 +50,7 @@ export default function AdminTicketsPage() {
   }, [loadTickets]);
 
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-10">
+    <main className="animate-fade-up mx-auto w-full max-w-5xl flex-1 px-4 py-10">
       <header className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">Tickets de suporte</h1>
@@ -59,7 +59,7 @@ export default function AdminTicketsPage() {
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as TicketStatus | 'TODOS')}
-          className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+          className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
         >
           {STATUS_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -70,7 +70,7 @@ export default function AdminTicketsPage() {
       </header>
 
       {error && (
-        <p className="mb-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+        <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
           {error}
         </p>
       )}
@@ -80,6 +80,7 @@ export default function AdminTicketsPage() {
       ) : tickets.length === 0 ? (
         <p className="text-gray-500">Nenhum ticket encontrado.</p>
       ) : (
+        <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-500">
@@ -117,6 +118,7 @@ export default function AdminTicketsPage() {
             ))}
           </tbody>
         </table>
+        </div>
       )}
     </main>
   );

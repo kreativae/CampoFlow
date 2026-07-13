@@ -16,7 +16,6 @@ interface FarmResponseBody {
 interface WeatherRecordBody {
   temperatureC: number;
   windSpeedKmh: number;
-  alertType: string | null;
   source: string | null;
   recordedAt: string;
 }
@@ -53,6 +52,11 @@ describe('External weather (e2e)', () => {
   let accessToken: string;
   let farmId: string;
   let farmNoCoordsId: string;
+
+  // Data das leituras simuladas: hoje. A rota de alertas só considera registros
+  // dos últimos 7 dias, então datas fixas envelhecem e quebram o teste — usar a
+  // data corrente mantém os registros sempre dentro da janela.
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -123,7 +127,7 @@ describe('External weather (e2e)', () => {
       .spyOn(global, 'fetch')
       .mockResolvedValue(
         new Response(
-          JSON.stringify(fakeOpenMeteoResponse('2026-06-26T13:00', 22, 10, 1)),
+          JSON.stringify(fakeOpenMeteoResponse(`${today}T13:00`, 22, 10, 1)),
         ),
       );
 
@@ -140,7 +144,6 @@ describe('External weather (e2e)', () => {
 
     const body = latest.body as WeatherRecordBody;
     expect(body.temperatureC).toBe(22);
-    expect(body.alertType).toBeNull();
     expect(body.source).toBe('Open-Meteo');
   });
 
@@ -149,7 +152,7 @@ describe('External weather (e2e)', () => {
       .spyOn(global, 'fetch')
       .mockResolvedValue(
         new Response(
-          JSON.stringify(fakeOpenMeteoResponse('2026-06-26T13:00', 22, 10, 1)),
+          JSON.stringify(fakeOpenMeteoResponse(`${today}T13:00`, 22, 10, 1)),
         ),
       );
 
@@ -158,73 +161,5 @@ describe('External weather (e2e)', () => {
       .set('Authorization', `Bearer ${accessToken}`)
       .expect(201)
       .expect({ created: false });
-  });
-
-  it('infers GEADA (frost) when temperature is at or below the threshold', async () => {
-    fetchSpy = jest
-      .spyOn(global, 'fetch')
-      .mockResolvedValue(
-        new Response(
-          JSON.stringify(fakeOpenMeteoResponse('2026-06-26T16:00', 2, 5, 0)),
-        ),
-      );
-
-    await request(app.getHttpServer())
-      .post(`/fazendas/${farmId}/clima/atualizar`)
-      .set('Authorization', `Bearer ${accessToken}`)
-      .expect(201);
-
-    const alerts = await request(app.getHttpServer())
-      .get(`/fazendas/${farmId}/clima/alertas`)
-      .set('Authorization', `Bearer ${accessToken}`)
-      .expect(200);
-
-    expect(
-      (alerts.body as WeatherRecordBody[]).some((a) => a.alertType === 'GEADA'),
-    ).toBe(true);
-  });
-
-  it('infers VENTO_FORTE (strong wind) when wind speed crosses the threshold', async () => {
-    fetchSpy = jest
-      .spyOn(global, 'fetch')
-      .mockResolvedValue(
-        new Response(
-          JSON.stringify(fakeOpenMeteoResponse('2026-06-26T19:00', 25, 55, 2)),
-        ),
-      );
-
-    await request(app.getHttpServer())
-      .post(`/fazendas/${farmId}/clima/atualizar`)
-      .set('Authorization', `Bearer ${accessToken}`)
-      .expect(201);
-
-    const latest = await request(app.getHttpServer())
-      .get(`/fazendas/${farmId}/clima/recente`)
-      .set('Authorization', `Bearer ${accessToken}`)
-      .expect(200);
-
-    expect((latest.body as WeatherRecordBody).alertType).toBe('VENTO_FORTE');
-  });
-
-  it('infers GRANIZO (hail) from the WMO thunderstorm-with-hail codes', async () => {
-    fetchSpy = jest
-      .spyOn(global, 'fetch')
-      .mockResolvedValue(
-        new Response(
-          JSON.stringify(fakeOpenMeteoResponse('2026-06-26T22:00', 25, 20, 96)),
-        ),
-      );
-
-    await request(app.getHttpServer())
-      .post(`/fazendas/${farmId}/clima/atualizar`)
-      .set('Authorization', `Bearer ${accessToken}`)
-      .expect(201);
-
-    const latest = await request(app.getHttpServer())
-      .get(`/fazendas/${farmId}/clima/recente`)
-      .set('Authorization', `Bearer ${accessToken}`)
-      .expect(200);
-
-    expect((latest.body as WeatherRecordBody).alertType).toBe('GRANIZO');
   });
 });

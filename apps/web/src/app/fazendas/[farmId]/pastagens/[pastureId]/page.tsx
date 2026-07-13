@@ -1,21 +1,28 @@
 'use client';
 
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, ApiError } from '@/lib/api';
-import type { Pasture, PastureOccupation } from '@/lib/types';
+import { useConfirm } from '@/lib/confirm-context';
+import type { Farm, Pasture, PastureOccupation } from '@/lib/types';
+
+const BoundaryDrawer = dynamic(() => import('../boundary-drawer'), { ssr: false });
 
 export default function PastureDetailPage() {
   const { farmId, pastureId } = useParams<{ farmId: string; pastureId: string }>();
   const { user, accessToken, loading } = useAuth();
   const router = useRouter();
+  const confirm = useConfirm();
 
   const [pasture, setPasture] = useState<Pasture | null>(null);
   const [pastures, setPastures] = useState<Pasture[]>([]);
+  const [farm, setFarm] = useState<Farm | null>(null);
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [drawingBoundary, setDrawingBoundary] = useState(false);
 
   const [headCount, setHeadCount] = useState('');
   const [notes, setNotes] = useState('');
@@ -38,14 +45,16 @@ export default function PastureDetailPage() {
     setFetching(true);
     setError(null);
     try {
-      const [data, allPastures] = await Promise.all([
+      const [data, allPastures, farmData] = await Promise.all([
         apiFetch<Pasture>(`/fazendas/${farmId}/pastagens/${pastureId}`, {
           token: accessToken,
         }),
         apiFetch<Pasture[]>(`/fazendas/${farmId}/pastagens`, { token: accessToken }),
+        apiFetch<Farm>(`/fazendas/${farmId}`, { token: accessToken }),
       ]);
       setPasture(data);
       setPastures(allPastures.filter((p) => p.id !== pastureId));
+      setFarm(farmData);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao carregar o pasto');
     } finally {
@@ -154,6 +163,26 @@ export default function PastureDetailPage() {
     }
   }
 
+  async function handleDeleteOccupation(occupationId: string) {
+    const ok = await confirm({
+      title: 'Excluir registro',
+      message: 'Excluir este registro de ocupação? Essa ação não pode ser desfeita.',
+      confirmLabel: 'Excluir',
+      danger: true,
+    });
+    if (!ok) return;
+    setError(null);
+    try {
+      await apiFetch(
+        `/fazendas/${farmId}/pastagens/${pastureId}/ocupacoes/${occupationId}`,
+        { method: 'DELETE', token: accessToken },
+      );
+      await loadData();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao excluir registro');
+    }
+  }
+
   if (loading || !user || fetching) {
     return (
       <main className="flex flex-1 items-center justify-center">
@@ -163,33 +192,111 @@ export default function PastureDetailPage() {
   }
 
   const activeOccupations = pasture?.occupations?.filter((o) => o.exitedAt === null) ?? [];
-  const occupiedHeadCount = activeOccupations.reduce((sum, o) => sum + o.headCount, 0);
   const pastOccupations = pasture?.occupations?.filter((o) => o.exitedAt !== null) ?? [];
+  const herdAnimals = pasture?.animals ?? [];
+  const herdHeadCount = pasture?.animalHeadCount ?? herdAnimals.length;
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
+    <main className="animate-fade-up mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-8">
       <header className="mb-8">
-        <Link href={`/fazendas/${farmId}/pastagens`} className="text-sm text-green-700 hover:underline">
+        <Link href={`/fazendas/${farmId}/pastagens`} className="text-sm text-emerald-700 hover:underline">
           ← Pastagens
         </Link>
-        <h1 className="text-2xl font-semibold text-green-800">{pasture?.name}</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-gray-900">{pasture?.name}</h1>
         <p className="text-sm text-gray-500">
           {pasture?.areaHectares} ha · {pasture?.grassType ?? 'Capim não informado'}
         </p>
       </header>
 
       {error && (
-        <p className="mb-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+        <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
           {error}
         </p>
       )}
 
       <section className="mb-8 grid grid-cols-2 gap-3">
         <SummaryCard label="Capacidade" value={`${pasture?.animalCapacity ?? 0} animais`} />
-        <SummaryCard label="Ocupação atual" value={`${occupiedHeadCount} animais`} />
+        <SummaryCard label="Ocupação atual (rebanho)" value={`${herdHeadCount} animais`} />
       </section>
 
-      <section className="mb-8 rounded border border-gray-200 bg-white p-4">
+      <section className="mb-8 rounded-xl border border-gray-200/80 bg-white shadow-sm p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="font-semibold text-gray-800">Croqui no mapa</h2>
+          {!drawingBoundary && (
+            <button
+              type="button"
+              onClick={() => setDrawingBoundary(true)}
+              className="text-sm font-medium text-emerald-700 hover:underline"
+            >
+              {pasture?.boundaries ? 'Editar croqui' : 'Desenhar croqui'}
+            </button>
+          )}
+        </div>
+        {drawingBoundary ? (
+          <BoundaryDrawer
+            initial={pasture?.boundaries}
+            center={
+              farm?.latitude && farm?.longitude
+                ? [farm.latitude, farm.longitude]
+                : [-15.78, -47.93]
+            }
+            onSave={async (boundaries) => {
+              try {
+                await apiFetch(`/fazendas/${farmId}/pastagens/${pastureId}`, {
+                  method: 'PATCH',
+                  token: accessToken,
+                  body: { boundaries },
+                });
+                setDrawingBoundary(false);
+                await loadData();
+              } catch (err) {
+                setError(err instanceof ApiError ? err.message : 'Erro ao salvar croqui');
+              }
+            }}
+            onCancel={() => setDrawingBoundary(false)}
+          />
+        ) : pasture?.boundaries && pasture.boundaries.length >= 3 ? (
+          <p className="text-sm text-gray-500">
+            Polígono com {pasture.boundaries.length} pontos definido.
+            Clique em &quot;Editar croqui&quot; para alterar.
+          </p>
+        ) : (
+          <p className="text-sm text-gray-500">
+            Nenhum croqui definido. Clique em &quot;Desenhar croqui&quot; para marcar a área deste pasto no mapa.
+          </p>
+        )}
+      </section>
+
+      <section className="mb-8 rounded-xl border border-gray-200/80 bg-white shadow-sm p-4">
+        <h2 className="mb-3 font-semibold text-gray-800">
+          Animais neste pasto (rebanho)
+        </h2>
+        {herdAnimals.length === 0 ? (
+          <p className="text-sm text-gray-500">
+            Nenhum animal do rebanho está atribuído a este pasto. Atribua ou mova brincos
+            para cá em Rebanho.
+          </p>
+        ) : (
+          <ul className="divide-y divide-gray-100 text-sm">
+            {herdAnimals.map((animal) => (
+              <li key={animal.id} className="flex items-center justify-between py-2">
+                <Link
+                  href={`/fazendas/${farmId}/animais/${animal.id}`}
+                  className="font-medium text-emerald-700 hover:underline"
+                >
+                  {animal.earTag}
+                </Link>
+                <span className="text-gray-500">
+                  {animal.category}
+                  {animal.currentWeightKg ? ` · ${animal.currentWeightKg} kg` : ''}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="mb-8 rounded-xl border border-gray-200/80 bg-white shadow-sm p-4">
         <h2 className="mb-3 font-semibold text-gray-800">Registrar entrada de lote</h2>
         <form onSubmit={handleEnter} className="flex flex-wrap gap-2">
           <input
@@ -198,26 +305,26 @@ export default function PastureDetailPage() {
             required
             value={headCount}
             onChange={(e) => setHeadCount(e.target.value)}
-            className="flex-1 rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
           <input
             type="text"
             placeholder="Observações (opcional)"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            className="flex-1 rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
           <button
             type="submit"
             disabled={submitting}
-            className="rounded bg-green-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+            className="rounded-lg bg-emerald-700 px-3 py-1.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
           >
             {submitting ? 'Salvando...' : 'Registrar entrada'}
           </button>
         </form>
       </section>
 
-      <section className="mb-8 rounded border border-gray-200 bg-white p-4">
+      <section className="mb-8 rounded-xl border border-gray-200/80 bg-white shadow-sm p-4">
         <h2 className="mb-3 font-semibold text-gray-800">Lotes no pasto</h2>
         {activeOccupations.length === 0 ? (
           <p className="text-sm text-gray-500">Nenhum lote no pasto atualmente.</p>
@@ -225,7 +332,7 @@ export default function PastureDetailPage() {
           <ul className="space-y-2 text-sm text-gray-700">
             {activeOccupations.map((o) =>
               exitingId === o.id ? (
-                <li key={o.id} className="rounded border border-green-600 bg-green-50 p-3">
+                <li key={o.id} className="rounded-lg border border-emerald-600 bg-emerald-50 p-3">
                   <p className="mb-2 text-xs font-medium text-gray-600">
                     Registrar saída do lote ({o.headCount} animais desde{' '}
                     {new Date(o.enteredAt).toLocaleDateString('pt-BR')})
@@ -241,7 +348,7 @@ export default function PastureDetailPage() {
                         max={o.headCount}
                         value={exitQuantity}
                         onChange={(e) => setExitQuantity(e.target.value)}
-                        className="mt-1 w-28 rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                        className="mt-1 w-28 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                       />
                     </div>
                     <div>
@@ -251,7 +358,7 @@ export default function PastureDetailPage() {
                       <select
                         value={exitDestinationId}
                         onChange={(e) => setExitDestinationId(e.target.value)}
-                        className="mt-1 w-44 rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                        className="mt-1 w-44 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                       >
                         <option value="">— Não mover —</option>
                         {pastures.map((p) => (
@@ -269,7 +376,7 @@ export default function PastureDetailPage() {
                         type="text"
                         value={exitNotes}
                         onChange={(e) => setExitNotes(e.target.value)}
-                        className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                        className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                       />
                     </div>
                   </div>
@@ -278,14 +385,14 @@ export default function PastureDetailPage() {
                       type="button"
                       disabled={submittingExit}
                       onClick={() => handleConfirmExit(o.id)}
-                      className="rounded bg-green-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+                      className="rounded-lg bg-emerald-700 px-3 py-1.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
                     >
                       {submittingExit ? 'Salvando...' : 'Confirmar saída'}
                     </button>
                     <button
                       type="button"
                       onClick={() => setExitingId(null)}
-                      className="rounded border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
+                      className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
                     >
                       Cancelar
                     </button>
@@ -317,16 +424,23 @@ export default function PastureDetailPage() {
                     <button
                       type="button"
                       onClick={() => startEditOccupation(o)}
-                      className="text-xs font-medium text-green-700 hover:underline"
+                      className="text-xs font-medium text-emerald-700 hover:underline"
                     >
                       Editar
                     </button>
                     <button
                       type="button"
                       onClick={() => startExit(o)}
-                      className="text-xs font-medium text-green-700 hover:underline"
+                      className="text-xs font-medium text-emerald-700 hover:underline"
                     >
                       Registrar saída
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteOccupation(o.id)}
+                      className="text-xs font-medium text-red-600 hover:underline"
+                    >
+                      Excluir
                     </button>
                   </span>
                 </li>
@@ -336,7 +450,7 @@ export default function PastureDetailPage() {
         )}
       </section>
 
-      <section className="rounded border border-gray-200 bg-white p-4">
+      <section className="rounded-xl border border-gray-200/80 bg-white shadow-sm p-4">
         <h2 className="mb-3 font-semibold text-gray-800">Histórico de ocupação</h2>
         {pastOccupations.length === 0 ? (
           <p className="text-sm text-gray-500">Nenhum lote saiu deste pasto ainda.</p>
@@ -366,13 +480,22 @@ export default function PastureDetailPage() {
                     {o.exitedAt ? new Date(o.exitedAt).toLocaleDateString('pt-BR') : '—'}
                     {o.notes ? ` (${o.notes})` : ''}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => startEditOccupation(o)}
-                    className="text-xs font-medium text-green-700 hover:underline"
-                  >
-                    Editar
-                  </button>
+                  <span className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => startEditOccupation(o)}
+                      className="text-xs font-medium text-emerald-700 hover:underline"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteOccupation(o.id)}
+                      className="text-xs font-medium text-red-600 hover:underline"
+                    >
+                      Excluir
+                    </button>
+                  </span>
                 </li>
               ),
             )}
@@ -385,7 +508,7 @@ export default function PastureDetailPage() {
 
 function SummaryCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded border border-gray-200 bg-white p-3">
+    <div className="rounded-xl border border-gray-200/80 bg-white shadow-sm p-3">
       <p className="text-xs uppercase tracking-wide text-gray-500">{label}</p>
       <p className="mt-1 text-lg font-semibold text-gray-900">{value}</p>
     </div>
@@ -420,7 +543,7 @@ function OccupationEditForm({
   onCancel: () => void;
 }) {
   return (
-    <li className="rounded border border-green-600 bg-green-50 p-3">
+    <li className="rounded-lg border border-emerald-600 bg-emerald-50 p-3">
       <div className="flex flex-wrap gap-2">
         <div>
           <label className="text-xs font-medium text-gray-600">Qtd. de animais</label>
@@ -429,7 +552,7 @@ function OccupationEditForm({
             min={1}
             value={headCount}
             onChange={(e) => onHeadCountChange(e.target.value)}
-            className="mt-1 w-28 rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="mt-1 w-28 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
         <div>
@@ -438,7 +561,7 @@ function OccupationEditForm({
             type="date"
             value={enteredAt}
             onChange={(e) => onEnteredAtChange(e.target.value)}
-            className="mt-1 rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="mt-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
         {showExitedAt && (
@@ -448,7 +571,7 @@ function OccupationEditForm({
               type="date"
               value={exitedAt}
               onChange={(e) => onExitedAtChange(e.target.value)}
-              className="mt-1 rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+              className="mt-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
             />
           </div>
         )}
@@ -458,7 +581,7 @@ function OccupationEditForm({
             type="text"
             value={notes}
             onChange={(e) => onNotesChange(e.target.value)}
-            className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
       </div>
@@ -467,14 +590,14 @@ function OccupationEditForm({
           type="button"
           disabled={saving}
           onClick={onSave}
-          className="rounded bg-green-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+          className="rounded-lg bg-emerald-700 px-3 py-1.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
         >
           {saving ? 'Salvando...' : 'Salvar'}
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="rounded border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
+          className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
         >
           Cancelar
         </button>

@@ -19,6 +19,7 @@ import { FarmsService } from './farms.service';
 import { CreateFarmDto } from './dto/create-farm.dto';
 import { UpdateFarmDto } from './dto/update-farm.dto';
 import { AddMemberDto } from './dto/add-member.dto';
+import { UpdateMemberDto } from './dto/update-member.dto';
 
 @Controller('fazendas')
 @UseGuards(JwtAuthGuard)
@@ -71,6 +72,27 @@ export class FarmsController {
   @Roles(Role.OWNER, Role.MANAGER)
   listMembers(@Param('farmId') farmId: string) {
     return this.farmsService.listMembers(farmId);
+  }
+
+  // Papel + módulos liberados do próprio usuário logado (qualquer membro da fazenda).
+  @Get(':farmId/meu-acesso')
+  @UseGuards(FarmAccessGuard)
+  myAccess(
+    @Param('farmId') farmId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.farmsService.getMyAccess(farmId, user.id);
+  }
+
+  @Patch(':farmId/membros/:userId')
+  @UseGuards(RolesGuard)
+  @Roles(Role.OWNER, Role.MANAGER)
+  updateMember(
+    @Param('farmId') farmId: string,
+    @Param('userId') userId: string,
+    @Body() dto: UpdateMemberDto,
+  ) {
+    return this.farmsService.updateMember(farmId, userId, dto);
   }
 
   @Delete(':farmId/membros/:userId')

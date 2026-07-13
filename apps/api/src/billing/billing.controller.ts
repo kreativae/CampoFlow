@@ -1,13 +1,29 @@
-import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  ForbiddenException,
+  Get,
+  Headers,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
+import type { RawBodyRequest } from '@nestjs/common';
+import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/decorators/current-user.decorator';
 import { BillingService } from './billing.service';
+import { StripeService } from './stripe.service';
+import type { UpdateStripeConfigInput } from './stripe.service';
 import { CheckoutDto } from './dto/checkout.dto';
 
 @Controller('conta/assinatura')
 export class BillingController {
-  constructor(private readonly billingService: BillingService) {}
+  constructor(
+    private readonly billingService: BillingService,
+    private readonly stripeService: StripeService,
+  ) {}
 
   @Get()
   @UseGuards(JwtAuthGuard)
@@ -31,19 +47,33 @@ export class BillingController {
     return this.billingService.cancel(user.accountId);
   }
 
-  // Public endpoint: Mercado Pago calls this directly, with no auth header. The
-  // handler re-fetches the resource from MP's API by id rather than trusting the
-  // webhook body, so an unauthenticated POST here can't be used to forge state.
-  @Post('webhook/mercadopago')
+  // Endpoint público — o Stripe envia sem header de auth.
+  // Verificamos via assinatura HMAC do Stripe (stripe-signature header).
+  // O body precisa ser raw (Buffer) para a verificação funcionar.
+  @Post('webhook/stripe')
   async webhook(
-    @Query('id') queryId: string,
-    @Body() body: Record<string, unknown>,
+    @Req() req: RawBodyRequest<Request>,
+    @Headers('stripe-signature') signature: string | undefined,
   ) {
-    const data = body?.data as { id?: string } | undefined;
-    const preapprovalId = data?.id ?? queryId;
-    if (preapprovalId) {
-      await this.billingService.handleWebhook(preapprovalId);
+    const payload = req.rawBody;
+    if (!payload) {
+      throw new ForbiddenException('Payload vazio');
     }
+    await this.billingService.handleWebhook(payload, signature ?? '');
     return { received: true };
+  }
+
+  // Admin: status da configuração Stripe
+  @Get('admin/stripe')
+  @UseGuards(JwtAuthGuard)
+  getStripeConfig() {
+    return this.stripeService.getConfigStatus();
+  }
+
+  // Admin: salvar chaves do Stripe
+  @Post('admin/stripe')
+  @UseGuards(JwtAuthGuard)
+  updateStripeConfig(@Body() dto: UpdateStripeConfigInput) {
+    return this.stripeService.updateConfig(dto);
   }
 }

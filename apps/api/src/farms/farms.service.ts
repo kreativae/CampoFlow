@@ -16,6 +16,7 @@ import { CANCELED_DATA_RETENTION_DAYS } from '../billing/plans';
 import { CreateFarmDto } from './dto/create-farm.dto';
 import { UpdateFarmDto } from './dto/update-farm.dto';
 import { AddMemberDto } from './dto/add-member.dto';
+import { UpdateMemberDto } from './dto/update-member.dto';
 
 const INVITE_TOKEN_SALT_ROUNDS = 10;
 const INVITE_TTL_DAYS = 7;
@@ -130,8 +131,13 @@ export class FarmsService {
     if (user) {
       const membership = await this.prisma.membership.upsert({
         where: { userId_farmId: { userId: user.id, farmId } },
-        update: { role: dto.role },
-        create: { userId: user.id, farmId, role: dto.role },
+        update: { role: dto.role, moduleAccess: dto.moduleAccess ?? [] },
+        create: {
+          userId: user.id,
+          farmId,
+          role: dto.role,
+          moduleAccess: dto.moduleAccess ?? [],
+        },
       });
 
       if (this.emailService.isConfigured()) {
@@ -164,6 +170,7 @@ export class FarmsService {
         farmId,
         email: dto.email,
         role: dto.role,
+        moduleAccess: dto.moduleAccess ?? [],
         tokenHash,
         invitedById: inviterId,
         expiresAt: new Date(Date.now() + INVITE_TTL_DAYS * 24 * 60 * 60 * 1000),
@@ -255,8 +262,13 @@ export class FarmsService {
       }),
       this.prisma.membership.upsert({
         where: { userId_farmId: { userId, farmId: matched.farmId } },
-        update: { role: matched.role },
-        create: { userId, farmId: matched.farmId, role: matched.role },
+        update: { role: matched.role, moduleAccess: matched.moduleAccess },
+        create: {
+          userId,
+          farmId: matched.farmId,
+          role: matched.role,
+          moduleAccess: matched.moduleAccess,
+        },
       }),
     ]);
 
@@ -275,7 +287,65 @@ export class FarmsService {
       email: m.user.email,
       name: m.user.name,
       role: m.role,
+      moduleAccess: m.moduleAccess,
     }));
+  }
+
+  // Papel + allowlist de módulos do usuário logado nesta propriedade. Usado pelo
+  // painel web para esconder da navegação os módulos que o membro não pode acessar.
+  async getMyAccess(farmId: string, userId: string) {
+    const membership = await this.prisma.membership.findUnique({
+      where: { userId_farmId: { userId, farmId } },
+    });
+    if (!membership) {
+      throw new NotFoundException('Você não é membro desta propriedade');
+    }
+    return {
+      role: membership.role,
+      // Proprietário sempre tem acesso total, independentemente do allowlist.
+      moduleAccess:
+        membership.role === Role.OWNER ? [] : membership.moduleAccess,
+    };
+  }
+
+  async updateMember(farmId: string, userId: string, dto: UpdateMemberDto) {
+    const membership = await this.prisma.membership.findUnique({
+      where: { userId_farmId: { userId, farmId } },
+    });
+    if (!membership) {
+      throw new NotFoundException('Membro não encontrado nesta propriedade');
+    }
+
+    // Ao rebaixar o papel de um proprietário, garantir que sobre pelo menos um.
+    if (
+      membership.role === Role.OWNER &&
+      dto.role !== undefined &&
+      dto.role !== Role.OWNER
+    ) {
+      const ownerCount = await this.prisma.membership.count({
+        where: { farmId, role: Role.OWNER },
+      });
+      if (ownerCount <= 1) {
+        throw new BadRequestException(
+          'Não é possível rebaixar o único proprietário da propriedade',
+        );
+      }
+    }
+
+    const updated = await this.prisma.membership.update({
+      where: { userId_farmId: { userId, farmId } },
+      data: {
+        ...(dto.role !== undefined ? { role: dto.role } : {}),
+        ...(dto.moduleAccess !== undefined
+          ? { moduleAccess: dto.moduleAccess }
+          : {}),
+      },
+    });
+    return {
+      userId: updated.userId,
+      role: updated.role,
+      moduleAccess: updated.moduleAccess,
+    };
   }
 
   async removeMember(farmId: string, userId: string) {

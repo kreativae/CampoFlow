@@ -129,8 +129,9 @@ describe('Admin (e2e)', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(200);
 
-    const accounts = res.body as AccountSummaryBody[];
-    expect(accounts.some((a) => a.id === regularAccountId)).toBe(true);
+    const body = res.body as { items: AccountSummaryBody[]; total: number };
+    expect(Array.isArray(body.items)).toBe(true);
+    expect(body.items.some((a) => a.id === regularAccountId)).toBe(true);
   });
 
   it('lets a platform admin inspect a single account', async () => {

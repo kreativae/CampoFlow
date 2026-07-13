@@ -76,7 +76,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                   autoFocus
                   value={typedText}
                   onChange={(e) => setTypedText(e.target.value)}
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none"
                 />
               </div>
             )}
@@ -85,7 +85,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
               <button
                 type="button"
                 onClick={() => handleClose(false)}
-                className="rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
               >
                 {pending.cancelLabel ?? 'Cancelar'}
               </button>
@@ -96,7 +96,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                 className={`rounded px-4 py-2 text-sm font-medium text-white disabled:opacity-50 ${
                   pending.danger
                     ? 'bg-red-600 hover:bg-red-700'
-                    : 'bg-green-700 hover:bg-green-800'
+                    : 'bg-emerald-700 hover:bg-emerald-800'
                 }`}
               >
                 {pending.confirmLabel ?? 'Confirmar'}

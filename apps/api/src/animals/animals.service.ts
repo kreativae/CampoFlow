@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateAnimalDto } from './dto/create-animal.dto';
 import { UpdateAnimalDto } from './dto/update-animal.dto';
 import { TransferAnimalDto } from './dto/transfer-animal.dto';
+import { MoveAnimalsDto } from './dto/move-animals.dto';
 
 @Injectable()
 export class AnimalsService {
@@ -122,6 +123,44 @@ export class AnimalsService {
     });
 
     return updated;
+  }
+
+  // Moves one or several ear tags to another pasture within the same farm at once,
+  // logging a move event for each animal.
+  async moveToPasture(farmId: string, dto: MoveAnimalsDto) {
+    const targetPastureId = dto.pastureId ?? null;
+    if (targetPastureId) {
+      await this.assertPastureBelongsToFarm(farmId, targetPastureId);
+    }
+
+    const animals = await this.prisma.animal.findMany({
+      where: { id: { in: dto.animalIds }, farmId, active: true },
+    });
+    if (animals.length !== dto.animalIds.length) {
+      throw new NotFoundException(
+        'Um ou mais animais não foram encontrados nesta propriedade',
+      );
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.animal.updateMany({
+        where: { id: { in: dto.animalIds }, farmId },
+        data: { pastureId: targetPastureId },
+      }),
+      this.prisma.animalEvent.createMany({
+        data: animals.map((animal) => ({
+          animalId: animal.id,
+          type: AnimalEventType.TRANSFER,
+          description: `Movido de pasto ${animal.pastureId ?? '-'} para pasto ${targetPastureId ?? '-'}`,
+          metadata: {
+            fromPastureId: animal.pastureId,
+            toPastureId: targetPastureId,
+          },
+        })),
+      }),
+    ]);
+
+    return { moved: animals.length, pastureId: targetPastureId };
   }
 
   async history(farmId: string, animalId: string) {

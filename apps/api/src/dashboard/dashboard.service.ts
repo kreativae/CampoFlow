@@ -7,10 +7,10 @@ import { FinanceService } from '../finance/finance.service';
 import { HealthRecordsService } from '../health-records/health-records.service';
 import { FarmsService } from '../farms/farms.service';
 import { ReproductionService } from '../reproduction/reproduction.service';
-import { WeatherService } from '../weather/weather.service';
 import { SuppliesService } from '../supplies/supplies.service';
 import { MachinesService } from '../machines/machines.service';
 import { TasksService } from '../teams/tasks.service';
+import { EmployeesService } from '../employees/employees.service';
 import { AgendaService } from '../agenda/agenda.service';
 import { MapFeaturesService } from '../map-features/map-features.service';
 import { SoilAnalysisService } from '../soil-analysis/soil-analysis.service';
@@ -32,10 +32,10 @@ export class DashboardService {
     private readonly healthRecordsService: HealthRecordsService,
     private readonly farmsService: FarmsService,
     private readonly reproductionService: ReproductionService,
-    private readonly weatherService: WeatherService,
     private readonly suppliesService: SuppliesService,
     private readonly machinesService: MachinesService,
     private readonly tasksService: TasksService,
+    private readonly employeesService: EmployeesService,
     private readonly agendaService: AgendaService,
     private readonly mapFeaturesService: MapFeaturesService,
     private readonly soilAnalysisService: SoilAnalysisService,
@@ -99,12 +99,12 @@ export class DashboardService {
       herd,
       members,
       reproductionStats,
-      weatherAlerts,
       supplyAlerts,
       supplies,
       machines,
       machinesCosts,
       tasks,
+      employeesSummary,
       agendaAlerts,
       mapFeatures,
       soilAnalyses,
@@ -116,12 +116,12 @@ export class DashboardService {
       this.getOverview(farmId),
       this.farmsService.listMembers(farmId),
       this.reproductionService.stats(farmId),
-      this.weatherService.activeAlerts(farmId),
       this.suppliesService.alerts(farmId),
       this.suppliesService.findAll(farmId),
       this.machinesService.findAll(farmId),
       this.machinesService.costsSummary(farmId),
       this.tasksService.findAll(farmId),
+      this.employeesService.summary(farmId),
       this.agendaService.alerts(farmId),
       this.mapFeaturesService.findAll(farmId),
       this.soilAnalysisService.findAll(farmId),
@@ -140,10 +140,6 @@ export class DashboardService {
       herd,
       members: { total: members.length },
       reproduction: reproductionStats,
-      weather: {
-        activeAlertsCount: weatherAlerts.length,
-        latestAlert: weatherAlerts[0] ?? null,
-      },
       supplies: {
         total: supplies.length,
         alertsCount: supplyAlerts.length,
@@ -157,6 +153,7 @@ export class DashboardService {
         total: tasks.length,
         openCount: openTasks.length,
       },
+      employees: employeesSummary,
       agenda: {
         upcomingCount: agendaAlerts.length,
         upcoming: agendaAlerts.slice(0, 5),

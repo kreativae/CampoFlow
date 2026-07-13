@@ -10,6 +10,7 @@ import type {
   Animal,
   AnimalEvent,
   GainSummary,
+  Pasture,
   PregnancyDiagnosisResult,
   ReproductiveEvent,
   ReproductiveEventType,
@@ -34,6 +35,9 @@ export default function AnimalDetailPage() {
   const confirm = useConfirm();
 
   const [animal, setAnimal] = useState<Animal | null>(null);
+  const [pastures, setPastures] = useState<Pasture[]>([]);
+  const [movePastureId, setMovePastureId] = useState('');
+  const [savingPasture, setSavingPasture] = useState(false);
   const [weighings, setWeighings] = useState<WeighingRecord[]>([]);
   const [gainSummary, setGainSummary] = useState<GainSummary | null>(null);
   const [vaccinations, setVaccinations] = useState<VaccinationRecord[]>([]);
@@ -80,6 +84,7 @@ export default function AnimalDetailPage() {
       const base = `/fazendas/${farmId}/animais/${animalId}`;
       const [
         animalData,
+        pasturesData,
         weighingsData,
         gainData,
         vaccinationsData,
@@ -87,6 +92,7 @@ export default function AnimalDetailPage() {
         historyData,
       ] = await Promise.all([
         apiFetch<Animal>(base, { token: accessToken }),
+        apiFetch<Pasture[]>(`/fazendas/${farmId}/pastagens`, { token: accessToken }),
         apiFetch<WeighingRecord[]>(`${base}/pesagens`, { token: accessToken }),
         apiFetch<GainSummary>(`${base}/pesagens/resumo-ganho`, { token: accessToken }),
         apiFetch<VaccinationRecord[]>(`${base}/vacinacoes`, { token: accessToken }),
@@ -94,6 +100,8 @@ export default function AnimalDetailPage() {
         apiFetch<AnimalEvent[]>(`${base}/historico`, { token: accessToken }),
       ]);
       setAnimal(animalData);
+      setPastures(pasturesData);
+      setMovePastureId(animalData.pastureId ?? '');
       setWeighings(weighingsData);
       setGainSummary(gainData);
       setVaccinations(vaccinationsData);
@@ -116,6 +124,27 @@ export default function AnimalDetailPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadData();
   }, [loading, user, loadData, router]);
+
+  async function handleChangePasture(event: FormEvent) {
+    event.preventDefault();
+    setSavingPasture(true);
+    setError(null);
+    try {
+      await apiFetch(`/fazendas/${farmId}/animais/mover-pasto`, {
+        method: 'POST',
+        token: accessToken,
+        body: {
+          animalIds: [animalId],
+          pastureId: movePastureId || null,
+        },
+      });
+      await loadData();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao trocar o pasto do animal');
+    } finally {
+      setSavingPasture(false);
+    }
+  }
 
   async function handleAddWeighing(event: FormEvent) {
     event.preventDefault();
@@ -336,12 +365,12 @@ export default function AnimalDetailPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
+    <main className="animate-fade-up mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-8">
       <header className="mb-8">
-        <Link href={`/fazendas/${farmId}/animais`} className="text-sm text-green-700 hover:underline">
+        <Link href={`/fazendas/${farmId}/animais`} className="text-sm text-emerald-700 hover:underline">
           ← Rebanho
         </Link>
-        <h1 className="text-2xl font-semibold text-green-800">{animal?.earTag}</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-gray-900">{animal?.earTag}</h1>
         <p className="text-sm text-gray-500">
           {animal?.category} · {animal?.sex === 'FEMALE' ? 'Fêmea' : 'Macho'} ·{' '}
           {animal?.breed ?? 'Raça não informada'}
@@ -349,12 +378,12 @@ export default function AnimalDetailPage() {
       </header>
 
       {error && (
-        <p className="mb-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+        <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
           {error}
         </p>
       )}
 
-      <section className="mb-8 grid grid-cols-3 gap-3">
+      <section className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <SummaryCard label="Peso atual" value={`${animal?.currentWeightKg ?? '—'} kg`} />
         <SummaryCard
           label="Ganho diário médio"
@@ -366,22 +395,54 @@ export default function AnimalDetailPage() {
         />
       </section>
 
-      <section className="mb-8 rounded border border-gray-200 bg-white p-4">
+      <section className="mb-8 rounded-xl border border-gray-200/80 bg-white shadow-sm p-4">
+        <h2 className="mb-3 font-semibold text-gray-800">Pasto</h2>
+        <p className="mb-3 text-sm text-gray-500">
+          Pasto atual:{' '}
+          <span className="font-medium text-gray-800">
+            {pastures.find((p) => p.id === animal?.pastureId)?.name ?? 'Sem pasto'}
+          </span>
+        </p>
+        <form onSubmit={handleChangePasture} className="flex flex-wrap gap-2">
+          <select
+            value={movePastureId}
+            onChange={(e) => setMovePastureId(e.target.value)}
+            className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+          >
+            <option value="">— Sem pasto —</option>
+            {pastures.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+          <button
+            type="submit"
+            disabled={savingPasture || movePastureId === (animal?.pastureId ?? '')}
+            className="rounded-lg bg-emerald-700 px-3 py-1.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
+          >
+            {savingPasture ? 'Salvando...' : 'Trocar pasto'}
+          </button>
+        </form>
+      </section>
+
+      <section className="mb-8 rounded-xl border border-gray-200/80 bg-white shadow-sm p-4">
         <h2 className="mb-3 font-semibold text-gray-800">Pesagens</h2>
         <form onSubmit={handleAddWeighing} className="mb-4 flex gap-2">
           <input
             type="number"
             step="0.1"
+            min="0"
             placeholder="Peso (kg)"
             required
             value={newWeight}
             onChange={(e) => setNewWeight(e.target.value)}
-            className="flex-1 rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
           <button
             type="submit"
             disabled={savingWeight}
-            className="rounded bg-green-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+            className="rounded-lg bg-emerald-700 px-3 py-1.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
           >
             {savingWeight ? 'Salvando...' : 'Registrar'}
           </button>
@@ -402,27 +463,28 @@ export default function AnimalDetailPage() {
                         type="date"
                         value={editWeighingDate}
                         onChange={(e) => setEditWeighingDate(e.target.value)}
-                        className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+                        className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                       />
                       <input
                         type="number"
                         step="0.1"
+                        min="0"
                         value={editWeighingKg}
                         onChange={(e) => setEditWeighingKg(e.target.value)}
-                        className="w-24 rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+                        className="w-24 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                       />
                       <button
                         type="button"
                         disabled={savingWeighingEdit}
                         onClick={() => handleSaveWeighingEdit(w.id)}
-                        className="rounded bg-green-700 px-2 py-1 text-xs font-medium text-white hover:bg-green-800 disabled:opacity-50"
+                        className="rounded-lg bg-emerald-700 px-2 py-1 text-xs font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
                       >
                         {savingWeighingEdit ? 'Salvando...' : 'Salvar'}
                       </button>
                       <button
                         type="button"
                         onClick={() => setEditingWeighingId(null)}
-                        className="rounded border border-gray-300 px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50"
+                        className="rounded-lg border border-gray-300 px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50"
                       >
                         Cancelar
                       </button>
@@ -437,7 +499,7 @@ export default function AnimalDetailPage() {
                         <button
                           type="button"
                           onClick={() => startEditWeighing(w)}
-                          className="text-xs font-medium text-green-700 hover:underline"
+                          className="text-xs font-medium text-emerald-700 hover:underline"
                         >
                           Editar
                         </button>
@@ -457,7 +519,7 @@ export default function AnimalDetailPage() {
         )}
       </section>
 
-      <section className="mb-8 rounded border border-gray-200 bg-white p-4">
+      <section className="mb-8 rounded-xl border border-gray-200/80 bg-white shadow-sm p-4">
         <h2 className="mb-3 font-semibold text-gray-800">Vacinação</h2>
         <form onSubmit={handleScheduleVaccination} className="mb-4 flex flex-wrap gap-2">
           <input
@@ -466,19 +528,19 @@ export default function AnimalDetailPage() {
             required
             value={vaccineName}
             onChange={(e) => setVaccineName(e.target.value)}
-            className="flex-1 rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
           <input
             type="date"
             required
             value={scheduledDate}
             onChange={(e) => setScheduledDate(e.target.value)}
-            className="rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
           <button
             type="submit"
             disabled={savingVaccination}
-            className="rounded bg-green-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+            className="rounded-lg bg-emerald-700 px-3 py-1.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
           >
             {savingVaccination ? 'Salvando...' : 'Agendar'}
           </button>
@@ -497,7 +559,7 @@ export default function AnimalDetailPage() {
                       type="date"
                       value={editVaccinationScheduledDate}
                       onChange={(e) => setEditVaccinationScheduledDate(e.target.value)}
-                      className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+                      className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                     />
                   </label>
                   {v.administeredAt && (
@@ -509,7 +571,7 @@ export default function AnimalDetailPage() {
                         onChange={(e) =>
                           setEditVaccinationAdministeredAt(e.target.value)
                         }
-                        className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+                        className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                       />
                     </label>
                   )}
@@ -517,14 +579,14 @@ export default function AnimalDetailPage() {
                     type="button"
                     disabled={savingVaccinationEdit}
                     onClick={() => handleSaveVaccinationEdit(v.id)}
-                    className="rounded bg-green-700 px-2 py-1 text-xs font-medium text-white hover:bg-green-800 disabled:opacity-50"
+                    className="rounded-lg bg-emerald-700 px-2 py-1 text-xs font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
                   >
                     {savingVaccinationEdit ? 'Salvando...' : 'Salvar'}
                   </button>
                   <button
                     type="button"
                     onClick={() => setEditingVaccinationId(null)}
-                    className="rounded border border-gray-300 px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50"
+                    className="rounded-lg border border-gray-300 px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50"
                   >
                     Cancelar
                   </button>
@@ -540,7 +602,7 @@ export default function AnimalDetailPage() {
                       <button
                         type="button"
                         onClick={() => handleApplyVaccination(v.id)}
-                        className="text-xs font-medium text-green-700 hover:underline"
+                        className="text-xs font-medium text-emerald-700 hover:underline"
                       >
                         Marcar como aplicada
                       </button>
@@ -548,7 +610,7 @@ export default function AnimalDetailPage() {
                     <button
                       type="button"
                       onClick={() => startEditVaccination(v)}
-                      className="text-xs font-medium text-green-700 hover:underline"
+                      className="text-xs font-medium text-emerald-700 hover:underline"
                     >
                       Editar
                     </button>
@@ -560,13 +622,13 @@ export default function AnimalDetailPage() {
         )}
       </section>
 
-      <section className="mb-8 rounded border border-gray-200 bg-white p-4">
+      <section className="mb-8 rounded-xl border border-gray-200/80 bg-white shadow-sm p-4">
         <h2 className="mb-3 font-semibold text-gray-800">Reprodução</h2>
         <form onSubmit={handleAddReproductiveEvent} className="mb-4 flex flex-wrap gap-2">
           <select
             value={reproEventType}
             onChange={(e) => setReproEventType(e.target.value as ReproductiveEventType)}
-            className="rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           >
             {REPRODUCTIVE_EVENT_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -579,7 +641,7 @@ export default function AnimalDetailPage() {
               value={reproResult}
               onChange={(e) => setReproResult(e.target.value as PregnancyDiagnosisResult | '')}
               required
-              className="rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+              className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
             >
               <option value="">Resultado...</option>
               <option value="PRENHE">Prenhe</option>
@@ -589,7 +651,7 @@ export default function AnimalDetailPage() {
           <button
             type="submit"
             disabled={savingReproEvent}
-            className="rounded bg-green-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+            className="rounded-lg bg-emerald-700 px-3 py-1.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
           >
             {savingReproEvent ? 'Salvando...' : 'Registrar evento'}
           </button>
@@ -605,12 +667,12 @@ export default function AnimalDetailPage() {
                     type="date"
                     value={editReproDate}
                     onChange={(ev) => setEditReproDate(ev.target.value)}
-                    className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+                    className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                   />
                   <select
                     value={editReproType}
                     onChange={(ev) => setEditReproType(ev.target.value as ReproductiveEventType)}
-                    className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+                    className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                   >
                     {REPRODUCTIVE_EVENT_OPTIONS.map((opt) => (
                       <option key={opt.value} value={opt.value}>
@@ -622,7 +684,7 @@ export default function AnimalDetailPage() {
                     <select
                       value={editReproResult}
                       onChange={(ev) => setEditReproResult(ev.target.value as PregnancyDiagnosisResult | '')}
-                      className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+                      className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                     >
                       <option value="">Resultado...</option>
                       <option value="PRENHE">Prenhe</option>
@@ -633,14 +695,14 @@ export default function AnimalDetailPage() {
                     type="button"
                     disabled={savingReproEdit}
                     onClick={() => handleSaveReproEdit(e.id)}
-                    className="rounded bg-green-700 px-2 py-1 text-xs font-medium text-white hover:bg-green-800 disabled:opacity-50"
+                    className="rounded-lg bg-emerald-700 px-2 py-1 text-xs font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
                   >
                     {savingReproEdit ? 'Salvando...' : 'Salvar'}
                   </button>
                   <button
                     type="button"
                     onClick={() => setEditingReproId(null)}
-                    className="rounded border border-gray-300 px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50"
+                    className="rounded-lg border border-gray-300 px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50"
                   >
                     Cancelar
                   </button>
@@ -656,7 +718,7 @@ export default function AnimalDetailPage() {
                     <button
                       type="button"
                       onClick={() => startEditReproEvent(e)}
-                      className="text-xs font-medium text-green-700 hover:underline"
+                      className="text-xs font-medium text-emerald-700 hover:underline"
                     >
                       Editar
                     </button>
@@ -675,7 +737,7 @@ export default function AnimalDetailPage() {
         )}
       </section>
 
-      <section className="rounded border border-gray-200 bg-white p-4">
+      <section className="rounded-xl border border-gray-200/80 bg-white shadow-sm p-4">
         <h2 className="mb-3 font-semibold text-gray-800">Histórico</h2>
         {history.length === 0 ? (
           <p className="text-sm text-gray-500">Nenhum evento registrado.</p>
@@ -697,7 +759,7 @@ export default function AnimalDetailPage() {
 
 function SummaryCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded border border-gray-200 bg-white p-3">
+    <div className="rounded-xl border border-gray-200/80 bg-white shadow-sm p-3">
       <p className="text-xs uppercase tracking-wide text-gray-500">{label}</p>
       <p className="mt-1 text-lg font-semibold text-gray-900">{value}</p>
     </div>
@@ -718,7 +780,7 @@ function WeightEvolutionChart({ weighings }: { weighings: WeighingRecord[] }) {
     .sort((a, b) => new Date(a.weighedAt).getTime() - new Date(b.weighedAt).getTime());
 
   const width = 600;
-  const height = 160;
+  const height = 200;
   const padding = 28;
   const weights = points.map((p) => p.weightKg);
   const minWeight = Math.min(...weights);
@@ -754,19 +816,19 @@ function WeightEvolutionChart({ weighings }: { weighings: WeighingRecord[] }) {
       {coords.map((c) => (
         <circle key={c.id} cx={c.x} cy={c.y} r={3} fill="#15803d" />
       ))}
-      <text x={padding} y={14} fontSize={11} fill="#6b7280">
+      <text x={padding} y={14} fontSize={8} fill="#6b7280">
         {maxWeight.toFixed(1)} kg
       </text>
-      <text x={padding} y={height - padding + 14} fontSize={11} fill="#6b7280">
+      <text x={padding} y={height - padding + 12} fontSize={8} fill="#6b7280">
         {minWeight.toFixed(1)} kg
       </text>
-      <text x={coords[0].x} y={height - 6} fontSize={10} fill="#9ca3af">
+      <text x={coords[0].x} y={height - 6} fontSize={7} fill="#9ca3af">
         {new Date(coords[0].weighedAt).toLocaleDateString('pt-BR')}
       </text>
       <text
         x={coords[coords.length - 1].x}
         y={height - 6}
-        fontSize={10}
+        fontSize={7}
         fill="#9ca3af"
         textAnchor="end"
       >

@@ -89,6 +89,7 @@ export class SoilAnalysisService {
   async findOne(farmId: string, id: string) {
     const analysis = await this.prisma.soilAnalysis.findUnique({
       where: { id },
+      include: { photos: { orderBy: { createdAt: 'asc' } } },
     });
     if (!analysis || analysis.farmId !== farmId) {
       throw new NotFoundException('Análise de solo não encontrada');
@@ -137,10 +138,16 @@ export class SoilAnalysisService {
 
   async remove(farmId: string, id: string) {
     const analysis = await this.findOne(farmId, id);
+    const photos = await this.prisma.soilAnalysisPhoto.findMany({
+      where: { soilAnalysisId: id },
+    });
     await this.prisma.soilAnalysis.delete({ where: { id } });
     if (analysis.documentPath) {
       await this.storageService.delete(analysis.documentPath);
     }
+    await Promise.all(
+      photos.map((p) => this.storageService.delete(p.storagePath)),
+    );
     return { success: true };
   }
 
@@ -150,6 +157,7 @@ export class SoilAnalysisService {
     return this.prisma.soilAnalysis.findMany({
       where: { farmId, mapFeatureId },
       orderBy: { collectedAt: 'asc' },
+      include: { photos: { orderBy: { createdAt: 'asc' } } },
     });
   }
 
@@ -234,5 +242,73 @@ export class SoilAnalysisService {
       path: analysis.documentPath,
       fileName: analysis.documentFileName,
     };
+  }
+
+  async uploadPhotos(
+    farmId: string,
+    analysisId: string,
+    files: Express.Multer.File[],
+    metadata: {
+      takenAt?: string;
+      latitude?: number;
+      longitude?: number;
+      caption?: string;
+    }[],
+  ) {
+    await this.findOne(farmId, analysisId);
+
+    const created = await Promise.all(
+      files.map(async (file, i) => {
+        const meta = metadata[i] ?? {};
+        const storagePath = `${farmId}/solo/fotos/${randomUUID()}${extname(file.originalname)}`;
+        await this.storageService.upload(
+          storagePath,
+          file.buffer,
+          file.mimetype,
+        );
+
+        return this.prisma.soilAnalysisPhoto.create({
+          data: {
+            soilAnalysisId: analysisId,
+            storagePath,
+            fileName: file.originalname,
+            mimeType: file.mimetype,
+            sizeBytes: file.size,
+            takenAt: meta.takenAt ? new Date(meta.takenAt) : null,
+            latitude: meta.latitude ?? null,
+            longitude: meta.longitude ?? null,
+            caption: meta.caption ?? null,
+          },
+        });
+      }),
+    );
+
+    return created;
+  }
+
+  async listPhotos(farmId: string, analysisId: string) {
+    await this.findOne(farmId, analysisId);
+    return this.prisma.soilAnalysisPhoto.findMany({
+      where: { soilAnalysisId: analysisId },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  async getPhoto(farmId: string, analysisId: string, photoId: string) {
+    await this.findOne(farmId, analysisId);
+    const photo = await this.prisma.soilAnalysisPhoto.findUnique({
+      where: { id: photoId },
+    });
+    if (!photo || photo.soilAnalysisId !== analysisId) {
+      throw new NotFoundException('Foto não encontrada');
+    }
+    return photo;
+  }
+
+  async deletePhoto(farmId: string, analysisId: string, photoId: string) {
+    const photo = await this.getPhoto(farmId, analysisId, photoId);
+    await this.prisma.soilAnalysisPhoto.delete({ where: { id: photoId } });
+    await this.storageService.delete(photo.storagePath);
+    return { success: true };
   }
 }

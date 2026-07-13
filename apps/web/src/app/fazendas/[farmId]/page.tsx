@@ -3,13 +3,33 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
+import {
+  BarChart3,
+  Bell,
+  Calendar,
+  FileText,
+  Gauge,
+  Heart,
+  Map,
+  Package,
+  Scale,
+  Sparkles,
+  Sprout,
+  Tractor,
+  TrendingUp,
+  TriangleAlert,
+  Users,
+  Wallet,
+  Beef,
+  type LucideIcon,
+} from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, ApiError } from '@/lib/api';
 import type { DashboardFullOverview, DashboardOverview, Farm } from '@/lib/types';
 
 export default function FarmDashboardPage() {
   const { farmId } = useParams<{ farmId: string }>();
-  const { user, accessToken, loading, logout } = useAuth();
+  const { user, accessToken, loading } = useAuth();
   const router = useRouter();
   const [farm, setFarm] = useState<Farm | null>(null);
   const [dashboard, setDashboard] = useState<DashboardOverview | null>(null);
@@ -66,217 +86,178 @@ export default function FarmDashboardPage() {
     );
   }
 
+  const alerts = dashboard?.pendingAlerts ?? [];
+  const overdueCount = alerts.filter((a) => a.overdue).length;
+
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
-      <header className="mb-8 flex items-center justify-between">
-        <div>
-          <Link href="/fazendas" className="text-sm text-green-700 hover:underline">
-            ← Propriedades
-          </Link>
-          <h1 className="text-2xl font-semibold text-green-800">{farm?.name ?? 'Propriedade'}</h1>
-        </div>
-        <button onClick={logout} className="text-sm font-medium text-gray-600 hover:text-gray-900">
-          Sair
-        </button>
+    <main className="animate-fade-up mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-8">
+      <header className="mb-8">
+        <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
+          {farm?.name ?? 'Propriedade'}
+        </h1>
+        <p className="mt-0.5 text-sm text-gray-500">Visão geral da propriedade</p>
       </header>
 
-      <nav className="mb-8 flex gap-4 border-b border-gray-200 pb-2 text-sm">
-        <Link href={`/fazendas/${farmId}/animais`} className="font-medium text-green-700 hover:underline">
-          Rebanho
-        </Link>
-        <Link href={`/fazendas/${farmId}/pastagens`} className="font-medium text-green-700 hover:underline">
-          Pastagens
-        </Link>
-        <Link href={`/fazendas/${farmId}/reproducao`} className="font-medium text-green-700 hover:underline">
-          Reprodução
-        </Link>
-        <Link href={`/fazendas/${farmId}/insumos`} className="font-medium text-green-700 hover:underline">
-          Insumos
-        </Link>
-        <Link href={`/fazendas/${farmId}/maquinas`} className="font-medium text-green-700 hover:underline">
-          Máquinas
-        </Link>
-        <Link href={`/fazendas/${farmId}/equipe`} className="font-medium text-green-700 hover:underline">
-          Equipe
-        </Link>
-        <Link href={`/fazendas/${farmId}/agenda`} className="font-medium text-green-700 hover:underline">
-          Agenda
-        </Link>
-        <Link href={`/fazendas/${farmId}/mapa`} className="font-medium text-green-700 hover:underline">
-          Solo
-        </Link>
-        <Link href={`/fazendas/${farmId}/safras`} className="font-medium text-green-700 hover:underline">
-          Safras
-        </Link>
-        <Link href={`/fazendas/${farmId}/documentos`} className="font-medium text-green-700 hover:underline">
-          Documentos
-        </Link>
-        <Link href={`/fazendas/${farmId}/relatorios`} className="font-medium text-green-700 hover:underline">
-          Relatórios
-        </Link>
-        <Link href={`/fazendas/${farmId}/inteligencia`} className="font-medium text-green-700 hover:underline">
-          IA
-        </Link>
-        <Link
-          href={`/fazendas/${farmId}/notificacoes`}
-          className="font-medium text-green-700 hover:underline"
-        >
-          Notificações
-        </Link>
-        <Link href={`/fazendas/${farmId}/financeiro`} className="font-medium text-green-700 hover:underline">
-          Financeiro
-        </Link>
-        <Link href={`/fazendas/${farmId}/membros`} className="font-medium text-green-700 hover:underline">
-          Membros
-        </Link>
-        <Link href={`/fazendas/${farmId}/contatos`} className="font-medium text-green-700 hover:underline">
-          Contatos
-        </Link>
-      </nav>
-
       {error && (
-        <p className="mb-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+        <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
           {error}
         </p>
       )}
 
       {!dashboard ? (
-        <p className="rounded border border-gray-200 bg-white px-4 py-3 text-sm text-gray-500">
+        <p className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-500">
           Seu perfil não tem permissão para visualizar o dashboard desta propriedade.
         </p>
       ) : (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-          <Card label="Total de animais" value={dashboard.totalAnimals} />
-          <Card label="Peso médio (kg)" value={dashboard.averageWeightKg} />
-          <Card label="Ganho diário médio (kg)" value={dashboard.averageDailyGainKg} />
-          <Card
-            label="Taxa de lotação"
-            value={`${(dashboard.stockingRate.occupancyRate * 100).toFixed(0)}%`}
-          />
-          <Card label="Saldo do mês (R$)" value={dashboard.currentMonthFinance.saldo} />
-          <Card label="Alertas pendentes" value={dashboard.pendingAlerts.length} />
+        <>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <MetricCard
+              label="Total de animais"
+              value={dashboard.totalAnimals.toLocaleString('pt-BR')}
+              icon={Beef}
+            />
+            <MetricCard
+              label="Peso médio"
+              value={dashboard.averageWeightKg.toLocaleString('pt-BR', {
+                maximumFractionDigits: 1,
+              })}
+              unit="kg"
+              icon={Scale}
+            />
+            <MetricCard
+              label="Ganho médio diário"
+              value={dashboard.averageDailyGainKg.toLocaleString('pt-BR', {
+                maximumFractionDigits: 2,
+              })}
+              unit="kg/dia"
+              icon={TrendingUp}
+            />
+            <MetricCard
+              label="Taxa de lotação"
+              value={(dashboard.stockingRate.occupancyRate * 100).toFixed(0)}
+              unit="%"
+              icon={Gauge}
+              footer={`${dashboard.stockingRate.occupiedHeadCount} de ${dashboard.stockingRate.totalCapacity} cabeças`}
+            />
+            <MetricCard
+              label="Saldo do mês"
+              value={dashboard.currentMonthFinance.saldo.toLocaleString('pt-BR', {
+                style: 'currency',
+                currency: 'BRL',
+              })}
+              icon={Wallet}
+              tone={dashboard.currentMonthFinance.saldo >= 0 ? 'positive' : 'negative'}
+              footer={`${dashboard.currentMonthFinance.receita.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} receita · ${dashboard.currentMonthFinance.despesa.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} despesa`}
+            />
+            <MetricCard
+              label="Alertas pendentes"
+              value={alerts.length}
+              icon={TriangleAlert}
+              tone={alerts.length > 0 ? 'warning' : undefined}
+              footer={
+                overdueCount > 0 ? `${overdueCount} vacinação(ões) vencida(s)` : 'Tudo em dia'
+              }
+            />
+          </div>
 
-          {dashboard.pendingAlerts.length > 0 && (
-            <div className="col-span-full rounded border border-amber-200 bg-amber-50 p-4">
-              <h2 className="mb-2 text-sm font-semibold text-amber-800">
-                Vacinações pendentes
-              </h2>
-              <ul className="space-y-1 text-sm text-amber-900">
-                {dashboard.pendingAlerts.map((alert) => (
-                  <li key={alert.id}>
-                    {alert.animalEarTag} — {alert.vaccineName}{' '}
-                    {alert.overdue ? '(vencida)' : '(a vencer)'}
-                  </li>
-                ))}
-              </ul>
+          {alerts.length > 0 && (
+            <div className="mt-6 flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 sm:flex-row sm:items-center">
+              <TriangleAlert size={18} strokeWidth={2} className="shrink-0 text-amber-600" />
+              <p className="min-w-0 flex-1 text-sm text-amber-900">
+                <span className="font-semibold">Vacinações pendentes: </span>
+                {alerts
+                  .map(
+                    (a) => `${a.animalEarTag} ${a.vaccineName} ${a.overdue ? '(vencida)' : '(a vencer)'}`,
+                  )
+                  .join(' · ')}
+              </p>
+              <Link
+                href={`/fazendas/${farmId}/animais`}
+                className="shrink-0 text-sm font-semibold text-amber-800 transition-colors hover:text-amber-950"
+              >
+                Resolver →
+              </Link>
             </div>
           )}
-        </div>
+        </>
       )}
 
       {resumo && (
         <section className="mt-10">
-          <h2 className="mb-4 text-lg font-semibold text-gray-800">Resumo geral</h2>
+          <h2 className="mb-4 text-lg font-semibold tracking-tight text-gray-900">Resumo geral</h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <SummaryCard
               title="Reprodução"
               href={`/fazendas/${farmId}/reproducao`}
-              lines={[
-                `Taxa de prenhez: ${(resumo.reproduction.pregnancyRate * 100).toFixed(0)}%`,
-                `Taxa de concepção: ${(resumo.reproduction.conceptionRate * 100).toFixed(0)}%`,
-              ]}
-            />
-            <SummaryCard
-              title="Clima"
-              href={`/fazendas/${farmId}/mapa`}
-              lines={[
-                `Alertas ativos: ${resumo.weather.activeAlertsCount}`,
-                resumo.weather.latestAlert
-                  ? `Último: ${resumo.weather.latestAlert.alertType}`
-                  : 'Sem alertas recentes',
-              ]}
-              highlight={resumo.weather.activeAlertsCount > 0}
+              icon={Heart}
+              text={`Prenhez ${(resumo.reproduction.pregnancyRate * 100).toFixed(0)}% · Concepção ${(resumo.reproduction.conceptionRate * 100).toFixed(0)}%`}
             />
             <SummaryCard
               title="Insumos"
               href={`/fazendas/${farmId}/insumos`}
-              lines={[
-                `${resumo.supplies.total} cadastrado(s)`,
-                `${resumo.supplies.alertsCount} em alerta`,
-              ]}
-              highlight={resumo.supplies.alertsCount > 0}
+              icon={Package}
+              text={`${resumo.supplies.total} itens · ${resumo.supplies.alertsCount} em estoque baixo`}
+              badge={resumo.supplies.alertsCount > 0 ? `${resumo.supplies.alertsCount} alertas` : undefined}
             />
             <SummaryCard
               title="Máquinas"
               href={`/fazendas/${farmId}/maquinas`}
-              lines={[`${resumo.machines.total} cadastrada(s)`]}
+              icon={Tractor}
+              text={`${resumo.machines.total} cadastrada(s)`}
             />
             <SummaryCard
               title="Equipe"
               href={`/fazendas/${farmId}/equipe`}
-              lines={[
-                `${resumo.tasks.total} tarefa(s)`,
-                `${resumo.tasks.openCount} em aberto`,
-              ]}
+              icon={Users}
+              text={`${resumo.employees.employeeCount} funcionário(s) · ${resumo.employees.totalCost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`}
             />
             <SummaryCard
               title="Agenda"
               href={`/fazendas/${farmId}/agenda`}
-              lines={[`${resumo.agenda.upcomingCount} próximo(s)/atrasado(s)`]}
-              highlight={resumo.agenda.upcomingCount > 0}
+              icon={Calendar}
+              text={`${resumo.agenda.upcomingCount} evento(s) próximos ou atrasados`}
+              badge={resumo.agenda.upcomingCount > 0 ? String(resumo.agenda.upcomingCount) : undefined}
             />
             <SummaryCard
-              title="Solo"
+              title="Mapa e Solo"
               href={`/fazendas/${farmId}/mapa`}
-              lines={[
-                `${resumo.map.featuresCount} elemento(s)`,
-                `${resumo.map.soilAnalysesCount} análise(s) de solo`,
-              ]}
+              icon={Map}
+              text={`${resumo.map.featuresCount} elementos · ${resumo.map.soilAnalysesCount} análises`}
             />
             <SummaryCard
               title="Safras"
               href={`/fazendas/${farmId}/safras`}
-              lines={[
-                `${resumo.crops.total} safra(s)`,
-                `${resumo.crops.activeCount} em andamento`,
-              ]}
+              icon={Sprout}
+              text={`${resumo.crops.total} safras · ${resumo.crops.activeCount} em andamento`}
             />
             <SummaryCard
               title="Documentos"
               href={`/fazendas/${farmId}/documentos`}
-              lines={[`${resumo.documents.total} arquivo(s)`]}
+              icon={FileText}
+              text={`${resumo.documents.total} arquivo(s)`}
             />
             <SummaryCard
               title="Notificações"
               href={`/fazendas/${farmId}/notificacoes`}
-              lines={[`${resumo.notifications.unreadCount} não lida(s)`]}
-              highlight={resumo.notifications.unreadCount > 0}
-            />
-            <SummaryCard
-              title="Membros"
-              href={`/fazendas/${farmId}/membros`}
-              lines={[`${resumo.members.total} membro(s)`]}
+              icon={Bell}
+              text={`${resumo.notifications.unreadCount} não lida(s)`}
+              badge={
+                resumo.notifications.unreadCount > 0
+                  ? String(resumo.notifications.unreadCount)
+                  : undefined
+              }
             />
             <SummaryCard
               title="Relatórios"
               href={`/fazendas/${farmId}/relatorios`}
-              lines={['Exportação de dados gerenciais']}
+              icon={BarChart3}
+              text="Exportação de dados gerenciais"
             />
             <SummaryCard
-              title="IA / Inteligência"
+              title="Inteligência"
               href={`/fazendas/${farmId}/inteligencia`}
-              lines={['KPIs, previsões e sugestões']}
-            />
-            <SummaryCard
-              title="Cotações"
-              href="/cotacoes"
-              lines={
-                resumo.quotations.length > 0
-                  ? resumo.quotations.map(
-                      (q) => `${q.commodity}: ${q.price} ${q.unit}`,
-                    )
-                  : ['Nenhuma cotação registrada']
-              }
+              icon={Sparkles}
+              text="Análises e recomendações IA"
             />
           </div>
         </section>
@@ -285,11 +266,45 @@ export default function FarmDashboardPage() {
   );
 }
 
-function Card({ label, value }: { label: string; value: string | number }) {
+function MetricCard({
+  label,
+  value,
+  unit,
+  icon: Icon,
+  tone,
+  footer,
+}: {
+  label: string;
+  value: string | number;
+  unit?: string;
+  icon: LucideIcon;
+  tone?: 'positive' | 'negative' | 'warning';
+  footer?: string;
+}) {
+  const valueColor =
+    tone === 'positive'
+      ? 'text-emerald-700'
+      : tone === 'negative'
+        ? 'text-red-600'
+        : tone === 'warning'
+          ? 'text-amber-600'
+          : 'text-gray-900';
+  const chipColor =
+    tone === 'warning' ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-700';
+
   return (
-    <div className="rounded border border-gray-200 bg-white p-4">
-      <p className="text-xs uppercase tracking-wide text-gray-500">{label}</p>
-      <p className="mt-1 text-2xl font-semibold text-gray-900">{value}</p>
+    <div className="rounded-xl border border-gray-200/80 bg-white p-5 shadow-sm transition-shadow duration-200 hover:shadow-md">
+      <div className="flex items-start justify-between">
+        <p className="text-sm font-medium text-gray-500">{label}</p>
+        <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${chipColor}`}>
+          <Icon size={16} strokeWidth={2} />
+        </span>
+      </div>
+      <p className={`mt-2 text-3xl font-semibold tracking-tight ${valueColor}`}>
+        {value}
+        {unit && <span className="ml-1 text-base font-normal text-gray-400">{unit}</span>}
+      </p>
+      {footer && <p className="mt-2 truncate text-xs text-gray-500">{footer}</p>}
     </div>
   );
 }
@@ -297,27 +312,35 @@ function Card({ label, value }: { label: string; value: string | number }) {
 function SummaryCard({
   title,
   href,
-  lines,
-  highlight,
+  icon: Icon,
+  text,
+  badge,
 }: {
   title: string;
   href: string;
-  lines: string[];
-  highlight?: boolean;
+  icon: LucideIcon;
+  text: string;
+  badge?: string;
 }) {
   return (
     <Link
       href={href}
-      className={`block rounded border p-4 transition hover:shadow-sm ${
-        highlight ? 'border-amber-300 bg-amber-50' : 'border-gray-200 bg-white'
-      }`}
+      className="group flex items-start gap-3.5 rounded-xl border border-gray-200/80 bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md"
     >
-      <p className="font-semibold text-green-800">{title}</p>
-      <ul className="mt-1 space-y-0.5 text-sm text-gray-600">
-        {lines.map((line, i) => (
-          <li key={i}>{line}</li>
-        ))}
-      </ul>
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 transition-colors duration-200 group-hover:bg-emerald-100">
+        <Icon size={18} strokeWidth={1.9} />
+      </span>
+      <span className="min-w-0">
+        <span className="flex items-center gap-2">
+          <span className="font-semibold text-gray-900">{title}</span>
+          {badge && (
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
+              {badge}
+            </span>
+          )}
+        </span>
+        <span className="mt-0.5 block truncate text-sm text-gray-500">{text}</span>
+      </span>
     </Link>
   );
 }

@@ -1,11 +1,16 @@
 'use client';
 
+import { Leaf, X } from 'lucide-react';
+import PageHeader from '@/components/PageHeader';
+import Modal from '@/components/Modal';
+
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, ApiError } from '@/lib/api';
 import { useConfirm } from '@/lib/confirm-context';
+import { useToast } from '@/lib/toast-context';
 import type { Pasture } from '@/lib/types';
 
 export default function PasturesPage() {
@@ -13,6 +18,7 @@ export default function PasturesPage() {
   const { user, accessToken, loading } = useAuth();
   const router = useRouter();
   const confirm = useConfirm();
+  const { toastSuccess } = useToast();
 
   const [pastures, setPastures] = useState<Pasture[]>([]);
   const [fetching, setFetching] = useState(true);
@@ -55,6 +61,15 @@ export default function PasturesPage() {
     void loadData();
   }, [loading, user, loadData, router]);
 
+  // Fecha a visualização rápida ao pressionar Esc.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setEditingId(null);
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   async function handleCreate(event: FormEvent) {
     event.preventDefault();
     setCreating(true);
@@ -75,6 +90,7 @@ export default function PasturesPage() {
       setGrassType('');
       setAnimalCapacity('');
       await loadData();
+      toastSuccess('Pasto cadastrado.');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao cadastrar pasto');
     } finally {
@@ -106,6 +122,7 @@ export default function PasturesPage() {
       });
       setEditingId(null);
       await loadData();
+      toastSuccess('Pasto atualizado.');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao atualizar pasto');
     } finally {
@@ -128,6 +145,7 @@ export default function PasturesPage() {
         token: accessToken,
       });
       await loadData();
+      toastSuccess('Pasto excluído.');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao excluir pasto');
     }
@@ -142,23 +160,23 @@ export default function PasturesPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
-      <header className="mb-8">
-        <Link href={`/fazendas/${farmId}`} className="text-sm text-green-700 hover:underline">
-          ← Dashboard
-        </Link>
-        <h1 className="text-2xl font-semibold text-green-800">Pastagens</h1>
-      </header>
+    <main className="animate-fade-up mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-8">
+      <PageHeader
+        icon={Leaf}
+        title="Pastagens"
+        subtitle="Pastos, áreas e capacidade"
+        backHref={`/fazendas/${farmId}`}
+      />
 
       {error && (
-        <p className="mb-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+        <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
           {error}
         </p>
       )}
 
       <form
         onSubmit={handleCreate}
-        className="mb-8 grid grid-cols-2 gap-3 rounded border border-gray-200 bg-white p-4 sm:grid-cols-4"
+        className="mb-8 grid grid-cols-2 gap-3 rounded-xl border border-gray-200/80 bg-white shadow-sm p-4 sm:grid-cols-4"
       >
         <div className="col-span-2">
           <label className="text-xs font-medium text-gray-600">Nome</label>
@@ -167,7 +185,7 @@ export default function PasturesPage() {
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
 
@@ -176,10 +194,11 @@ export default function PasturesPage() {
           <input
             type="number"
             step="0.01"
+            min="0"
             required
             value={areaHectares}
             onChange={(e) => setAreaHectares(e.target.value)}
-            className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
 
@@ -187,10 +206,11 @@ export default function PasturesPage() {
           <label className="text-xs font-medium text-gray-600">Capacidade (animais)</label>
           <input
             type="number"
+            min="1"
             required
             value={animalCapacity}
             onChange={(e) => setAnimalCapacity(e.target.value)}
-            className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
 
@@ -200,7 +220,7 @@ export default function PasturesPage() {
             type="text"
             value={grassType}
             onChange={(e) => setGrassType(e.target.value)}
-            className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
 
@@ -208,7 +228,7 @@ export default function PasturesPage() {
           <button
             type="submit"
             disabled={creating}
-            className="rounded bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+            className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
           >
             {creating ? 'Cadastrando...' : 'Cadastrar pasto'}
           </button>
@@ -218,35 +238,38 @@ export default function PasturesPage() {
       {fetching ? (
         <p className="text-gray-500">Carregando pastos...</p>
       ) : pastures.length === 0 ? (
-        <p className="text-gray-500">Nenhum pasto cadastrado ainda.</p>
+        <div className="flex flex-col items-center rounded-lg border-2 border-dashed border-gray-200 py-12 text-center">
+          <p className="text-lg font-medium text-gray-700">Nenhum pasto cadastrado</p>
+          <p className="mt-1 text-sm text-gray-500">Cadastre seu primeiro pasto para controlar a lotação e rotação do rebanho.</p>
+        </div>
       ) : (
         <ul className="space-y-2">
           {pastures.map((pasture) => {
-            const occupiedHeadCount = (pasture.occupations ?? []).reduce(
-              (sum, o) => sum + o.headCount,
-              0,
-            );
+            const occupiedHeadCount = pasture.animalHeadCount ?? 0;
             return (
               <li
                 key={pasture.id}
-                className="flex items-center justify-between rounded border border-gray-200 bg-white px-4 py-3 hover:border-green-600 hover:shadow-sm"
+                className="flex flex-col gap-2 rounded-xl border border-gray-200/80 bg-white shadow-sm px-4 py-3 transition-all duration-200 hover:border-emerald-200 hover:shadow-md sm:flex-row sm:items-center sm:justify-between"
               >
-                <Link href={`/fazendas/${farmId}/pastagens/${pasture.id}`} className="flex-1">
-                  <p className="font-medium text-gray-900">{pasture.name}</p>
-                  <p className="text-sm text-gray-500">
-                    {pasture.areaHectares} ha · {pasture.grassType ?? 'Capim não informado'}
-                  </p>
+                <Link href={`/fazendas/${farmId}/pastagens/${pasture.id}`} className="flex min-w-0 flex-1 items-center gap-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700"><Leaf size={18} strokeWidth={1.9} /></span>
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium text-gray-900">{pasture.name}</span>
+                    <span className="block truncate text-sm text-gray-500">
+                      {pasture.areaHectares} ha · {pasture.grassType ?? 'Capim não informado'}
+                    </span>
+                  </span>
                 </Link>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 self-end sm:self-auto">
                   <p className="text-sm text-gray-500">
                     {occupiedHeadCount}/{pasture.animalCapacity} animais
                   </p>
                   <button
                     type="button"
                     onClick={() => startEdit(pasture)}
-                    className="text-sm font-medium text-green-700 hover:underline"
+                    className="text-sm font-medium text-emerald-700 hover:underline"
                   >
-                    Visualização rápida
+                    Editar
                   </button>
                   <button
                     type="button"
@@ -263,30 +286,35 @@ export default function PasturesPage() {
       )}
 
       {editingId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-lg">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Visualização rápida — {editName}
-              </h2>
+        <Modal onClose={() => setEditingId(null)}>
+            <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600/10 text-emerald-700">
+                  <Leaf size={19} strokeWidth={1.9} />
+                </span>
+                <div>
+                  <h2 className="text-base font-semibold text-gray-900">{editName}</h2>
+                  <p className="text-xs text-gray-500">Visualização rápida</p>
+                </div>
+              </div>
               <button
                 type="button"
                 onClick={() => setEditingId(null)}
-                className="text-gray-400 hover:text-gray-600"
+                className="rounded-lg p-1.5 text-gray-400 transition-colors duration-150 hover:bg-gray-100 hover:text-gray-600"
                 aria-label="Fechar"
               >
-                ✕
+                <X size={18} />
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 px-6 py-5">
               <div className="col-span-2">
                 <label className="text-xs font-medium text-gray-600">Nome</label>
                 <input
                   type="text"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 />
               </div>
               <div>
@@ -294,18 +322,20 @@ export default function PasturesPage() {
                 <input
                   type="number"
                   step="0.01"
+                  min="0"
                   value={editAreaHectares}
                   onChange={(e) => setEditAreaHectares(e.target.value)}
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 />
               </div>
               <div>
                 <label className="text-xs font-medium text-gray-600">Capacidade</label>
                 <input
                   type="number"
+                  min="1"
                   value={editAnimalCapacity}
                   onChange={(e) => setEditAnimalCapacity(e.target.value)}
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 />
               </div>
               <div className="col-span-2">
@@ -314,15 +344,15 @@ export default function PasturesPage() {
                   type="text"
                   value={editGrassType}
                   onChange={(e) => setEditGrassType(e.target.value)}
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 />
               </div>
             </div>
 
-            <div className="mt-6 flex items-center justify-between">
+            <div className="flex items-center justify-between border-t border-gray-100 bg-gray-50/60 px-6 py-4">
               <Link
                 href={`/fazendas/${farmId}/pastagens/${editingId}`}
-                className="text-sm font-medium text-green-700 hover:underline"
+                className="text-sm font-medium text-emerald-700 hover:underline"
               >
                 Ver detalhes completos →
               </Link>
@@ -330,7 +360,7 @@ export default function PasturesPage() {
                 <button
                   type="button"
                   onClick={() => setEditingId(null)}
-                  className="rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                 >
                   Cancelar
                 </button>
@@ -338,14 +368,13 @@ export default function PasturesPage() {
                   type="button"
                   disabled={saving}
                   onClick={() => handleSaveEdit(editingId)}
-                  className="rounded bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+                  className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
                 >
                   {saving ? 'Salvando...' : 'Salvar'}
                 </button>
               </div>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </main>
   );

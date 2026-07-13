@@ -51,7 +51,9 @@ describe('Canceled-account data retention (e2e)', () => {
       .post('/auth/register')
       .send(user);
     accessToken = (res.body as AuthResponseBody).accessToken;
-    const dbUser = await prisma.user.findUnique({ where: { email: user.email } });
+    const dbUser = await prisma.user.findUnique({
+      where: { email: user.email },
+    });
     accountId = dbUser!.accountId;
 
     const farmRes = await request(app.getHttpServer())
@@ -97,7 +99,9 @@ describe('Canceled-account data retention (e2e)', () => {
     expect(farm).toBeNull();
 
     // The account/user are kept (LGPD: the person can still log in).
-    const dbUser = await prisma.user.findUnique({ where: { email: user.email } });
+    const dbUser = await prisma.user.findUnique({
+      where: { email: user.email },
+    });
     expect(dbUser).not.toBeNull();
   });
 });

@@ -1,10 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
-import Link from 'next/link';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { FileText, Upload } from 'lucide-react';
+import PageHeader from '@/components/PageHeader';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, apiUpload, apiDownload, ApiError } from '@/lib/api';
+import { useToast } from '@/lib/toast-context';
 import type { DocumentCategory, FarmDocument } from '@/lib/types';
 
 const CATEGORY_OPTIONS: { value: DocumentCategory; label: string }[] = [
@@ -29,6 +31,7 @@ function formatSize(bytes: number) {
 export default function DocumentsPage() {
   const { farmId } = useParams<{ farmId: string }>();
   const { user, accessToken, loading } = useAuth();
+  const { toastSuccess } = useToast();
   const router = useRouter();
 
   const [documents, setDocuments] = useState<FarmDocument[]>([]);
@@ -38,6 +41,33 @@ export default function DocumentsPage() {
 
   const [category, setCategory] = useState<DocumentCategory>('GTA');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedFileName, setSelectedFileName] = useState('');
+  const [docFilter, setDocFilter] = useState<'day' | 'week' | 'month' | 'year' | 'all'>('all');
+  const [categoryFilter, setCategoryFilter] = useState<DocumentCategory | ''>('');
+
+  const filteredDocuments = useMemo(() => {
+    let result = documents;
+    if (categoryFilter) {
+      result = result.filter((d) => d.category === categoryFilter);
+    }
+    if (docFilter === 'all') return result;
+    const now = new Date();
+    const start = new Date(now);
+    if (docFilter === 'day') {
+      start.setHours(0, 0, 0, 0);
+    } else if (docFilter === 'week') {
+      const day = now.getDay();
+      start.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
+      start.setHours(0, 0, 0, 0);
+    } else if (docFilter === 'month') {
+      start.setDate(1);
+      start.setHours(0, 0, 0, 0);
+    } else {
+      start.setMonth(0, 1);
+      start.setHours(0, 0, 0, 0);
+    }
+    return result.filter((d) => new Date(d.createdAt) >= start);
+  }, [documents, docFilter, categoryFilter]);
 
   const loadData = useCallback(async () => {
     setFetching(true);
@@ -81,7 +111,9 @@ export default function DocumentsPage() {
       formData.append('file', file);
       await apiUpload(`/fazendas/${farmId}/documentos`, formData, accessToken);
       if (fileInputRef.current) fileInputRef.current.value = '';
+      setSelectedFileName('');
       await loadData();
+      toastSuccess('Documento enviado.');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao enviar documento');
     } finally {
@@ -106,6 +138,7 @@ export default function DocumentsPage() {
         token: accessToken,
       });
       await loadData();
+      toastSuccess('Documento excluído.');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao excluir documento');
     }
@@ -120,34 +153,30 @@ export default function DocumentsPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
-      <header className="mb-8">
-        <Link href={`/fazendas/${farmId}`} className="text-sm text-green-700 hover:underline">
-          ← Dashboard
-        </Link>
-        <h1 className="text-2xl font-semibold text-green-800">Documentos</h1>
-        <p className="text-sm text-gray-500">
-          Armazenamento local de arquivos. Integração com armazenamento em nuvem (AWS S3,
-          Cloudflare R2) é uma evolução futura.
-        </p>
-      </header>
+    <main className="animate-fade-up mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-8">
+      <PageHeader
+        icon={FileText}
+        title="Documentos"
+        subtitle="Arquivos da propriedade"
+        backHref={`/fazendas/${farmId}`}
+      />
 
       {error && (
-        <p className="mb-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+        <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
           {error}
         </p>
       )}
 
       <form
         onSubmit={handleUpload}
-        className="mb-8 flex flex-wrap items-end gap-3 rounded border border-gray-200 bg-white p-4"
+        className="mb-8 flex flex-wrap items-end gap-3 rounded-xl border border-gray-200/80 bg-white shadow-sm p-4"
       >
         <div>
           <label className="text-xs font-medium text-gray-600">Categoria</label>
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value as DocumentCategory)}
-            className="mt-1 rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="mt-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           >
             {CATEGORY_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -163,27 +192,79 @@ export default function DocumentsPage() {
             ref={fileInputRef}
             type="file"
             required
-            className="mt-1 block w-full text-sm"
+            className="hidden"
+            onChange={(e) => setSelectedFileName(e.target.files?.[0]?.name ?? '')}
           />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="mt-1 flex w-full items-center gap-2 rounded-lg border border-dashed border-gray-300 bg-white px-3 py-2 text-sm text-gray-500 transition-all duration-150 hover:border-emerald-400 hover:bg-emerald-50/40"
+          >
+            <Upload size={15} className="shrink-0 text-gray-400" />
+            {selectedFileName || 'Escolher arquivo...'}
+          </button>
         </div>
 
         <button
           type="submit"
           disabled={uploading}
-          className="rounded bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+          className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
         >
           {uploading ? 'Enviando...' : 'Enviar documento'}
         </button>
       </form>
 
-      {documents.length === 0 ? (
-        <p className="text-gray-500">Nenhum documento enviado ainda.</p>
+      {documents.length > 0 && (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-3">
+            <h2 className="font-semibold text-gray-800">Documentos</h2>
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value as DocumentCategory | '')}
+              className="rounded-lg border border-gray-300 px-2 py-1 text-sm"
+            >
+              <option value="">Todas as categorias</option>
+              {CATEGORY_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex gap-1">
+            {([['day', 'Dia'], ['week', 'Semana'], ['month', 'Mês'], ['year', 'Ano'], ['all', 'Todos']] as const).map(([val, label]) => (
+              <button
+                key={val}
+                type="button"
+                onClick={() => setDocFilter(val)}
+                className={`rounded-lg px-3 py-1 text-xs font-medium transition-colors duration-150 ${
+                  docFilter === val
+                    ? 'bg-emerald-700 text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {filteredDocuments.length === 0 ? (
+        <div className="flex flex-col items-center rounded-lg border-2 border-dashed border-gray-200 py-12 text-center">
+          <p className="text-lg font-medium text-gray-700">
+            {documents.length === 0 ? 'Nenhum documento enviado' : 'Nenhum documento no período'}
+          </p>
+          <p className="mt-1 text-sm text-gray-500">
+            {documents.length === 0
+              ? 'Envie notas fiscais, laudos, contratos e outros arquivos da propriedade.'
+              : 'Altere o filtro para ver outros documentos.'}
+          </p>
+        </div>
       ) : (
         <ul className="space-y-2">
-          {documents.map((doc) => (
+          {filteredDocuments.map((doc) => (
             <li
               key={doc.id}
-              className="flex items-center justify-between rounded border border-gray-200 bg-white px-4 py-3"
+              className="flex items-center justify-between rounded-xl border border-gray-200/80 bg-white shadow-sm px-4 py-3"
             >
               <div>
                 <p className="font-medium text-gray-900">{doc.fileName}</p>
@@ -195,7 +276,7 @@ export default function DocumentsPage() {
               <div className="flex gap-3">
                 <button
                   onClick={() => handleDownload(doc)}
-                  className="text-xs font-medium text-green-700 hover:underline"
+                  className="text-xs font-medium text-emerald-700 hover:underline"
                 >
                   Baixar
                 </button>

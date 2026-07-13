@@ -182,6 +182,30 @@ describe('Animals (e2e)', () => {
     expect(events.some((e) => e.type === 'TRANSFER')).toBe(true);
   });
 
+  it('moves one or more ear tags to another pasture in bulk', async () => {
+    const res = await request(app.getHttpServer())
+      .post(`/fazendas/${farmId}/animais/mover-pasto`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ animalIds: [animalId], pastureId: pastureAId })
+      .expect(201);
+
+    expect((res.body as { moved: number }).moved).toBe(1);
+
+    const animalRes = await request(app.getHttpServer())
+      .get(`/fazendas/${farmId}/animais/${animalId}`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+    expect((animalRes.body as AnimalResponseBody).pastureId).toBe(pastureAId);
+  });
+
+  it('rejects a bulk move when an ear tag is not in the farm', async () => {
+    await request(app.getHttpServer())
+      .post(`/fazendas/${farmId}/animais/mover-pasto`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ animalIds: [animalId, 'non-existent'], pastureId: pastureAId })
+      .expect(404);
+  });
+
   it('transfers the animal to a different property', async () => {
     const res = await request(app.getHttpServer())
       .post(`/fazendas/${farmId}/animais/${animalId}/transferir`)

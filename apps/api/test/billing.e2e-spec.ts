@@ -9,6 +9,7 @@ interface AuthResponseBody {
   accessToken: string;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 interface FarmResponseBody {
   id: string;
 }
@@ -55,11 +56,15 @@ describe('Billing (e2e)', () => {
   });
 
   afterAll(async () => {
-    const dbUser = await prisma.user.findUnique({ where: { email: user.email } });
+    const dbUser = await prisma.user.findUnique({
+      where: { email: user.email },
+    });
     if (dbUser) {
       await prisma.membership.deleteMany({ where: { userId: dbUser.id } });
       await prisma.farm.deleteMany({ where: { accountId: dbUser.accountId } });
-      await prisma.subscription.deleteMany({ where: { accountId: dbUser.accountId } });
+      await prisma.subscription.deleteMany({
+        where: { accountId: dbUser.accountId },
+      });
       await prisma.user.delete({ where: { id: dbUser.id } });
       await prisma.account.delete({ where: { id: dbUser.accountId } });
     }

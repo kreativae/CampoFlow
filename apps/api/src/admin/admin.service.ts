@@ -4,14 +4,23 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
+import { Prisma, SubscriptionStatus, TicketStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { PLAN_DEFINITIONS } from '../billing/plans';
-import { MercadoPagoService } from '../billing/mercadopago.service';
+import { StripeService } from '../billing/stripe.service';
 import { FarmsService } from '../farms/farms.service';
 import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
 import { UpdateAccountDto } from './dto/update-account.dto';
 import { UpdateAccountUserDto } from './dto/update-account-user.dto';
-import { UpdateMercadoPagoConfigDto } from './dto/update-mercadopago-config.dto';
+import { UpdateNotificationConfigDto } from './dto/update-notification-config.dto';
+import { ListAccountsDto } from './dto/list-accounts.dto';
+import { ListAuditLogsDto } from './dto/list-audit-logs.dto';
+import { NotificationsService } from '../notifications/notifications.service';
+import { ExternalQuotationsService } from '../quotations/external-quotations.service';
+import { EmailService } from '../common/email/email.service';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
+import { EMAIL_DIGEST_QUEUE } from '../common/queue/queue.constants';
 
 const PASSWORD_SALT_ROUNDS = 10;
 
@@ -19,25 +28,211 @@ const PASSWORD_SALT_ROUNDS = 10;
 export class AdminService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly mercadoPagoService: MercadoPagoService,
+    private readonly stripeService: StripeService,
     private readonly farmsService: FarmsService,
+    private readonly notificationsService: NotificationsService,
+    private readonly externalQuotationsService: ExternalQuotationsService,
+    private readonly emailService: EmailService,
+    @InjectQueue(EMAIL_DIGEST_QUEUE) private readonly emailQueue: Queue,
   ) {}
 
-  async listAccounts() {
-    const accounts = await this.prisma.account.findMany({
-      include: {
-        subscription: true,
-        _count: { select: { farms: true } },
-        users: {
-          where: { isAccountAdmin: true },
-          select: { email: true, name: true },
-          take: 1,
-        },
-      },
+  async healthCheck() {
+    const now = new Date();
+
+    const email = { configured: this.emailService.isConfigured() };
+
+    const stripe = { configured: this.stripeService.isConfigured() };
+
+    const storage = {
+      provider: process.env.R2_ACCESS_KEY_ID ? 'r2' : 'local',
+    };
+
+    let queue: {
+      connected: boolean;
+      waiting: number;
+      active: number;
+      failed: number;
+    } = {
+      connected: false,
+      waiting: 0,
+      active: 0,
+      failed: 0,
+    };
+    try {
+      const [waiting, active, failed] = await Promise.all([
+        this.emailQueue.getWaitingCount(),
+        this.emailQueue.getActiveCount(),
+        this.emailQueue.getFailedCount(),
+      ]);
+      queue = { connected: true, waiting, active, failed };
+    } catch {
+      queue = { connected: false, waiting: 0, active: 0, failed: 0 };
+    }
+
+    let database = { connected: false, latencyMs: 0 };
+    try {
+      const start = Date.now();
+      await this.prisma.$queryRaw`SELECT 1`;
+      database = { connected: true, latencyMs: Date.now() - start };
+    } catch {
+      database = { connected: false, latencyMs: 0 };
+    }
+
+    const lastQuotation = await this.prisma.quotation.findFirst({
       orderBy: { createdAt: 'desc' },
+      select: { createdAt: true },
     });
 
-    return accounts.map((account) => ({
+    const lastNotificationLog = await this.prisma.auditLog.findFirst({
+      where: { path: { contains: 'gerar-notificacoes' } },
+      orderBy: { createdAt: 'desc' },
+      select: { createdAt: true },
+    });
+
+    const notificationSchedule = await this.notificationsService.getSchedule();
+
+    const sentry = { configured: Boolean(process.env.SENTRY_DSN) };
+
+    return {
+      timestamp: now.toISOString(),
+      services: {
+        database,
+        email,
+        queue,
+        storage,
+        stripe,
+        sentry,
+      },
+      data: {
+        lastQuotationFetch: lastQuotation?.createdAt ?? null,
+        lastNotificationGeneration: lastNotificationLog?.createdAt ?? null,
+        notificationSchedule: {
+          frequency: notificationSchedule.frequency,
+          enabled: notificationSchedule.enabled,
+        },
+      },
+    };
+  }
+
+  // Painel de visão geral da plataforma: números que o dono acompanha no dia a dia.
+  // Tudo agregado do próprio banco (assinaturas + planos), sem depender de serviço
+  // externo. MRR considera apenas assinaturas ACTIVE com preço numérico (trial e
+  // enterprise "fale com vendas" não entram na receita recorrente).
+  async overview() {
+    const now = new Date();
+    const days7 = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const days30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    const [
+      totalAccounts,
+      totalFarms,
+      newAccounts7d,
+      newAccounts30d,
+      subscriptions,
+      openTickets,
+    ] = await Promise.all([
+      this.prisma.account.count(),
+      this.prisma.farm.count(),
+      this.prisma.account.count({ where: { createdAt: { gte: days7 } } }),
+      this.prisma.account.count({ where: { createdAt: { gte: days30 } } }),
+      this.prisma.subscription.findMany({
+        select: { status: true, planTier: true },
+      }),
+      this.prisma.ticket.count({
+        where: {
+          status: { in: [TicketStatus.ABERTO, TicketStatus.EM_ANDAMENTO] },
+        },
+      }),
+    ]);
+
+    const statusCounts: Record<string, number> = {
+      TRIALING: 0,
+      ACTIVE: 0,
+      PAST_DUE: 0,
+      CANCELED: 0,
+      SUSPENDED: 0,
+    };
+    const planCounts: Record<string, number> = {
+      TRIAL: 0,
+      BASICO: 0,
+      PROFISSIONAL: 0,
+      ENTERPRISE: 0,
+    };
+    let mrr = 0;
+    for (const sub of subscriptions) {
+      statusCounts[sub.status] = (statusCounts[sub.status] ?? 0) + 1;
+      planCounts[sub.planTier] = (planCounts[sub.planTier] ?? 0) + 1;
+      if (sub.status === SubscriptionStatus.ACTIVE) {
+        const price = PLAN_DEFINITIONS[sub.planTier]?.priceBRL;
+        if (price) mrr += price;
+      }
+    }
+
+    // Contas sem assinatura (staff da plataforma) não aparecem nos status acima.
+    const withoutSubscription = totalAccounts - subscriptions.length;
+
+    return {
+      totalAccounts,
+      totalFarms,
+      newAccounts7d,
+      newAccounts30d,
+      openTickets,
+      withoutSubscription,
+      statusCounts,
+      planCounts,
+      mrr: Number(mrr.toFixed(2)),
+    };
+  }
+
+  async listAccounts(query: ListAccountsDto = {}) {
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 20;
+    const search = query.search?.trim();
+
+    const where: Prisma.AccountWhereInput = {
+      ...(query.status || query.planTier
+        ? {
+            subscription: {
+              ...(query.status ? { status: query.status } : {}),
+              ...(query.planTier ? { planTier: query.planTier } : {}),
+            },
+          }
+        : {}),
+      ...(search
+        ? {
+            OR: [
+              { name: { contains: search, mode: 'insensitive' } },
+              { billingEmail: { contains: search, mode: 'insensitive' } },
+              {
+                users: {
+                  some: { email: { contains: search, mode: 'insensitive' } },
+                },
+              },
+            ],
+          }
+        : {}),
+    };
+
+    const [total, accounts] = await Promise.all([
+      this.prisma.account.count({ where }),
+      this.prisma.account.findMany({
+        where,
+        include: {
+          subscription: true,
+          _count: { select: { farms: true } },
+          users: {
+            where: { isAccountAdmin: true },
+            select: { email: true, name: true },
+            take: 1,
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+    ]);
+
+    const items = accounts.map((account) => ({
       id: account.id,
       name: account.name,
       billingEmail: account.billingEmail,
@@ -49,6 +244,8 @@ export class AdminService {
       currentPeriodEnd: account.subscription?.currentPeriodEnd ?? null,
       createdAt: account.createdAt,
     }));
+
+    return { items, total, page, pageSize };
   }
 
   async getAccount(accountId: string) {
@@ -70,11 +267,7 @@ export class AdminService {
       ? PLAN_DEFINITIONS[account.subscription.planTier]
       : null;
 
-    const paymentHistory = account.subscription?.mercadoPagoPreapprovalId
-      ? await this.mercadoPagoService.getPaymentHistory(
-          account.subscription.mercadoPagoPreapprovalId,
-        )
-      : [];
+    const paymentHistory: unknown[] = [];
 
     return { ...account, plan, paymentHistory };
   }
@@ -173,9 +366,9 @@ export class AdminService {
       throw new NotFoundException('Conta não encontrada');
     }
 
-    if (account.subscription?.mercadoPagoPreapprovalId) {
-      await this.mercadoPagoService.cancelSubscription(
-        account.subscription.mercadoPagoPreapprovalId,
+    if (account.subscription?.stripeSubscriptionId) {
+      await this.stripeService.cancelSubscription(
+        account.subscription.stripeSubscriptionId,
       );
     }
 
@@ -218,15 +411,102 @@ export class AdminService {
     return results;
   }
 
-  getMercadoPagoConfig() {
-    return this.mercadoPagoService.getConfigStatus();
+  getStripeConfig() {
+    return this.stripeService.getConfigStatus();
   }
 
-  updateMercadoPagoConfig(dto: UpdateMercadoPagoConfigDto) {
-    return this.mercadoPagoService.updateConfig(dto);
+  updateStripeConfig(dto: { secretKey?: string; webhookSecret?: string }) {
+    return this.stripeService.updateConfig(dto);
   }
 
-  getMercadoPagoLogs() {
-    return this.mercadoPagoService.getLogs();
+  getNotificationConfig() {
+    return this.notificationsService.getSchedule();
+  }
+
+  updateNotificationConfig(dto: UpdateNotificationConfigDto) {
+    return this.notificationsService.updateSchedule(dto);
+  }
+
+  // ---- Ações rápidas de suporte ----
+
+  // Estende o período de teste: soma os dias a partir da data atual de término do
+  // trial (ou de agora, se já passou) e recoloca a assinatura em TRIALING.
+  async extendTrial(accountId: string, days: number) {
+    const subscription = await this.prisma.subscription.findUnique({
+      where: { accountId },
+    });
+    if (!subscription) {
+      throw new NotFoundException('Assinatura não encontrada para esta conta');
+    }
+    const now = new Date();
+    const base =
+      subscription.trialEndsAt && subscription.trialEndsAt > now
+        ? subscription.trialEndsAt
+        : now;
+    const trialEndsAt = new Date(base.getTime() + days * 24 * 60 * 60 * 1000);
+
+    return this.prisma.subscription.update({
+      where: { accountId },
+      data: { trialEndsAt, status: SubscriptionStatus.TRIALING },
+    });
+  }
+
+  // Dispara a geração de notificações para todas as fazendas da conta (mesma lógica
+  // do cron/da tela do cliente), útil para o suporte "forçar" um alerta na hora.
+  async generateNotificationsForAccount(accountId: string) {
+    const farms = await this.prisma.farm.findMany({
+      where: { accountId },
+      select: { id: true },
+    });
+    let created = 0;
+    for (const farm of farms) {
+      const res = await this.notificationsService.generateFromAlerts(farm.id);
+      created += res.created;
+    }
+    return { farms: farms.length, created };
+  }
+
+  // Atualização manual das cotações (global). Reaproveita o fetch da Redação Agro.
+  refreshQuotations() {
+    return this.externalQuotationsService.refresh();
+  }
+
+  // ---- Auditoria ----
+
+  async listAuditLogs(query: ListAuditLogsDto = {}) {
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 50;
+    const search = query.search?.trim();
+
+    const where: Prisma.AuditLogWhereInput = {
+      ...(query.method ? { method: query.method } : {}),
+      ...(search
+        ? {
+            OR: [
+              { userEmail: { contains: search, mode: 'insensitive' } },
+              { path: { contains: search, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
+    };
+
+    const [total, items] = await Promise.all([
+      this.prisma.auditLog.count({ where }),
+      this.prisma.auditLog.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+    ]);
+
+    return { items, total, page, pageSize };
+  }
+
+  // TEMPORÁRIO: apaga todo o histórico de auditoria (usado para limpar o lixo de
+  // dados de teste). Remover quando não for mais necessário.
+  async clearAuditLogs() {
+    const { count } = await this.prisma.auditLog.deleteMany({});
+    return { deleted: count };
   }
 }

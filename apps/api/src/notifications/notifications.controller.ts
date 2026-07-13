@@ -1,5 +1,7 @@
 import {
+  Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -61,5 +63,14 @@ export class NotificationsController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.notificationsService.markAllRead(farmId, user.id);
+  }
+
+  @Delete('lote')
+  deleteMany(
+    @Param('farmId') farmId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body('ids') ids: string[],
+  ) {
+    return this.notificationsService.deleteMany(farmId, user.id, ids);
   }
 }

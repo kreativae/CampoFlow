@@ -326,6 +326,51 @@ export class AuthService {
     return this.toSafeUser(user);
   }
 
+  async updateProfile(userId: string, dto: { name?: string; email?: string }) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('Usuário não encontrado');
+
+    if (dto.email && dto.email !== user.email) {
+      const existing = await this.prisma.user.findUnique({
+        where: { email: dto.email },
+      });
+      if (existing) throw new ConflictException('E-mail já está em uso');
+    }
+
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(dto.name !== undefined ? { name: dto.name } : {}),
+        ...(dto.email !== undefined ? { email: dto.email } : {}),
+      },
+    });
+    return this.toSafeUser(updated);
+  }
+
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('Usuário não encontrado');
+    if (!user.passwordHash) {
+      throw new BadRequestException(
+        'Conta criada via Google — defina uma senha usando "Esqueci minha senha"',
+      );
+    }
+
+    const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!valid) throw new BadRequestException('Senha atual incorreta');
+
+    const hash = await bcrypt.hash(newPassword, PASSWORD_SALT_ROUNDS);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash: hash },
+    });
+    return { message: 'Senha alterada com sucesso' };
+  }
+
   // Finds an existing account by googleId, links Google to an existing account that
   // registered with the same email (so a user who signed up with a password can also
   // use "Entrar com Google" afterwards), or creates a brand-new OAuth-only account

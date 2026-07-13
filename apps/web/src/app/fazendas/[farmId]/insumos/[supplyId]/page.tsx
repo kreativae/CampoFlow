@@ -139,16 +139,16 @@ export default function SupplyDetailPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
+    <main className="animate-fade-up mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-8">
       <header className="mb-8">
-        <Link href={`/fazendas/${farmId}/insumos`} className="text-sm text-green-700 hover:underline">
+        <Link href={`/fazendas/${farmId}/insumos`} className="text-sm text-emerald-700 hover:underline">
           ← Insumos
         </Link>
-        <h1 className="text-2xl font-semibold text-green-800">{supply?.name}</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-gray-900">{supply?.name}</h1>
       </header>
 
       {error && (
-        <p className="mb-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+        <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
           {error}
         </p>
       )}
@@ -157,13 +157,13 @@ export default function SupplyDetailPage() {
         <SummaryCard label="Quantidade atual" value={`${supply?.currentQuantity} ${supply?.unit}`} />
       </section>
 
-      <section className="mb-8 rounded border border-gray-200 bg-white p-4">
+      <section className="mb-8 rounded-xl border border-gray-200/80 bg-white shadow-sm p-4">
         <h2 className="mb-3 font-semibold text-gray-800">Registrar movimento</h2>
         <form onSubmit={handleAddMovement} className="flex flex-wrap gap-2">
           <select
             value={movementType}
             onChange={(e) => setMovementType(e.target.value as SupplyMovementType)}
-            className="rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           >
             <option value="ENTRADA">Entrada</option>
             <option value="SAIDA">Saída</option>
@@ -171,30 +171,31 @@ export default function SupplyDetailPage() {
           <input
             type="number"
             step="0.01"
+            min="0.01"
             placeholder="Quantidade"
             required
             value={quantity}
             onChange={(e) => setQuantity(e.target.value)}
-            className="flex-1 rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
           <input
             type="text"
             placeholder="Observações (opcional)"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            className="flex-1 rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
           <button
             type="submit"
             disabled={submitting}
-            className="rounded bg-green-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+            className="rounded-lg bg-emerald-700 px-3 py-1.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
           >
             {submitting ? 'Salvando...' : 'Registrar'}
           </button>
         </form>
       </section>
 
-      <section className="rounded border border-gray-200 bg-white p-4">
+      <section className="rounded-xl border border-gray-200/80 bg-white shadow-sm p-4">
         <h2 className="mb-3 font-semibold text-gray-800">Movimentos</h2>
         {!supply?.movements || supply.movements.length === 0 ? (
           <p className="text-sm text-gray-500">Nenhum movimento registrado.</p>
@@ -204,14 +205,14 @@ export default function SupplyDetailPage() {
               editingMovementId === m.id ? (
                 <li
                   key={m.id}
-                  className="flex flex-wrap items-center gap-2 rounded border border-green-600 p-2"
+                  className="flex flex-wrap items-center gap-2 rounded-lg border border-emerald-600 p-2"
                 >
                   <select
                     value={editMovementType}
                     onChange={(e) =>
                       setEditMovementType(e.target.value as SupplyMovementType)
                     }
-                    className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+                    className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                   >
                     <option value="ENTRADA">Entrada</option>
                     <option value="SAIDA">Saída</option>
@@ -221,33 +222,33 @@ export default function SupplyDetailPage() {
                     step="0.01"
                     value={editQuantity}
                     onChange={(e) => setEditQuantity(e.target.value)}
-                    className="w-24 rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+                    className="w-24 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                   />
                   <input
                     type="date"
                     value={editOccurredAt}
                     onChange={(e) => setEditOccurredAt(e.target.value)}
-                    className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+                    className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                   />
                   <input
                     type="text"
                     placeholder="Observações"
                     value={editNotes}
                     onChange={(e) => setEditNotes(e.target.value)}
-                    className="flex-1 rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+                    className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                   />
                   <button
                     type="button"
                     disabled={savingMovement}
                     onClick={() => handleSaveMovement(m.id)}
-                    className="rounded bg-green-700 px-2 py-1 text-xs font-medium text-white hover:bg-green-800 disabled:opacity-50"
+                    className="rounded-lg bg-emerald-700 px-2 py-1 text-xs font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
                   >
                     {savingMovement ? 'Salvando...' : 'Salvar'}
                   </button>
                   <button
                     type="button"
                     onClick={() => setEditingMovementId(null)}
-                    className="rounded border border-gray-300 px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50"
+                    className="rounded-lg border border-gray-300 px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50"
                   >
                     Cancelar
                   </button>
@@ -264,7 +265,7 @@ export default function SupplyDetailPage() {
                     <button
                       type="button"
                       onClick={() => startEditMovement(m)}
-                      className="text-xs font-medium text-green-700 hover:underline"
+                      className="text-xs font-medium text-emerald-700 hover:underline"
                     >
                       Editar
                     </button>
@@ -288,7 +289,7 @@ export default function SupplyDetailPage() {
 
 function SummaryCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded border border-gray-200 bg-white p-3">
+    <div className="rounded-xl border border-gray-200/80 bg-white shadow-sm p-3">
       <p className="text-xs uppercase tracking-wide text-gray-500">{label}</p>
       <p className="mt-1 text-lg font-semibold text-gray-900">{value}</p>
     </div>

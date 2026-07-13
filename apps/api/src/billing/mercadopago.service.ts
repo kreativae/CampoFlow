@@ -1,4 +1,10 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  OnModuleInit,
+} from '@nestjs/common';
+import { createHmac, timingSafeEqual } from 'crypto';
 import { MercadoPagoConfig, PreApproval } from 'mercadopago';
 import { PrismaService } from '../prisma/prisma.service';
 import { EncryptionService } from '../common/crypto/encryption.service';
@@ -27,6 +33,10 @@ export interface MercadoPagoConfigStatus {
   accessTokenMasked: string | null;
   publicKey: string | null;
   webhookSecretSet: boolean;
+  // Estado do checklist de produção, para orientar o admin.
+  billingRedirectUrl: string | null;
+  webhookEndpointUrl: string;
+  nodeEnv: string;
 }
 
 export interface UpdateMercadoPagoConfigInput {
@@ -54,7 +64,7 @@ export class MercadoPagoService implements OnModuleInit {
   private preApproval: PreApproval | null = null;
   private accessToken: string | undefined;
   private publicKey: string | null = null;
-  private webhookSecretSet = false;
+  private webhookSecret: string | null = null;
   private source: MercadoPagoConfigStatus['source'] = 'nenhum';
 
   constructor(
@@ -74,12 +84,14 @@ export class MercadoPagoService implements OnModuleInit {
     if (setting?.accessToken) {
       this.accessToken = this.encryptionService.decrypt(setting.accessToken);
       this.publicKey = setting.publicKey ?? null;
-      this.webhookSecretSet = Boolean(setting.webhookSecret);
+      this.webhookSecret = setting.webhookSecret
+        ? this.encryptionService.decrypt(setting.webhookSecret)
+        : null;
       this.source = 'banco';
     } else {
       this.accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
       this.publicKey = process.env.MERCADOPAGO_PUBLIC_KEY ?? null;
-      this.webhookSecretSet = Boolean(process.env.MERCADOPAGO_WEBHOOK_SECRET);
+      this.webhookSecret = process.env.MERCADOPAGO_WEBHOOK_SECRET ?? null;
       this.source = this.accessToken ? 'variavel_de_ambiente' : 'nenhum';
     }
 
@@ -95,12 +107,16 @@ export class MercadoPagoService implements OnModuleInit {
   }
 
   getConfigStatus(): MercadoPagoConfigStatus {
+    const apiBase = process.env.API_PUBLIC_URL || 'http://localhost:3000';
     return {
       configured: this.isConfigured(),
       source: this.source,
       accessTokenMasked: this.accessToken ? maskToken(this.accessToken) : null,
       publicKey: this.publicKey,
-      webhookSecretSet: this.webhookSecretSet,
+      webhookSecretSet: Boolean(this.webhookSecret),
+      billingRedirectUrl: process.env.WEB_BILLING_REDIRECT_URL ?? null,
+      webhookEndpointUrl: `${apiBase.replace(/\/$/, '')}/conta/assinatura/webhook/mercadopago`,
+      nodeEnv: process.env.NODE_ENV ?? 'development',
     };
   }
 
@@ -214,12 +230,27 @@ export class MercadoPagoService implements OnModuleInit {
       );
       return { id: result.id, initPoint: result.init_point };
     } catch (err) {
+      const message = (err as Error).message;
+      // Log completo para diagnóstico — inclui cause/response do SDK do MP
+      console.error(
+        '[MP createSubscription] raw error:',
+        JSON.stringify(err, Object.getOwnPropertyNames(err as object)),
+      );
       await this.log(
         MercadoPagoLogEvent.CREATE_SUBSCRIPTION,
         false,
-        `Falha ao criar assinatura para ${input.payerEmail}: ${(err as Error).message}`,
+        `Falha ao criar assinatura para ${input.payerEmail}: ${message}`,
       );
-      throw err;
+      // O SDK do MP lança erros crus (ex.: "Invalid value for back_url") que virariam
+      // um 500 genérico. Devolvemos 400 com a causa para a tela mostrar algo útil.
+      if (message.toLowerCase().includes('back_url')) {
+        throw new BadRequestException(
+          'O Mercado Pago rejeitou a URL de retorno (back_url). Ele exige uma URL pública ' +
+            '(https) — defina WEB_BILLING_REDIRECT_URL com a URL do painel em produção; ' +
+            'localhost não é aceito.',
+        );
+      }
+      throw new BadRequestException(`Erro do Mercado Pago: ${message}`);
     }
   }
 
@@ -308,6 +339,48 @@ export class MercadoPagoService implements OnModuleInit {
       );
       return [];
     }
+  }
+
+  // Verifica a assinatura HMAC dos webhooks conforme especificação do Mercado Pago:
+  // https://www.mercadopago.com.br/developers/pt/docs/your-integrations/notifications/webhooks
+  // Header `x-signature` vem no formato `ts=<timestamp>,v1=<hmacHex>`; o manifest
+  // assinado é `id:<dataId>;request-id:<xRequestId>;ts:<timestamp>;` (HMAC-SHA256
+  // com o webhookSecret). Sem secret configurado, retorna true — melhor deixar o
+  // webhook rodar do que travar a sincronização de assinatura por config faltando.
+  // A comparação usa timingSafeEqual para evitar timing attacks.
+  verifyWebhookSignature(
+    signatureHeader: string | undefined,
+    requestId: string | undefined,
+    dataId: string | undefined,
+  ): boolean {
+    if (!this.webhookSecret) {
+      this.logger.warn(
+        'Webhook do Mercado Pago recebido sem webhookSecret configurado — assinatura não pode ser verificada. Configure em /admin/mercadopago para produção.',
+      );
+      return true;
+    }
+    if (!signatureHeader || !dataId) return false;
+
+    const parts = signatureHeader
+      .split(',')
+      .reduce<Record<string, string>>((acc, part) => {
+        const [k, v] = part.split('=');
+        if (k && v) acc[k.trim()] = v.trim();
+        return acc;
+      }, {});
+    const ts = parts.ts;
+    const v1 = parts.v1;
+    if (!ts || !v1) return false;
+
+    const manifest = `id:${dataId};request-id:${requestId ?? ''};ts:${ts};`;
+    const expected = createHmac('sha256', this.webhookSecret)
+      .update(manifest)
+      .digest('hex');
+
+    const a = Buffer.from(expected, 'hex');
+    const b = Buffer.from(v1, 'hex');
+    if (a.length !== b.length) return false;
+    return timingSafeEqual(a, b);
   }
 
   async recordWebhook(

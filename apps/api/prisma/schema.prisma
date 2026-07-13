@@ -62,6 +62,7 @@ model User {
   workLogs               WorkLog[]
   shifts                 Shift[]
   notifications          Notification[]
+  deals                  Deal[]
   createdAt              DateTime        @default(now())
   updatedAt              DateTime        @updatedAt
 }
@@ -107,7 +108,7 @@ model Subscription {
   accountId                String             @unique
   planTier                 PlanTier           @default(TRIAL)
   status                   SubscriptionStatus @default(TRIALING)
-  mercadoPagoPreapprovalId String?
+  stripeSubscriptionId     String?
   trialEndsAt              DateTime?
   currentPeriodEnd         DateTime?
   canceledAt               DateTime?
@@ -152,7 +153,12 @@ model Farm {
   documents          Document[]
   soilAnalyses       SoilAnalysis[]
   cropCycles         CropCycle[]
+  cropApplications   CropApplication[]
+  cropCostEntries    CropCostEntry[]
   contacts           Contact[]
+  employees          Employee[]
+  timeEntries        TimeEntry[]
+  deals              Deal[]
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
 }
@@ -169,6 +175,8 @@ model FarmInvite {
   role        Role
   tokenHash   String
   invitedById String?
+  // Módulos que o membro poderá acessar. Vazio = acesso total (conforme o papel).
+  moduleAccess String[] @default([])
   expiresAt   DateTime
   acceptedAt  DateTime?
   createdAt   DateTime  @default(now())
@@ -183,6 +191,8 @@ model Membership {
   farm      Farm     @relation(fields: [farmId], references: [id])
   farmId    String
   role      Role
+  // Módulos (páginas) que este membro pode acessar. Vazio = acesso total.
+  moduleAccess String[] @default([])
   createdAt DateTime @default(now())
 
   @@unique([userId, farmId])
@@ -196,6 +206,7 @@ model Pasture {
   areaHectares   Float
   grassType      String?
   animalCapacity Int
+  boundaries     Json?
   occupations    PastureOccupation[]
   animals        Animal[]
   createdAt      DateTime            @default(now())
@@ -250,6 +261,7 @@ model Animal {
   treatments         TreatmentRecord[]
   weighings          WeighingRecord[]
   reproductiveEvents ReproductiveEvent[]
+  dealItems          DealItem[]
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
 
@@ -366,6 +378,10 @@ model Transaction {
   amount      Float
   dueDate     DateTime
   paidAt      DateTime?
+  cropCycle   CropCycle?          @relation(fields: [cropCycleId], references: [id], onDelete: SetNull)
+  cropCycleId String?
+  deal        Deal?               @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  dealId      String?
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
 }
@@ -448,31 +464,22 @@ model Quotation {
   createdAt   DateTime        @default(now())
 }
 
-enum WeatherAlertType {
-  GEADA
-  TEMPESTADE
-  GRANIZO
-  SECA
-  VENTO_FORTE
-}
-
 // Farm-specific weather conditions. Auto-populated from Open-Meteo (free, no API key,
 // CC BY 4.0) for farms with latitude/longitude set, on top of manual entry — see
 // ExternalWeatherService. source is null for manually entered records.
 model WeatherRecord {
-  id              String            @id @default(uuid())
-  farm            Farm              @relation(fields: [farmId], references: [id])
+  id              String   @id @default(uuid())
+  farm            Farm     @relation(fields: [farmId], references: [id])
   farmId          String
   temperatureC    Float?
   humidityPercent Float?
   windSpeedKmh    Float?
   pressureHpa     Float?
   rainfallMm      Float?
-  alertType       WeatherAlertType?
   notes           String?
   source          String?
-  recordedAt      DateTime          @default(now())
-  createdAt       DateTime          @default(now())
+  recordedAt      DateTime @default(now())
+  createdAt       DateTime @default(now())
 }
 
 enum SupplyCategory {
@@ -622,6 +629,49 @@ model Shift {
   createdAt DateTime @default(now())
 }
 
+enum EmployeeType {
+  EFETIVO
+  CHAPA
+  TEMPORARIO
+  OUTRO
+}
+
+// Funcionário da equipe (não é um usuário do sistema): efetivos, chapas, temporários
+// e outros. hourlyRate is the valor/hora used to cost this worker's logged hours.
+model Employee {
+  id          String       @id @default(uuid())
+  farm        Farm         @relation(fields: [farmId], references: [id])
+  farmId      String
+  name        String
+  type        EmployeeType @default(EFETIVO)
+  role        String?
+  document    String?
+  phone       String?
+  hourlyRate  Float        @default(0)
+  active      Boolean      @default(true)
+  notes       String?
+  timeEntries TimeEntry[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+// Registro de horas / banco de horas de um funcionário. hours é positivo para horas
+// trabalhadas/crédito e negativo para folga/débito, de modo que a soma é o saldo do
+// banco de horas. O custo é derivado de horas positivas × hourlyRate do funcionário.
+model TimeEntry {
+  id          String   @id @default(uuid())
+  farm        Farm     @relation(fields: [farmId], references: [id])
+  farmId      String
+  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employeeId  String
+  workDate    DateTime @default(now())
+  hours       Float
+  description String
+  paid        Boolean  @default(false)
+  notes       String?
+  createdAt   DateTime @default(now())
+}
+
 enum AgendaEventType {
   VACINACAO
   PESAGEM
@@ -695,10 +745,81 @@ model CropCycle {
   expectedHarvestAt DateTime?
   harvestedAt       DateTime?
   yieldKg           Float?
+  salePricePerUnit  Float?
+  saleUnit          CropSaleUnit?
   notes             String?
   createdById       String?
+  applications      CropApplication[]
+  costEntries       CropCostEntry[]
+  transactions      Transaction[]
+  deals             Deal[]
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
+}
+
+// Unidade de venda para calcular receita/produtividade no fechamento da safra.
+enum CropSaleUnit {
+  SACA60
+  KG
+  ARROBA
+}
+
+enum CropCostCategory {
+  SEMENTE
+  FERTILIZANTE
+  DEFENSIVO
+  CALCARIO
+  OPERACAO
+  MAO_DE_OBRA
+  ARRENDAMENTO
+  OUTRO
+}
+
+// Lançamento manual de custo de uma safra (para o fechamento).
+model CropCostEntry {
+  id          String           @id @default(uuid())
+  farm        Farm             @relation(fields: [farmId], references: [id])
+  farmId      String
+  cropCycle   CropCycle        @relation(fields: [cropCycleId], references: [id], onDelete: Cascade)
+  cropCycleId String
+  category    CropCostCategory
+  description String
+  amount      Float
+  incurredAt  DateTime         @default(now())
+  createdAt   DateTime         @default(now())
+}
+
+enum CropApplicationType {
+  PLANTIO
+  ADUBACAO
+  CALAGEM
+  HERBICIDA
+  FUNGICIDA
+  INSETICIDA
+  DEFENSIVO
+  IRRIGACAO
+  OUTRO
+}
+
+// Caderno de campo: registro de operações/aplicações em uma safra (plantio,
+// adubação, defensivos), com dose, carência e responsável.
+model CropApplication {
+  id                     String              @id @default(uuid())
+  farm                   Farm                @relation(fields: [farmId], references: [id])
+  farmId                 String
+  cropCycle              CropCycle           @relation(fields: [cropCycleId], references: [id], onDelete: Cascade)
+  cropCycleId            String
+  type                   CropApplicationType
+  product                String
+  dosePerHa              Float?
+  doseUnit               String?
+  totalQuantity          Float?
+  unitPrice              Float?
+  appliedAt              DateTime            @default(now())
+  preHarvestIntervalDays Int?
+  responsible            String?
+  notes                  String?
+  createdAt              DateTime            @default(now())
 }
 
 enum ContactType {
@@ -835,8 +956,24 @@ model SoilAnalysis {
   documentPath          String?
   documentFileName      String?
   notes                 String?
+  photos                SoilAnalysisPhoto[]
   createdById           String?
   createdAt             DateTime    @default(now())
+}
+
+model SoilAnalysisPhoto {
+  id              String        @id @default(uuid())
+  soilAnalysis    SoilAnalysis  @relation(fields: [soilAnalysisId], references: [id], onDelete: Cascade)
+  soilAnalysisId  String
+  storagePath     String
+  fileName        String
+  mimeType        String
+  sizeBytes       Int
+  takenAt         DateTime?
+  latitude        Float?
+  longitude       Float?
+  caption         String?
+  createdAt       DateTime      @default(now())
 }
 
 enum TicketStatus {
@@ -883,14 +1020,24 @@ model TicketMessage {
 
 // Singleton row (id is always "mercadopago") holding the platform's Mercado Pago
 // credentials when configured from the admin UI instead of the MERCADOPAGO_ACCESS_TOKEN
-// env var. accessToken is encrypted at rest via EncryptionService — see
-// MercadoPagoService for the env-var-vs-DB precedence and decryption.
+// Tabela genérica para configurações de plataforma (uma linha por provider).
+// accessToken é criptografado em repouso via EncryptionService.
 model PlatformSetting {
-  id            String   @id @default("mercadopago")
+  id            String   @id
   accessToken   String?
   publicKey     String?
   webhookSecret String?
   updatedAt     DateTime @updatedAt
+}
+
+// Singleton (id fixo) com a configuração da geração automática de notificações,
+// editável pelo admin da plataforma. frequency é uma das chaves conhecidas
+// (NotificationsService.FREQUENCY_CRON); enabled liga/desliga o cron.
+model NotificationSetting {
+  id        String   @id @default("default")
+  frequency String   @default("HOURLY")
+  enabled   Boolean  @default(true)
+  updatedAt DateTime @updatedAt
 }
 
 enum MercadoPagoLogEvent {
@@ -910,4 +1057,80 @@ model MercadoPagoLog {
   createdAt     DateTime            @default(now())
 
   @@index([createdAt])
+}
+
+enum DealType {
+  COMPRA
+  VENDA
+  ABATE
+  VENDA_GRAO
+}
+
+enum DealStatus {
+  RASCUNHO
+  FINALIZADO
+  CANCELADO
+}
+
+model Deal {
+  id                String     @id @default(uuid())
+  farm              Farm       @relation(fields: [farmId], references: [id])
+  farmId            String
+  type              DealType
+  status            DealStatus @default(RASCUNHO)
+  counterparty      String?
+  pricePerUnit      Float
+  priceUnit         String     @default("ANIMAL") // "ANIMAL" or "ARROBA"
+  freightCost       Float      @default(0)
+  commissionPercent Float      @default(0)
+  // Compra em lote: quantidade informada sem brincos individuais, com valor
+  // total fechado e parcela negociada — o custo/animal deriva desses campos.
+  quantity          Int?
+  installmentCount  Int?
+  installmentValue  Float?
+  totalValue        Float?
+  // Abate
+  carcassYieldPercent   Float?
+  liveWeightPricePerKg  Float?
+  funruralPercent       Float?
+  senarPercent          Float?
+  slaughterFrequency    String?
+  // Venda de grãos
+  grainCrop              String?
+  grainQuantity          Float?
+  grainUnit              String?
+  grainMoisturePercent   Float?
+  grainMoistureBasePercent Float?
+  grainImpurityPercent   Float?
+  grainMoistureDiscount  Float?
+  grainGrossWeightKg     Float?
+  grainNetWeightKg       Float?
+  grainSaleModality      String?
+  grainWarehouse         String?
+  grainTicketRef         String?
+  cropCycle              CropCycle? @relation(fields: [cropCycleId], references: [id], onDelete: SetNull)
+  cropCycleId            String?
+  notes             String?
+  dealDate          DateTime
+  createdBy         User       @relation(fields: [createdById], references: [id])
+  createdById       String
+  items             DealItem[]
+  transactions      Transaction[]
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  @@index([farmId, dealDate])
+}
+
+model DealItem {
+  id        String  @id @default(uuid())
+  deal      Deal    @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  dealId    String
+  animal    Animal? @relation(fields: [animalId], references: [id])
+  animalId  String?
+  earTag    String
+  weightKg  Float?
+  unitPrice Float?
+
+  @@index([dealId])
 }

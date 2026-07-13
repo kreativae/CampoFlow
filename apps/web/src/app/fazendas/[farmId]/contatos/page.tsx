@@ -1,10 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
+import { BookUser } from 'lucide-react';
+import PageHeader from '@/components/PageHeader';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, ApiError } from '@/lib/api';
+import { useToast } from '@/lib/toast-context';
 import { useConfirm } from '@/lib/confirm-context';
 import type { Contact, ContactCategory, ContactType } from '@/lib/types';
 
@@ -59,6 +61,19 @@ const EMPTY_FORM: FormState = {
   notes: '',
 };
 
+const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+
+// Primeira letra do nome, sem acento e em maiúscula; números/símbolos viram '#'.
+function firstLetter(name: string): string {
+  const ch = name
+    .trim()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .charAt(0)
+    .toUpperCase();
+  return /[A-Z]/.test(ch) ? ch : '#';
+}
+
 function buildBody(form: FormState) {
   return {
     type: form.type,
@@ -98,6 +113,7 @@ function contactToForm(c: Contact): FormState {
 export default function ContactsPage() {
   const { farmId } = useParams<{ farmId: string }>();
   const { user, accessToken, loading } = useAuth();
+  const { toastSuccess } = useToast();
   const router = useRouter();
   const confirm = useConfirm();
 
@@ -107,6 +123,7 @@ export default function ContactsPage() {
   const [saving, setSaving] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [letterFilter, setLetterFilter] = useState<string | null>(null);
   const [filterTypes, setFilterTypes] = useState<Set<ContactType>>(new Set());
   const [filterCategories, setFilterCategories] = useState<Set<ContactCategory>>(
     new Set(),
@@ -147,6 +164,8 @@ export default function ContactsPage() {
     setter(next);
   }
 
+  const availableLetters = new Set(contacts.map((c) => firstLetter(c.name)));
+
   const filteredContacts = contacts.filter((c) => {
     if (
       searchTerm &&
@@ -155,6 +174,7 @@ export default function ContactsPage() {
     ) {
       return false;
     }
+    if (letterFilter && firstLetter(c.name) !== letterFilter) return false;
     if (filterTypes.size > 0 && !filterTypes.has(c.type)) return false;
     if (filterCategories.size > 0 && !filterCategories.has(c.category)) return false;
     return true;
@@ -193,6 +213,7 @@ export default function ContactsPage() {
         });
         await loadData();
       }
+      toastSuccess('Contato salvo.');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao salvar o contato');
     } finally {
@@ -218,6 +239,7 @@ export default function ContactsPage() {
       setSelectedId(null);
       setForm(EMPTY_FORM);
       await loadData();
+      toastSuccess('Contato excluído.');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao excluir o contato');
     }
@@ -232,20 +254,16 @@ export default function ContactsPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-10">
-      <header className="mb-6">
-        <Link href={`/fazendas/${farmId}`} className="text-sm text-green-700 hover:underline">
-          ← Dashboard
-        </Link>
-        <h1 className="text-2xl font-semibold text-green-800">Contatos</h1>
-        <p className="text-sm text-gray-500">
-          Cadastro de pessoas físicas e jurídicas: fornecedores, clientes, veterinários,
-          transportadores e outros.
-        </p>
-      </header>
+    <main className="animate-fade-up mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-8">
+      <PageHeader
+        icon={BookUser}
+        title="Contatos"
+        subtitle="Contatos e parceiros"
+        backHref={`/fazendas/${farmId}`}
+      />
 
       {error && (
-        <p className="mb-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+        <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
           {error}
         </p>
       )}
@@ -259,18 +277,67 @@ export default function ContactsPage() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Buscar por nome..."
-              className="flex-1 rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+              className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
             />
             <button
               type="button"
               onClick={selectNew}
-              className="shrink-0 rounded bg-green-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-800"
+              className="shrink-0 rounded-lg bg-emerald-700 px-3 py-1.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800"
             >
               + Novo
             </button>
           </div>
 
-          <div className="mb-3 rounded border border-gray-200 bg-white p-3">
+          {/* Índice alfabético — busca por letra inicial do nome */}
+          <div className="mb-3 flex flex-wrap gap-1">
+            <button
+              type="button"
+              onClick={() => setLetterFilter(null)}
+              className={`rounded px-1.5 py-0.5 text-xs font-medium ${
+                letterFilter === null
+                  ? 'bg-emerald-700 text-white'
+                  : 'text-emerald-700 hover:bg-emerald-50'
+              }`}
+            >
+              Todos
+            </button>
+            {ALPHABET.map((letter) => {
+              const enabled = availableLetters.has(letter);
+              const active = letterFilter === letter;
+              return (
+                <button
+                  key={letter}
+                  type="button"
+                  disabled={!enabled}
+                  onClick={() => setLetterFilter(active ? null : letter)}
+                  className={`w-6 rounded-lg px-0 py-0.5 text-xs font-medium ${
+                    active
+                      ? 'bg-emerald-700 text-white'
+                      : enabled
+                        ? 'text-emerald-700 hover:bg-emerald-50'
+                        : 'cursor-default text-gray-300'
+                  }`}
+                >
+                  {letter}
+                </button>
+              );
+            })}
+            {availableLetters.has('#') && (
+              <button
+                type="button"
+                onClick={() => setLetterFilter(letterFilter === '#' ? null : '#')}
+                className={`w-6 rounded-lg px-0 py-0.5 text-xs font-medium ${
+                  letterFilter === '#'
+                    ? 'bg-emerald-700 text-white'
+                    : 'text-emerald-700 hover:bg-emerald-50'
+                }`}
+              >
+                #
+              </button>
+            )}
+          </div>
+
+          <div className="mb-3 rounded-xl border border-gray-200/80 bg-white shadow-sm p-3">
             <p className="mb-1 text-xs font-medium text-gray-600">Tipo</p>
             <div className="mb-2 flex flex-wrap gap-3">
               {(['PESSOA_FISICA', 'PESSOA_JURIDICA'] as ContactType[]).map((t) => (
@@ -307,7 +374,10 @@ export default function ContactsPage() {
           {fetching ? (
             <p className="text-sm text-gray-500">Carregando...</p>
           ) : filteredContacts.length === 0 ? (
-            <p className="text-sm text-gray-500">Nenhum contato encontrado.</p>
+            <div className="flex flex-col items-center rounded-lg border-2 border-dashed border-gray-200 py-12 text-center">
+              <p className="text-lg font-medium text-gray-700">Nenhum contato cadastrado</p>
+              <p className="mt-1 text-sm text-gray-500">Cadastre veterinários, fornecedores e outros contatos importantes da fazenda.</p>
+            </div>
           ) : (
             <ul className="space-y-1">
               {filteredContacts.map((c) => (
@@ -315,9 +385,9 @@ export default function ContactsPage() {
                   <button
                     type="button"
                     onClick={() => selectContact(c)}
-                    className={`w-full rounded border px-3 py-2 text-left text-sm hover:border-green-600 ${
+                    className={`w-full rounded-lg border px-3 py-2 text-left text-sm hover:border-emerald-600 ${
                       selectedId === c.id
-                        ? 'border-green-600 bg-green-50'
+                        ? 'border-emerald-600 bg-emerald-50'
                         : 'border-gray-200 bg-white'
                     }`}
                   >
@@ -333,7 +403,7 @@ export default function ContactsPage() {
         </div>
 
         {/* Right: quick view / edit / create */}
-        <div className="rounded border border-gray-200 bg-white p-4">
+        <div className="rounded-xl border border-gray-200/80 bg-white shadow-sm p-4">
           {selectedId === null ? (
             <p className="text-sm text-gray-500">
               Selecione um contato à esquerda ou clique em &quot;+ Novo&quot; para
@@ -364,7 +434,7 @@ export default function ContactsPage() {
                     onChange={(e) =>
                       setForm((f) => ({ ...f, type: e.target.value as ContactType }))
                     }
-                    className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                    className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                   >
                     <option value="PESSOA_FISICA">Pessoa física</option>
                     <option value="PESSOA_JURIDICA">Pessoa jurídica</option>
@@ -380,7 +450,7 @@ export default function ContactsPage() {
                         category: e.target.value as ContactCategory,
                       }))
                     }
-                    className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                    className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                   >
                     {CATEGORY_OPTIONS.map((opt) => (
                       <option key={opt.value} value={opt.value}>
@@ -399,7 +469,7 @@ export default function ContactsPage() {
                     required
                     value={form.name}
                     onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                    className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                    className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                   />
                 </div>
 
@@ -414,7 +484,7 @@ export default function ContactsPage() {
                       onChange={(e) =>
                         setForm((f) => ({ ...f, tradeName: e.target.value }))
                       }
-                      className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                      className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                     />
                   </div>
                 )}
@@ -428,7 +498,7 @@ export default function ContactsPage() {
                     value={form.document}
                     onChange={(e) => setForm((f) => ({ ...f, document: e.target.value }))}
                     placeholder={form.type === 'PESSOA_JURIDICA' ? '00.000.000/0000-00' : '000.000.000-00'}
-                    className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                    className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                   />
                 </div>
 
@@ -438,7 +508,7 @@ export default function ContactsPage() {
                     type="email"
                     value={form.email}
                     onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                    className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                    className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                   />
                 </div>
                 <div>
@@ -447,7 +517,7 @@ export default function ContactsPage() {
                     type="text"
                     value={form.phone}
                     onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-                    className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                    className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                   />
                 </div>
                 <div className="col-span-2">
@@ -456,7 +526,7 @@ export default function ContactsPage() {
                     type="text"
                     value={form.whatsapp}
                     onChange={(e) => setForm((f) => ({ ...f, whatsapp: e.target.value }))}
-                    className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                    className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                   />
                 </div>
 
@@ -469,7 +539,7 @@ export default function ContactsPage() {
                       setForm((f) => ({ ...f, addressStreet: e.target.value }))
                     }
                     placeholder="Rua, número, bairro"
-                    className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                    className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                   />
                 </div>
                 <div>
@@ -480,7 +550,7 @@ export default function ContactsPage() {
                     onChange={(e) =>
                       setForm((f) => ({ ...f, addressCity: e.target.value }))
                     }
-                    className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                    className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                   />
                 </div>
                 <div>
@@ -493,7 +563,7 @@ export default function ContactsPage() {
                       setForm((f) => ({ ...f, addressState: e.target.value.toUpperCase() }))
                     }
                     placeholder="UF"
-                    className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                    className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                   />
                 </div>
                 <div>
@@ -504,7 +574,7 @@ export default function ContactsPage() {
                     onChange={(e) =>
                       setForm((f) => ({ ...f, addressZip: e.target.value }))
                     }
-                    className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                    className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                   />
                 </div>
 
@@ -514,7 +584,7 @@ export default function ContactsPage() {
                     rows={2}
                     value={form.notes}
                     onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-                    className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                    className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                   />
                 </div>
               </div>
@@ -526,14 +596,14 @@ export default function ContactsPage() {
                     setSelectedId(null);
                     setForm(EMPTY_FORM);
                   }}
-                  className="rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="rounded bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+                  className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
                 >
                   {saving ? 'Salvando...' : 'Salvar'}
                 </button>

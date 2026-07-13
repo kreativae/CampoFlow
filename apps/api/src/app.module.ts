@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
+import { JwtModule } from '@nestjs/jwt';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ModuleAccessGuard } from './auth/guards/module-access.guard';
 import { SentryModule } from '@sentry/nestjs/setup';
 import { SentryGlobalFilter } from '@sentry/nestjs/setup';
 import { AppController } from './app.controller';
@@ -33,6 +35,7 @@ import { MapFeaturesModule } from './map-features/map-features.module';
 import { SoilAnalysisModule } from './soil-analysis/soil-analysis.module';
 import { CropsModule } from './crops/crops.module';
 import { ContactsModule } from './contacts/contacts.module';
+import { EmployeesModule } from './employees/employees.module';
 import { DocumentsModule } from './documents/documents.module';
 import { ReportsModule } from './reports/reports.module';
 import { BiModule } from './bi/bi.module';
@@ -40,6 +43,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { BillingModule } from './billing/billing.module';
 import { AdminModule } from './admin/admin.module';
 import { TicketsModule } from './tickets/tickets.module';
+import { DealsModule } from './deals/deals.module';
 
 @Module({
   imports: [
@@ -67,6 +71,7 @@ import { TicketsModule } from './tickets/tickets.module';
     SuppliesModule,
     MachinesModule,
     TeamsModule,
+    EmployeesModule,
     AgendaModule,
     MapFeaturesModule,
     SoilAnalysisModule,
@@ -79,6 +84,8 @@ import { TicketsModule } from './tickets/tickets.module';
     BillingModule,
     AdminModule,
     TicketsModule,
+    DealsModule,
+    JwtModule.register({}),
   ],
   controllers: [AppController],
   providers: [
@@ -87,6 +94,8 @@ import { TicketsModule } from './tickets/tickets.module';
     // no-op when SENTRY_DSN isn't set — it just rethrows for Nest's default handler).
     { provide: APP_FILTER, useClass: SentryGlobalFilter },
     { provide: APP_GUARD, useClass: ThrottlerGuard },
+    // Aplica o allowlist de módulos por membro (apenas restringe).
+    { provide: APP_GUARD, useClass: ModuleAccessGuard },
     { provide: APP_INTERCEPTOR, useClass: AuditLogInterceptor },
   ],
 })

@@ -1,12 +1,15 @@
 import {
   IsDateString,
+  IsEnum,
   IsNumber,
   IsOptional,
   IsString,
   IsUUID,
+  Min,
   ValidateIf,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { CropSaleUnit } from '@prisma/client';
 
 export class CreateCropCycleDto {
   @IsOptional()
@@ -41,6 +44,16 @@ export class CreateCropCycleDto {
   @Type(() => Number)
   @IsNumber()
   yieldKg?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  salePricePerUnit?: number;
+
+  @IsOptional()
+  @IsEnum(CropSaleUnit)
+  saleUnit?: CropSaleUnit;
 
   @IsOptional()
   @IsString()

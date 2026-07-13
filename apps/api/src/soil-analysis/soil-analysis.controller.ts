@@ -9,10 +9,11 @@ import {
   Query,
   Res,
   UploadedFile,
+  UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import type { Response } from 'express';
 import { Role } from '@prisma/client';
@@ -98,6 +99,68 @@ export class SoilAnalysisController {
       id,
     );
     await this.storageService.downloadToResponse(path, fileName, res);
+  }
+
+  // --- Photos ---
+
+  @Post(':id/fotos')
+  @UseGuards(RolesGuard)
+  @Roles(Role.OWNER, Role.MANAGER, Role.EMPLOYEE, Role.VETERINARIAN)
+  @UseInterceptors(FilesInterceptor('fotos', 10, { storage: memoryStorage() }))
+  async uploadPhotos(
+    @Param('farmId') farmId: string,
+    @Param('id') id: string,
+    @Body() body: { metadata?: string },
+    @UploadedFiles() files: Express.Multer.File[],
+  ) {
+    let metadata: {
+      takenAt?: string;
+      latitude?: number;
+      longitude?: number;
+      caption?: string;
+    }[] = [];
+    if (body.metadata) {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        metadata = JSON.parse(body.metadata);
+      } catch {
+        // ignore parse errors — metadata is optional
+      }
+    }
+    return this.soilAnalysisService.uploadPhotos(farmId, id, files, metadata);
+  }
+
+  @Get(':id/fotos')
+  @UseGuards(FarmAccessGuard)
+  listPhotos(@Param('farmId') farmId: string, @Param('id') id: string) {
+    return this.soilAnalysisService.listPhotos(farmId, id);
+  }
+
+  @Get(':id/fotos/:photoId/baixar')
+  @UseGuards(FarmAccessGuard)
+  async downloadPhoto(
+    @Param('farmId') farmId: string,
+    @Param('id') id: string,
+    @Param('photoId') photoId: string,
+    @Res() res: Response,
+  ) {
+    const photo = await this.soilAnalysisService.getPhoto(farmId, id, photoId);
+    await this.storageService.downloadToResponse(
+      photo.storagePath,
+      photo.fileName,
+      res,
+    );
+  }
+
+  @Delete(':id/fotos/:photoId')
+  @UseGuards(RolesGuard)
+  @Roles(Role.OWNER, Role.MANAGER)
+  async deletePhoto(
+    @Param('farmId') farmId: string,
+    @Param('id') id: string,
+    @Param('photoId') photoId: string,
+  ) {
+    return this.soilAnalysisService.deletePhoto(farmId, id, photoId);
   }
 
   @Patch(':id')

@@ -8,8 +8,11 @@ import { apiFetch, apiUpload, apiDownload, ApiError } from '@/lib/api';
 import type {
   MapFeature,
   SoilAnalysis,
+  SoilAnalysisPhoto,
   SoilAnalysisRecommendation,
 } from '@/lib/types';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
 const FIELD_DEFS: { key: keyof SoilAnalysis; label: string }[] = [
   { key: 'ph', label: 'pH' },
@@ -52,6 +55,12 @@ export default function SoilAnalysisPage() {
   const [editForm, setEditForm] = useState<FormState>({});
   const [editNotes, setEditNotes] = useState('');
   const [saving, setSaving] = useState(false);
+
+  const [uploadingPhotosFor, setUploadingPhotosFor] = useState<string | null>(null);
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const [selectedPhotoCount, setSelectedPhotoCount] = useState(0);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const photoInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const loadData = useCallback(async () => {
     setFetching(true);
@@ -191,6 +200,73 @@ export default function SoilAnalysisPage() {
     }
   }
 
+  async function handleUploadPhotos(analysisId: string) {
+    const input = photoInputRefs.current[analysisId];
+    const files = input?.files;
+    if (!files || files.length === 0) {
+      setPhotoError('Selecione ao menos uma foto antes de enviar.');
+      return;
+    }
+
+    setUploadingPhotos(true);
+    setPhotoError(null);
+    try {
+      const formData = new FormData();
+      const metadata: { takenAt?: string; latitude?: number; longitude?: number }[] = [];
+
+      for (let i = 0; i < files.length; i++) {
+        formData.append('fotos', files[i]);
+        const meta: { takenAt?: string; latitude?: number; longitude?: number } = {};
+
+        if (files[i].lastModified) {
+          meta.takenAt = new Date(files[i].lastModified).toISOString();
+        }
+        metadata.push(meta);
+      }
+      formData.append('metadata', JSON.stringify(metadata));
+
+      await apiUpload(
+        `/fazendas/${farmId}/analises-solo/${analysisId}/fotos`,
+        formData,
+        accessToken,
+      );
+      if (input) input.value = '';
+      setSelectedPhotoCount(0);
+      setUploadingPhotosFor(null);
+      await loadData();
+    } catch (err) {
+      setPhotoError(err instanceof ApiError ? err.message : 'Erro ao enviar fotos');
+    } finally {
+      setUploadingPhotos(false);
+    }
+  }
+
+  async function handleDeletePhoto(analysisId: string, photoId: string) {
+    setError(null);
+    try {
+      await apiFetch(
+        `/fazendas/${farmId}/analises-solo/${analysisId}/fotos/${photoId}`,
+        { method: 'DELETE', token: accessToken },
+      );
+      await loadData();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao excluir foto');
+    }
+  }
+
+  async function handleDownloadPhoto(analysisId: string, photo: SoilAnalysisPhoto) {
+    setError(null);
+    try {
+      await apiDownload(
+        `/fazendas/${farmId}/analises-solo/${analysisId}/fotos/${photo.id}/baixar`,
+        photo.fileName,
+        accessToken,
+      );
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao baixar foto');
+    }
+  }
+
   if (loading || !user || fetching) {
     return (
       <main className="flex flex-1 items-center justify-center">
@@ -200,12 +276,12 @@ export default function SoilAnalysisPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
+    <main className="animate-fade-up mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-8">
       <header className="mb-8">
-        <Link href={`/fazendas/${farmId}/mapa`} className="text-sm text-green-700 hover:underline">
+        <Link href={`/fazendas/${farmId}/mapa`} className="text-sm text-emerald-700 hover:underline">
           ← Mapa da Fazenda
         </Link>
-        <h1 className="text-2xl font-semibold text-green-800">
+        <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
           Análises de solo — {feature?.name ?? '...'}
         </h1>
         <p className="text-sm text-gray-500">
@@ -215,14 +291,14 @@ export default function SoilAnalysisPage() {
       </header>
 
       {error && (
-        <p className="mb-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+        <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
           {error}
         </p>
       )}
 
       <form
         onSubmit={handleCreate}
-        className="mb-8 grid grid-cols-2 gap-3 rounded border border-gray-200 bg-white p-4 sm:grid-cols-3"
+        className="mb-8 grid grid-cols-2 gap-3 rounded-xl border border-gray-200/80 bg-white shadow-sm p-4 sm:grid-cols-3"
       >
         <div>
           <label className="text-xs font-medium text-gray-600">Data da coleta</label>
@@ -231,7 +307,7 @@ export default function SoilAnalysisPage() {
             required
             value={collectedAt}
             onChange={(e) => setCollectedAt(e.target.value)}
-            className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
         <div>
@@ -241,7 +317,7 @@ export default function SoilAnalysisPage() {
             value={areaLabel}
             onChange={(e) => setAreaLabel(e.target.value)}
             placeholder="Ex.: Talhão 3"
-            className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
         {FIELD_DEFS.map(({ key, label }) => (
@@ -252,7 +328,7 @@ export default function SoilAnalysisPage() {
               step="0.01"
               value={form[key] ?? ''}
               onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
-              className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+              className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
             />
           </div>
         ))}
@@ -269,7 +345,7 @@ export default function SoilAnalysisPage() {
           <button
             type="submit"
             disabled={creating}
-            className="rounded bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+            className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
           >
             {creating ? 'Salvando...' : 'Registrar análise'}
           </button>
@@ -277,13 +353,13 @@ export default function SoilAnalysisPage() {
       </form>
 
       {history.length >= 2 && (
-        <section className="mb-8 rounded border border-gray-200 bg-white p-4">
+        <section className="mb-8 rounded-xl border border-gray-200/80 bg-white shadow-sm p-4">
           <div className="mb-2 flex items-center justify-between">
             <h2 className="font-semibold text-gray-800">Evolução dos valores</h2>
             <select
               value={chartField}
               onChange={(e) => setChartField(e.target.value as keyof SoilAnalysis)}
-              className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
             >
               {FIELD_DEFS.map(({ key, label }) => (
                 <option key={key} value={key}>
@@ -305,8 +381,9 @@ export default function SoilAnalysisPage() {
             .reverse()
             .map((a) => {
               const rec = recommendations[a.id];
+              const photos = a.photos ?? [];
               return (
-                <li key={a.id} className="rounded border border-gray-200 bg-white p-4">
+                <li key={a.id} className="rounded-xl border border-gray-200/80 bg-white shadow-sm p-4">
                   {editingId === a.id ? (
                     <div className="space-y-3">
                       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -316,7 +393,7 @@ export default function SoilAnalysisPage() {
                             type="date"
                             value={editCollectedAt}
                             onChange={(e) => setEditCollectedAt(e.target.value)}
-                            className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                            className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                           />
                         </div>
                         <div>
@@ -325,7 +402,7 @@ export default function SoilAnalysisPage() {
                             type="text"
                             value={editAreaLabel}
                             onChange={(e) => setEditAreaLabel(e.target.value)}
-                            className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                            className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                           />
                         </div>
                         {FIELD_DEFS.map(({ key, label }) => (
@@ -338,7 +415,7 @@ export default function SoilAnalysisPage() {
                               onChange={(e) =>
                                 setEditForm((f) => ({ ...f, [key]: e.target.value }))
                               }
-                              className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                              className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                             />
                           </div>
                         ))}
@@ -348,7 +425,7 @@ export default function SoilAnalysisPage() {
                             type="text"
                             value={editNotes}
                             onChange={(e) => setEditNotes(e.target.value)}
-                            className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                            className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                           />
                         </div>
                       </div>
@@ -357,14 +434,14 @@ export default function SoilAnalysisPage() {
                           type="button"
                           disabled={saving}
                           onClick={() => handleSaveEdit(a.id)}
-                          className="rounded bg-green-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+                          className="rounded-lg bg-emerald-700 px-3 py-1.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
                         >
                           {saving ? 'Salvando...' : 'Salvar'}
                         </button>
                         <button
                           type="button"
                           onClick={() => setEditingId(null)}
-                          className="rounded border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
+                          className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
                         >
                           Cancelar
                         </button>
@@ -381,14 +458,14 @@ export default function SoilAnalysisPage() {
                           {a.documentFileName && (
                             <button
                               onClick={() => handleDownload(a)}
-                              className="text-sm text-green-700 hover:underline"
+                              className="text-sm text-emerald-700 hover:underline"
                             >
                               Baixar laudo
                             </button>
                           )}
                           <button
                             onClick={() => startEdit(a)}
-                            className="text-sm text-green-700 hover:underline"
+                            className="text-sm text-emerald-700 hover:underline"
                           >
                             Editar
                           </button>
@@ -413,7 +490,7 @@ export default function SoilAnalysisPage() {
                       {a.notes && <p className="mt-2 text-sm text-gray-600">{a.notes}</p>}
 
                       {rec && (
-                        <div className="mt-3 rounded bg-amber-50 p-3 text-sm text-amber-900">
+                        <div className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
                           <p className="font-medium">
                             {rec.limingNeeded
                               ? `Calagem recomendada: ${rec.limestoneTonPerHa} t/ha (meta V% ${rec.targetBaseSaturationPercent}%)`
@@ -426,6 +503,114 @@ export default function SoilAnalysisPage() {
                           </ul>
                         </div>
                       )}
+
+                      {/* --- Fotos --- */}
+                      <div className="mt-4 border-t border-gray-100 pt-3">
+                        <div className="mb-2 flex items-center justify-between">
+                          <h3 className="text-sm font-medium text-gray-700">
+                            Fotos ({photos.length})
+                          </h3>
+                          <button
+                            type="button"
+                            onClick={() => { setUploadingPhotosFor(uploadingPhotosFor === a.id ? null : a.id); setSelectedPhotoCount(0); setPhotoError(null); }}
+                            className="text-xs font-medium text-emerald-700 hover:underline"
+                          >
+                            {uploadingPhotosFor === a.id ? 'Cancelar' : 'Anexar fotos'}
+                          </button>
+                        </div>
+
+                        {uploadingPhotosFor === a.id && (
+                          <div className="mb-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                            {photoError && (
+                              <p className="mb-2 rounded-lg bg-red-50 px-2 py-1.5 text-xs text-red-700">{photoError}</p>
+                            )}
+                            <input
+                              ref={(el) => { photoInputRefs.current[a.id] = el; }}
+                              type="file"
+                              accept="image/*"
+                              multiple
+                              className="block w-full text-sm"
+                              onChange={(e) => { setSelectedPhotoCount(e.target.files?.length ?? 0); setPhotoError(null); }}
+                            />
+                            <p className="mt-1 text-xs text-gray-400">
+                              Selecione uma ou mais imagens. A data de modificação do arquivo será usada como data da foto.
+                            </p>
+                            <button
+                              type="button"
+                              disabled={uploadingPhotos}
+                              onClick={() => handleUploadPhotos(a.id)}
+                              className="mt-2 rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
+                            >
+                              {uploadingPhotos ? 'Enviando...' : selectedPhotoCount > 0 ? `Enviar ${selectedPhotoCount} foto${selectedPhotoCount > 1 ? 's' : ''}` : 'Enviar fotos'}
+                            </button>
+                          </div>
+                        )}
+
+                        {photos.length > 0 && (
+                          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                            {photos.map((photo) => (
+                              <div
+                                key={photo.id}
+                                className="group relative overflow-hidden rounded-lg border border-gray-200 bg-gray-100"
+                              >
+                                <PhotoThumbnail
+                                  url={`${API_URL}/fazendas/${farmId}/analises-solo/${a.id}/fotos/${photo.id}/baixar`}
+                                  alt={photo.caption || photo.fileName}
+                                  token={accessToken}
+                                />
+                                <div className="p-1.5">
+                                  <p className="truncate text-xs font-medium text-gray-700">
+                                    {photo.fileName}
+                                  </p>
+                                  <div className="flex flex-wrap gap-x-2 text-[10px] text-gray-400">
+                                    {photo.takenAt && (
+                                      <span>
+                                        {new Date(photo.takenAt).toLocaleString('pt-BR', {
+                                          day: '2-digit',
+                                          month: '2-digit',
+                                          year: 'numeric',
+                                          hour: '2-digit',
+                                          minute: '2-digit',
+                                        })}
+                                      </span>
+                                    )}
+                                    {photo.latitude != null && photo.longitude != null && (
+                                      <span>
+                                        {photo.latitude.toFixed(4)}, {photo.longitude.toFixed(4)}
+                                      </span>
+                                    )}
+                                    <span>
+                                      {(photo.sizeBytes / 1024).toFixed(0)} KB
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="absolute right-1 top-1 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDownloadPhoto(a.id, photo)}
+                                    className="rounded-lg bg-white/90 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 shadow-sm hover:bg-white"
+                                  >
+                                    Baixar
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeletePhoto(a.id, photo.id)}
+                                    className="rounded-lg bg-white/90 px-1.5 py-0.5 text-[10px] font-medium text-red-600 shadow-sm hover:bg-white"
+                                  >
+                                    Excluir
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {photos.length === 0 && uploadingPhotosFor !== a.id && (
+                          <p className="text-xs text-gray-400">
+                            Nenhuma foto anexada. Clique em &quot;Anexar fotos&quot; para adicionar registros visuais.
+                          </p>
+                        )}
+                      </div>
                     </>
                   )}
                 </li>
@@ -434,6 +619,53 @@ export default function SoilAnalysisPage() {
         </ul>
       )}
     </main>
+  );
+}
+
+function PhotoThumbnail({
+  url,
+  alt,
+  token,
+}: {
+  url: string;
+  alt: string;
+  token?: string | null;
+}) {
+  const [src, setSrc] = useState<string | null>(null);
+
+  useEffect(() => {
+    let revoke: string | null = null;
+    const headers: Record<string, string> = {};
+    if (token) headers.Authorization = `Bearer ${token}`;
+
+    fetch(url, { headers })
+      .then((res) => {
+        if (!res.ok) return;
+        return res.blob();
+      })
+      .then((blob) => {
+        if (!blob) return;
+        revoke = URL.createObjectURL(blob);
+        setSrc(revoke);
+      })
+      .catch(() => {});
+
+    return () => {
+      if (revoke) URL.revokeObjectURL(revoke);
+    };
+  }, [url, token]);
+
+  if (!src) {
+    return (
+      <div className="flex aspect-square w-full items-center justify-center bg-gray-100 text-xs text-gray-400">
+        Carregando...
+      </div>
+    );
+  }
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={src} alt={alt} className="aspect-square w-full object-cover" />
   );
 }
 
@@ -454,7 +686,7 @@ function SoilEvolutionChart({
   }
 
   const width = 600;
-  const height = 160;
+  const height = 200;
   const padding = 28;
   const values = points.map((p) => p[field] as number);
   const minValue = Math.min(...values);
@@ -490,19 +722,19 @@ function SoilEvolutionChart({
       {coords.map((c) => (
         <circle key={c.id} cx={c.x} cy={c.y} r={3} fill="#15803d" />
       ))}
-      <text x={padding} y={14} fontSize={11} fill="#6b7280">
+      <text x={padding} y={14} fontSize={8} fill="#6b7280">
         {maxValue.toFixed(2)}
       </text>
-      <text x={padding} y={height - padding + 14} fontSize={11} fill="#6b7280">
+      <text x={padding} y={height - padding + 12} fontSize={8} fill="#6b7280">
         {minValue.toFixed(2)}
       </text>
-      <text x={coords[0].x} y={height - 6} fontSize={10} fill="#9ca3af">
+      <text x={coords[0].x} y={height - 6} fontSize={7} fill="#9ca3af">
         {new Date(coords[0].collectedAt).toLocaleDateString('pt-BR')}
       </text>
       <text
         x={coords[coords.length - 1].x}
         y={height - 6}
-        fontSize={10}
+        fontSize={7}
         fill="#9ca3af"
         textAnchor="end"
       >

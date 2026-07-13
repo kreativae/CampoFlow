@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
 import { BillingService } from './billing.service';
 import { BillingController } from './billing.controller';
-import { MercadoPagoService } from './mercadopago.service';
+import { StripeService } from './stripe.service';
 
 @Module({
-  providers: [BillingService, MercadoPagoService],
+  providers: [BillingService, StripeService],
   controllers: [BillingController],
-  exports: [BillingService, MercadoPagoService],
+  exports: [BillingService, StripeService],
 })
 export class BillingModule {}

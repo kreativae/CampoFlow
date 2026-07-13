@@ -85,15 +85,15 @@ export default function AdminTicketPage() {
 
   if (!ticket) {
     return (
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
+      <main className="animate-fade-up mx-auto w-full max-w-3xl flex-1 px-4 py-10">
         <p className="text-red-700">{error ?? 'Ticket não encontrado.'}</p>
       </main>
     );
   }
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
-      <Link href="/admin/tickets" className="text-sm text-green-700 hover:underline">
+    <main className="animate-fade-up mx-auto w-full max-w-3xl flex-1 px-4 py-10">
+      <Link href="/admin/tickets" className="text-sm text-emerald-700 hover:underline">
         ← Voltar para Tickets
       </Link>
 
@@ -109,7 +109,7 @@ export default function AdminTicketPage() {
           value={ticket.status}
           disabled={updatingStatus}
           onChange={(e) => handleStatusChange(e.target.value as TicketStatus)}
-          className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+          className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
         >
           {STATUS_OPTIONS.map((status) => (
             <option key={status} value={status}>
@@ -120,7 +120,7 @@ export default function AdminTicketPage() {
       </header>
 
       {error && (
-        <p className="mb-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+        <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
           {error}
         </p>
       )}
@@ -129,7 +129,7 @@ export default function AdminTicketPage() {
         {ticket.messages.map((msg) => (
           <li
             key={msg.id}
-            className={`max-w-[85%] rounded px-4 py-3 ${
+            className={`max-w-[85%] rounded-lg px-4 py-3 ${
               msg.fromStaff ? 'ml-auto bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'
             }`}
           >
@@ -152,12 +152,12 @@ export default function AdminTicketPage() {
           placeholder="Responder como equipe CampoFlow"
           required
           rows={3}
-          className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-green-600 focus:outline-none"
+          className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
         />
         <button
           type="submit"
           disabled={sending}
-          className="rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+          className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
         >
           {sending ? 'Enviando...' : 'Responder'}
         </button>

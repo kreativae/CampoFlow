@@ -32,6 +32,11 @@ export default function AdminAccountDetailPage() {
   const [savingSubscription, setSavingSubscription] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  // Ações rápidas de suporte
+  const [trialDays, setTrialDays] = useState(15);
+  const [actionBusy, setActionBusy] = useState<string | null>(null);
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
+
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [editUserName, setEditUserName] = useState('');
   const [editUserEmail, setEditUserEmail] = useState('');
@@ -152,13 +157,51 @@ export default function AdminAccountDetailPage() {
     }
   }
 
+  async function handleExtendTrial() {
+    setActionBusy('trial');
+    setError(null);
+    setActionMessage(null);
+    try {
+      await apiFetch(`/admin/contas/${params.accountId}/estender-trial`, {
+        method: 'POST',
+        token: accessToken,
+        body: { days: trialDays },
+      });
+      setActionMessage(`Teste estendido em ${trialDays} dia(s).`);
+      await loadAccount();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao estender o teste');
+    } finally {
+      setActionBusy(null);
+    }
+  }
+
+  async function handleGenerateNotifications() {
+    setActionBusy('notif');
+    setError(null);
+    setActionMessage(null);
+    try {
+      const res = await apiFetch<{ farms: number; created: number }>(
+        `/admin/contas/${params.accountId}/gerar-notificacoes`,
+        { method: 'POST', token: accessToken },
+      );
+      setActionMessage(
+        `${res.created} notificação(ões) gerada(s) em ${res.farms} fazenda(s).`,
+      );
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao gerar notificações');
+    } finally {
+      setActionBusy(null);
+    }
+  }
+
   async function handleDeleteAccount() {
     if (!account) return;
     const confirmed = await confirm({
       title: 'Excluir conta',
       message:
         `ATENÇÃO: excluir a conta "${account.name}" é IRREVERSÍVEL.\n\n` +
-        'Todas as propriedades, usuários, tickets e a assinatura (cancelada no Mercado Pago) ' +
+        'Todas as propriedades, usuários, tickets e a assinatura (cancelada no Stripe) ' +
         'serão apagados permanentemente.\n\n' +
         'Não será possível recuperar esses dados depois.',
       confirmLabel: 'Excluir definitivamente',
@@ -192,27 +235,27 @@ export default function AdminAccountDetailPage() {
 
   if (!account) {
     return (
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
+      <main className="animate-fade-up mx-auto w-full max-w-3xl flex-1 px-4 py-10">
         <p className="text-red-700">{error ?? 'Conta não encontrada.'}</p>
       </main>
     );
   }
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
-      <Link href="/admin" className="text-sm text-green-700 hover:underline">
+    <main className="animate-fade-up mx-auto w-full max-w-3xl flex-1 px-4 py-10">
+      <Link href="/admin" className="text-sm text-emerald-700 hover:underline">
         ← Voltar para Contas e assinaturas
       </Link>
 
       <h1 className="mt-2 mb-6 text-2xl font-semibold text-gray-900">{account.name}</h1>
 
       {error && (
-        <p className="mb-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+        <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
           {error}
         </p>
       )}
 
-      <section className="mb-8 rounded border border-gray-200 p-4">
+      <section className="mb-8 rounded-lg border border-gray-200 p-4">
         <h2 className="mb-3 text-sm font-semibold text-gray-700">Dados da conta</h2>
         <form onSubmit={handleSave} className="space-y-3">
           <div>
@@ -222,7 +265,7 @@ export default function AdminAccountDetailPage() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-green-600 focus:outline-none"
+              className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
             />
           </div>
           <div>
@@ -232,7 +275,7 @@ export default function AdminAccountDetailPage() {
               value={billingEmail}
               onChange={(e) => setBillingEmail(e.target.value)}
               required
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-green-600 focus:outline-none"
+              className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
             />
           </div>
           <div>
@@ -243,13 +286,13 @@ export default function AdminAccountDetailPage() {
               type="text"
               value={document}
               onChange={(e) => setDocument(e.target.value)}
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-green-600 focus:outline-none"
+              className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
             />
           </div>
           <button
             type="submit"
             disabled={saving}
-            className="rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+            className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
           >
             {saving ? 'Salvando...' : 'Salvar alterações'}
           </button>
@@ -257,7 +300,7 @@ export default function AdminAccountDetailPage() {
       </section>
 
       {account.subscription && (
-        <section className="mb-8 rounded border border-gray-200 p-4">
+        <section className="mb-8 rounded-lg border border-gray-200 p-4">
           <h2 className="mb-3 text-sm font-semibold text-gray-700">Assinatura</h2>
           <div className="flex items-center gap-4">
             <div>
@@ -266,7 +309,7 @@ export default function AdminAccountDetailPage() {
                 value={account.subscription.planTier}
                 disabled={savingSubscription}
                 onChange={(e) => handleSubscriptionChange('planTier', e.target.value)}
-                className="mt-1 rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+                className="mt-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
               >
                 {PLAN_OPTIONS.map((opt) => (
                   <option key={opt} value={opt}>
@@ -281,7 +324,7 @@ export default function AdminAccountDetailPage() {
                 value={account.subscription.status}
                 disabled={savingSubscription}
                 onChange={(e) => handleSubscriptionChange('status', e.target.value)}
-                className="mt-1 rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+                className="mt-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
               >
                 {STATUS_OPTIONS.map((opt) => (
                   <option key={opt} value={opt}>
@@ -294,8 +337,55 @@ export default function AdminAccountDetailPage() {
         </section>
       )}
 
+      <section className="mb-8 rounded-lg border border-gray-200 p-4">
+        <h2 className="mb-3 text-sm font-semibold text-gray-700">Ações de suporte</h2>
+        {actionMessage && (
+          <p className="mb-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+            {actionMessage}
+          </p>
+        )}
+        <div className="flex flex-wrap items-end gap-4">
+          <div className="flex items-end gap-2">
+            <div>
+              <label className="block text-xs font-medium text-gray-500">
+                Estender teste (dias)
+              </label>
+              <input
+                type="number"
+                min={1}
+                max={365}
+                value={trialDays}
+                onChange={(e) => setTrialDays(Number(e.target.value))}
+                className="mt-1 w-24 rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-gray-900 focus:outline-none"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={handleExtendTrial}
+              disabled={!account.subscription || actionBusy !== null || trialDays < 1}
+              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-40"
+            >
+              {actionBusy === 'trial' ? 'Estendendo...' : 'Estender teste'}
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={handleGenerateNotifications}
+            disabled={actionBusy !== null}
+            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-40"
+          >
+            {actionBusy === 'notif' ? 'Gerando...' : 'Gerar notificações agora'}
+          </button>
+        </div>
+        <p className="mt-2 text-xs text-gray-400">
+          &quot;Estender teste&quot; recoloca a assinatura em período de teste. &quot;Gerar
+          notificações&quot; varre as fazendas desta conta e cria os alertas pendentes na hora.
+        </p>
+      </section>
+
       <section className="mb-8">
         <h2 className="mb-3 text-sm font-semibold text-gray-700">Membros da conta</h2>
+        <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-500">
@@ -319,7 +409,7 @@ export default function AdminAccountDetailPage() {
                           type="text"
                           value={editUserName}
                           onChange={(e) => setEditUserName(e.target.value)}
-                          className="mt-1 rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+                          className="mt-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                         />
                       </div>
                       <div>
@@ -330,7 +420,7 @@ export default function AdminAccountDetailPage() {
                           type="email"
                           value={editUserEmail}
                           onChange={(e) => setEditUserEmail(e.target.value)}
-                          className="mt-1 rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+                          className="mt-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                         />
                       </div>
                       <div>
@@ -342,14 +432,14 @@ export default function AdminAccountDetailPage() {
                           value={editUserPassword}
                           onChange={(e) => setEditUserPassword(e.target.value)}
                           placeholder="Deixe em branco para manter"
-                          className="mt-1 rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:outline-none"
+                          className="mt-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                         />
                       </div>
                       <button
                         type="button"
                         onClick={() => handleSaveUser(user.id)}
                         disabled={savingUserId === user.id}
-                        className="rounded bg-gray-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+                        className="rounded-lg bg-gray-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
                       >
                         {savingUserId === user.id ? 'Salvando...' : 'Salvar'}
                       </button>
@@ -379,7 +469,7 @@ export default function AdminAccountDetailPage() {
                     <button
                       type="button"
                       onClick={() => startEditUser(user)}
-                      className="text-xs font-medium text-green-700 hover:underline"
+                      className="text-xs font-medium text-emerald-700 hover:underline"
                     >
                       Editar
                     </button>
@@ -389,6 +479,7 @@ export default function AdminAccountDetailPage() {
             )}
           </tbody>
         </table>
+        </div>
       </section>
 
       <section className="mb-8">
@@ -413,10 +504,10 @@ export default function AdminAccountDetailPage() {
         <h2 className="mb-3 text-sm font-semibold text-gray-700">Histórico de pagamentos</h2>
         {account.paymentHistory.length === 0 ? (
           <p className="text-sm text-gray-500">
-            Nenhum pagamento encontrado no Mercado Pago (ou integração não configurada
-            neste ambiente).
+            Nenhum pagamento encontrado (histórico via Stripe não implementado ainda).
           </p>
         ) : (
+          <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-500">
@@ -442,6 +533,7 @@ export default function AdminAccountDetailPage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </section>
 
@@ -449,13 +541,13 @@ export default function AdminAccountDetailPage() {
         <h2 className="mb-2 text-sm font-semibold text-red-700">Zona de risco</h2>
         <p className="mb-3 text-sm text-gray-500">
           Exclui a conta, suas propriedades, usuários e tickets permanentemente, e
-          cancela a assinatura no Mercado Pago.
+          cancela a assinatura no Stripe.
         </p>
         <button
           type="button"
           onClick={handleDeleteAccount}
           disabled={deleting}
-          className="rounded bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+          className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
         >
           {deleting ? 'Excluindo...' : 'Excluir conta'}
         </button>

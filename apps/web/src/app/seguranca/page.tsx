@@ -121,7 +121,7 @@ export default function SecurityPage() {
 
   return (
     <div className="mx-auto max-w-2xl p-8">
-      <Link href="/fazendas" className="text-sm text-green-700 hover:underline">
+      <Link href="/fazendas" className="text-sm text-emerald-700 hover:underline">
         &larr; Voltar
       </Link>
       <h1 className="mt-2 text-2xl font-bold">Segurança da conta</h1>
@@ -129,7 +129,7 @@ export default function SecurityPage() {
         Conectado como {user.name} ({user.email})
       </p>
 
-      <section className="mt-8 rounded border border-gray-200 bg-white p-6">
+      <section className="mt-8 rounded-xl border border-gray-200/80 bg-white shadow-sm p-6">
         <h2 className="text-lg font-semibold">Autenticação em duas etapas (MFA)</h2>
         <p className="mt-1 text-sm text-gray-600">
           Use um aplicativo autenticador (Google Authenticator, Authy, etc.) para exigir um
@@ -137,13 +137,13 @@ export default function SecurityPage() {
         </p>
 
         {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
-        {message && <p className="mt-3 text-sm text-green-700">{message}</p>}
+        {message && <p className="mt-3 text-sm text-emerald-700">{message}</p>}
 
         {step === 'idle' && (
           <button
             onClick={handleStartSetup}
             disabled={submitting}
-            className="mt-4 rounded bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+            className="mt-4 rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
           >
             {submitting ? 'Gerando...' : 'Habilitar MFA'}
           </button>
@@ -153,7 +153,7 @@ export default function SecurityPage() {
           <form onSubmit={handleConfirmEnable} className="mt-4 space-y-4">
             <p className="text-sm text-gray-700">
               Escaneie o QR code abaixo com seu aplicativo autenticador, ou digite o código
-              manualmente: <code className="rounded bg-gray-100 px-1 py-0.5">{setupData.secret}</code>
+              manualmente: <code className="rounded-lg bg-gray-100 px-1 py-0.5">{setupData.secret}</code>
             </p>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={setupData.qrCodeDataUrl} alt="QR code para configurar o MFA" className="h-48 w-48" />
@@ -169,13 +169,13 @@ export default function SecurityPage() {
                 required
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
-                className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-green-600 focus:outline-none"
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
               />
             </div>
             <button
               type="submit"
               disabled={submitting}
-              className="rounded bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+              className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
             >
               {submitting ? 'Confirmando...' : 'Confirmar e habilitar'}
             </button>
@@ -186,14 +186,14 @@ export default function SecurityPage() {
           <button
             onClick={handleDisable}
             disabled={submitting}
-            className="mt-4 rounded bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+            className="mt-4 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
           >
             {submitting ? 'Desabilitando...' : 'Desabilitar MFA'}
           </button>
         )}
       </section>
 
-      <section className="mt-6 rounded border border-gray-200 bg-white p-6">
+      <section className="mt-6 rounded-xl border border-gray-200/80 bg-white shadow-sm p-6">
         <h2 className="text-lg font-semibold">Privacidade e dados (LGPD)</h2>
         <p className="mt-1 text-sm text-gray-600">
           Você pode exportar uma cópia de todos os seus dados pessoais ou solicitar a exclusão
@@ -205,7 +205,7 @@ export default function SecurityPage() {
         <button
           onClick={handleExportData}
           disabled={exporting}
-          className="mt-4 rounded bg-gray-200 px-4 py-2 text-sm font-medium text-gray-800 hover:bg-gray-300 disabled:opacity-50"
+          className="mt-4 rounded-lg bg-gray-200 px-4 py-2 text-sm font-medium text-gray-800 hover:bg-gray-300 disabled:opacity-50"
         >
           {exporting ? 'Exportando...' : 'Exportar meus dados'}
         </button>
@@ -214,7 +214,7 @@ export default function SecurityPage() {
           {!confirmingDelete ? (
             <button
               onClick={() => setConfirmingDelete(true)}
-              className="rounded bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
             >
               Excluir minha conta
             </button>
@@ -229,13 +229,13 @@ export default function SecurityPage() {
                 <button
                   onClick={handleDeleteAccount}
                   disabled={deletingAccount}
-                  className="rounded bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                  className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
                 >
                   {deletingAccount ? 'Excluindo...' : 'Sim, excluir minha conta'}
                 </button>
                 <button
                   onClick={() => setConfirmingDelete(false)}
-                  className="rounded bg-gray-200 px-4 py-2 text-sm font-medium text-gray-800 hover:bg-gray-300"
+                  className="rounded-lg bg-gray-200 px-4 py-2 text-sm font-medium text-gray-800 hover:bg-gray-300"
                 >
                   Cancelar
                 </button>

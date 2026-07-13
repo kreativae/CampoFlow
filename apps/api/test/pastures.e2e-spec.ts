@@ -18,6 +18,7 @@ interface FarmResponseBody {
 interface PastureResponseBody {
   id: string;
   animalCapacity: number;
+  animalHeadCount?: number;
 }
 
 interface OccupationResponseBody {
@@ -93,6 +94,8 @@ describe('Properties & Pastures (e2e)', () => {
     await prisma.pastureOccupation.deleteMany({
       where: { pasture: { farmId } },
     });
+    await prisma.animalEvent.deleteMany({ where: { animal: { farmId } } });
+    await prisma.animal.deleteMany({ where: { farmId } });
     await prisma.pasture.deleteMany({ where: { farmId } });
     await prisma.membership.deleteMany({ where: { farmId } });
     await prisma.farm.delete({ where: { id: farmId } });
@@ -283,5 +286,50 @@ describe('Properties & Pastures (e2e)', () => {
         thirdOccupations.some((o) => o.headCount === 4 && o.exitedAt === null),
       ).toBe(true);
     });
+  });
+
+  it('reflects herd pasture assignments in the pasture head count', async () => {
+    const pastureRes = await request(app.getHttpServer())
+      .post(`/fazendas/${farmId}/pastagens`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ name: 'Pasto Rebanho', areaHectares: 5, animalCapacity: 20 })
+      .expect(201);
+    const herdPastureId = (pastureRes.body as PastureResponseBody).id;
+
+    // Assign two animals to the pasture through the herd module.
+    for (const earTag of ['REB-1', 'REB-2']) {
+      await request(app.getHttpServer())
+        .post(`/fazendas/${farmId}/animais`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({
+          earTag,
+          sex: 'FEMALE',
+          category: 'VACA',
+          pastureId: herdPastureId,
+        })
+        .expect(201);
+    }
+
+    const listRes = await request(app.getHttpServer())
+      .get(`/fazendas/${farmId}/pastagens`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+    const listed = (listRes.body as PastureResponseBody[]).find(
+      (p) => p.id === herdPastureId,
+    )!;
+    expect(listed.animalHeadCount).toBe(2);
+
+    const detailRes = await request(app.getHttpServer())
+      .get(`/fazendas/${farmId}/pastagens/${herdPastureId}`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+    const detail = detailRes.body as PastureResponseBody & {
+      animals: { earTag: string }[];
+    };
+    expect(detail.animalHeadCount).toBe(2);
+    expect(detail.animals.map((a) => a.earTag).sort()).toEqual([
+      'REB-1',
+      'REB-2',
+    ]);
   });
 });

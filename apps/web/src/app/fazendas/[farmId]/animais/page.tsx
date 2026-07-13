@@ -1,11 +1,16 @@
 'use client';
 
+import { Beef, SlidersHorizontal, X, Search } from 'lucide-react';
+import PageHeader from '@/components/PageHeader';
+import Modal from '@/components/Modal';
+
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, ApiError } from '@/lib/api';
 import { useConfirm } from '@/lib/confirm-context';
+import { useToast } from '@/lib/toast-context';
 import type {
   Animal,
   AnimalCategory,
@@ -53,11 +58,103 @@ interface ReproductiveEventSummary {
   type: ReproductiveEventType;
 }
 
+function FilterPanel({
+  categories, setCategories,
+  sexes, setSexes,
+  pastureIds, setPastureIds,
+  vaccinationStatuses, setVaccinationStatuses,
+  reproductionTypes, setReproductionTypes,
+  pastures,
+  hasActiveFilters,
+  onClear,
+  toggleInSet,
+}: {
+  categories: Set<AnimalCategory>; setCategories: (s: Set<AnimalCategory>) => void;
+  sexes: Set<AnimalSex>; setSexes: (s: Set<AnimalSex>) => void;
+  pastureIds: Set<string>; setPastureIds: (s: Set<string>) => void;
+  vaccinationStatuses: Set<VaccinationStatus>; setVaccinationStatuses: (s: Set<VaccinationStatus>) => void;
+  reproductionTypes: Set<ReproductiveEventType>; setReproductionTypes: (s: Set<ReproductiveEventType>) => void;
+  pastures: Pasture[];
+  hasActiveFilters: boolean;
+  onClear: () => void;
+  toggleInSet: <T>(set: Set<T>, value: T, setter: (next: Set<T>) => void) => void;
+}) {
+  return (
+    <div className="space-y-4">
+      <div>
+        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-gray-400">Categoria</p>
+        <div className="flex flex-col gap-0.5">
+          {CATEGORY_OPTIONS.map((opt) => (
+            <label key={opt} className="flex items-center gap-1.5 rounded px-1 py-0.5 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer">
+              <input type="checkbox" checked={categories.has(opt)} onChange={() => toggleInSet(categories, opt, setCategories)} className="rounded border-gray-300" />
+              {opt}
+            </label>
+          ))}
+        </div>
+      </div>
+      <div>
+        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-gray-400">Sexo</p>
+        <div className="flex flex-col gap-0.5">
+          {SEX_OPTIONS.map((opt) => (
+            <label key={opt} className="flex items-center gap-1.5 rounded px-1 py-0.5 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer">
+              <input type="checkbox" checked={sexes.has(opt)} onChange={() => toggleInSet(sexes, opt, setSexes)} className="rounded border-gray-300" />
+              {opt === 'FEMALE' ? 'Fêmea' : 'Macho'}
+            </label>
+          ))}
+        </div>
+      </div>
+      <div>
+        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-gray-400">Pasto</p>
+        <div className="flex max-h-28 flex-col gap-0.5 overflow-y-auto">
+          {pastures.length === 0 ? (
+            <p className="text-xs text-gray-400">Nenhum pasto.</p>
+          ) : (
+            pastures.map((p) => (
+              <label key={p.id} className="flex items-center gap-1.5 rounded px-1 py-0.5 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer">
+                <input type="checkbox" checked={pastureIds.has(p.id)} onChange={() => toggleInSet(pastureIds, p.id, setPastureIds)} className="rounded border-gray-300" />
+                {p.name}
+              </label>
+            ))
+          )}
+        </div>
+      </div>
+      <div>
+        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-gray-400">Vacinação</p>
+        <div className="flex flex-col gap-0.5">
+          {VACCINATION_STATUS_OPTIONS.map((opt) => (
+            <label key={opt.value} className="flex items-center gap-1.5 rounded px-1 py-0.5 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer">
+              <input type="checkbox" checked={vaccinationStatuses.has(opt.value)} onChange={() => toggleInSet(vaccinationStatuses, opt.value, setVaccinationStatuses)} className="rounded border-gray-300" />
+              {opt.label}
+            </label>
+          ))}
+        </div>
+      </div>
+      <div>
+        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-gray-400">Reprodução</p>
+        <div className="flex flex-col gap-0.5">
+          {REPRODUCTIVE_EVENT_OPTIONS.map((opt) => (
+            <label key={opt.value} className="flex items-center gap-1.5 rounded px-1 py-0.5 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer">
+              <input type="checkbox" checked={reproductionTypes.has(opt.value)} onChange={() => toggleInSet(reproductionTypes, opt.value, setReproductionTypes)} className="rounded border-gray-300" />
+              {opt.label}
+            </label>
+          ))}
+        </div>
+      </div>
+      {hasActiveFilters && (
+        <button type="button" onClick={onClear} className="text-xs font-medium text-emerald-700 hover:underline">
+          Limpar filtros
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function AnimalsPage() {
   const { farmId } = useParams<{ farmId: string }>();
   const { user, accessToken, loading } = useAuth();
   const router = useRouter();
   const confirm = useConfirm();
+  const { toastSuccess } = useToast();
 
   const [animals, setAnimals] = useState<Animal[]>([]);
   const [pastures, setPastures] = useState<Pasture[]>([]);
@@ -88,6 +185,9 @@ export default function AnimalsPage() {
   const [saving, setSaving] = useState(false);
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [moveModalOpen, setMoveModalOpen] = useState(false);
+  const [movePastureId, setMovePastureId] = useState('');
+  const [moving, setMoving] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
@@ -145,6 +245,18 @@ export default function AnimalsPage() {
     void loadData();
   }, [loading, user, loadData, router]);
 
+  // Fecha a visualização rápida / mover de pasto ao pressionar Esc.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        setEditingId(null);
+        setMoveModalOpen(false);
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   async function handleCreate(event: FormEvent) {
     event.preventDefault();
     setCreating(true);
@@ -165,6 +277,7 @@ export default function AnimalsPage() {
       setBreed('');
       setPastureId('');
       await loadData();
+      toastSuccess('Animal cadastrado.');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao cadastrar animal');
     } finally {
@@ -210,6 +323,7 @@ export default function AnimalsPage() {
       });
       setEditingId(null);
       await loadData();
+      toastSuccess('Animal atualizado.');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao atualizar animal');
     } finally {
@@ -232,8 +346,35 @@ export default function AnimalsPage() {
         token: accessToken,
       });
       await loadData();
+      toastSuccess('Animal excluído.');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao excluir animal');
+    }
+  }
+
+  async function handleMovePasture() {
+    if (selected.size === 0) return;
+    setMoving(true);
+    setError(null);
+    try {
+      await apiFetch(`/fazendas/${farmId}/animais/mover-pasto`, {
+        method: 'POST',
+        token: accessToken,
+        body: {
+          animalIds: Array.from(selected),
+          pastureId: movePastureId || null,
+        },
+      });
+      setMoveModalOpen(false);
+      setMovePastureId('');
+      const moved = selected.size;
+      setSelected(new Set());
+      await loadData();
+      toastSuccess(`${moved} brinco(s) movido(s) de pasto.`);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao mover os brincos de pasto');
+    } finally {
+      setMoving(false);
     }
   }
 
@@ -321,23 +462,23 @@ export default function AnimalsPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
-      <header className="mb-8">
-        <Link href={`/fazendas/${farmId}`} className="text-sm text-green-700 hover:underline">
-          ← Dashboard
-        </Link>
-        <h1 className="text-2xl font-semibold text-green-800">Rebanho</h1>
-      </header>
+    <main className="animate-fade-up mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-8">
+      <PageHeader
+        icon={Beef}
+        title="Rebanho"
+        subtitle="Gerencie o rebanho da propriedade"
+        backHref={`/fazendas/${farmId}`}
+      />
 
       {error && (
-        <p className="mb-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+        <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
           {error}
         </p>
       )}
 
       <form
         onSubmit={handleCreate}
-        className="mb-8 grid grid-cols-2 gap-3 rounded border border-gray-200 bg-white p-4 sm:grid-cols-3"
+        className="mb-8 grid grid-cols-2 gap-3 rounded-xl border border-gray-200/80 bg-white shadow-sm p-4 sm:grid-cols-3"
       >
         <div className="col-span-2 sm:col-span-1">
           <label className="text-xs font-medium text-gray-600">Brinco</label>
@@ -346,7 +487,7 @@ export default function AnimalsPage() {
             required
             value={earTag}
             onChange={(e) => setEarTag(e.target.value)}
-            className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
 
@@ -355,7 +496,7 @@ export default function AnimalsPage() {
           <select
             value={sex}
             onChange={(e) => setSex(e.target.value as AnimalSex)}
-            className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           >
             {SEX_OPTIONS.map((opt) => (
               <option key={opt} value={opt}>
@@ -370,7 +511,7 @@ export default function AnimalsPage() {
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value as AnimalCategory)}
-            className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           >
             {CATEGORY_OPTIONS.map((opt) => (
               <option key={opt} value={opt}>
@@ -386,7 +527,7 @@ export default function AnimalsPage() {
             type="text"
             value={breed}
             onChange={(e) => setBreed(e.target.value)}
-            className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
 
@@ -395,7 +536,7 @@ export default function AnimalsPage() {
           <select
             value={pastureId}
             onChange={(e) => setPastureId(e.target.value)}
-            className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+            className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           >
             <option value="">— Sem pasto —</option>
             {pastures.map((p) => (
@@ -410,7 +551,7 @@ export default function AnimalsPage() {
           <button
             type="submit"
             disabled={creating}
-            className="rounded bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+            className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
           >
             {creating ? 'Cadastrando...' : 'Cadastrar animal'}
           </button>
@@ -420,247 +561,253 @@ export default function AnimalsPage() {
       {fetching ? (
         <p className="text-gray-500">Carregando animais...</p>
       ) : animals.length === 0 ? (
-        <p className="text-gray-500">Nenhum animal cadastrado ainda.</p>
+        <div className="flex flex-col items-center rounded-lg border-2 border-dashed border-gray-200 py-12 text-center">
+          <p className="text-lg font-medium text-gray-700">Nenhum animal cadastrado</p>
+          <p className="mt-1 text-sm text-gray-500">Comece cadastrando seu primeiro animal usando o formulário acima.</p>
+        </div>
       ) : (
-        <>
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded border border-gray-200 bg-gray-50 px-3 py-2 text-sm">
-            <label className="flex items-center gap-2 text-gray-600">
-              <input
-                type="checkbox"
-                checked={
-                  filteredAnimals.length > 0 &&
-                  selected.size === filteredAnimals.length
-                }
-                onChange={(e) => toggleSelectAll(e.target.checked)}
-              />
-              Selecionar todos
-            </label>
+        <div className="flex gap-6">
+          {/* ── Sidebar de filtros (sticky no desktop, drawer no mobile) ── */}
+          {/* Botão mobile para abrir filtros */}
+          <div className="lg:hidden mb-3">
+            <button
+              type="button"
+              onClick={() => setShowFilters(true)}
+              className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium ${
+                hasActiveFilters
+                  ? 'border-emerald-600 bg-emerald-50 text-emerald-700'
+                  : 'border-gray-300 text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <SlidersHorizontal size={14} />
+              Filtros{hasActiveFilters ? ` (${activeFilterCount})` : ''}
+            </button>
+          </div>
 
-            <div className="flex items-center gap-2">
+          {/* Drawer overlay mobile */}
+          {showFilters && (
+            <div
+              className="fixed inset-0 z-50 bg-black/40 lg:hidden"
+              onClick={(e) => { if (e.target === e.currentTarget) setShowFilters(false); }}
+            >
+              <aside className="absolute left-0 top-0 h-full w-72 overflow-y-auto bg-white p-4 shadow-xl animate-slide-in-left">
+                <div className="mb-4 flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-gray-900">Filtros</h3>
+                  <button type="button" onClick={() => setShowFilters(false)} className="text-gray-400 hover:text-gray-600">
+                    <X size={18} />
+                  </button>
+                </div>
+                <FilterPanel
+                  categories={filterCategories} setCategories={setFilterCategories}
+                  sexes={filterSexes} setSexes={setFilterSexes}
+                  pastureIds={filterPastureIds} setPastureIds={setFilterPastureIds}
+                  vaccinationStatuses={filterVaccinationStatuses} setVaccinationStatuses={setFilterVaccinationStatuses}
+                  reproductionTypes={filterReproductionTypes} setReproductionTypes={setFilterReproductionTypes}
+                  pastures={pastures}
+                  hasActiveFilters={hasActiveFilters}
+                  onClear={clearFilters}
+                  toggleInSet={toggleInSet}
+                />
+              </aside>
+            </div>
+          )}
+
+          {/* Sidebar desktop sticky */}
+          <aside className="hidden lg:block w-56 shrink-0">
+            <div className="sticky top-8 space-y-1 rounded-xl border border-gray-200/80 bg-white p-4 shadow-sm">
+              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">Filtros</h3>
+              <FilterPanel
+                categories={filterCategories} setCategories={setFilterCategories}
+                sexes={filterSexes} setSexes={setFilterSexes}
+                pastureIds={filterPastureIds} setPastureIds={setFilterPastureIds}
+                vaccinationStatuses={filterVaccinationStatuses} setVaccinationStatuses={setFilterVaccinationStatuses}
+                reproductionTypes={filterReproductionTypes} setReproductionTypes={setFilterReproductionTypes}
+                pastures={pastures}
+                hasActiveFilters={hasActiveFilters}
+                onClear={clearFilters}
+                toggleInSet={toggleInSet}
+              />
+            </div>
+          </aside>
+
+          {/* ── Lista principal ── */}
+          <div className="min-w-0 flex-1">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <label className="flex items-center gap-2 text-sm text-gray-600">
+                <input
+                  type="checkbox"
+                  checked={filteredAnimals.length > 0 && selected.size === filteredAnimals.length}
+                  onChange={(e) => toggleSelectAll(e.target.checked)}
+                  className="rounded border-gray-300"
+                />
+                Selecionar todos
+              </label>
+
               <div className="relative">
-                <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2 text-gray-400">
-                  🔍
+                <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2.5 text-gray-400">
+                  <Search size={14} />
                 </span>
                 <input
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Buscar por brinco..."
-                  className="w-44 rounded border border-gray-300 py-1.5 pl-7 pr-2 text-sm focus:border-green-600 focus:outline-none"
+                  className="w-48 rounded-lg border border-gray-300 py-1.5 pl-8 pr-2 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 />
               </div>
+            </div>
+
+            {selected.size > 0 && (
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-emerald-50 px-3 py-2">
+                <p className="text-sm font-medium text-gray-900">
+                  {selected.size} brinco(s) selecionado(s) · peso total{' '}
+                  {selectedTotalWeightKg.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}{' '}
+                  kg
+                </p>
+                <button
+                  type="button"
+                  onClick={() => { setMovePastureId(''); setMoveModalOpen(true); }}
+                  className="rounded-lg bg-emerald-700 px-3 py-1.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800"
+                >
+                  Mover de pasto
+                </button>
+              </div>
+            )}
+
+            {filteredAnimals.length === 0 ? (
+              <p className="text-gray-500">Nenhum animal encontrado para esse filtro.</p>
+            ) : (
+              <ul className="space-y-2">
+                {filteredAnimals.map((animal) => (
+                  <li
+                    key={animal.id}
+                    className="flex flex-col gap-2 rounded-xl border border-gray-200/80 bg-white shadow-sm px-4 py-3 transition-all duration-200 hover:border-emerald-200 hover:shadow-md sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="flex min-w-0 items-center">
+                      <input
+                        type="checkbox"
+                        checked={selected.has(animal.id)}
+                        onChange={(e) => toggleSelected(animal.id, e.target.checked)}
+                        className="mr-3 shrink-0 rounded border-gray-300"
+                      />
+                      <Link href={`/fazendas/${farmId}/animais/${animal.id}`} className="flex min-w-0 flex-1 items-center gap-3">
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700"><Beef size={18} strokeWidth={1.9} /></span>
+                        <span className="min-w-0">
+                          <span className="block truncate font-medium text-gray-900">{animal.earTag}</span>
+                          <span className="block truncate text-sm text-gray-500">
+                            {animal.category} · {animal.breed ?? 'Raça não informada'}
+                          </span>
+                        </span>
+                      </Link>
+                    </div>
+                    <div className="flex items-center gap-3 self-end sm:self-auto">
+                      <p className="text-sm text-gray-500">
+                        {animal.currentWeightKg ? `${animal.currentWeightKg} kg` : '—'}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => startEdit(animal)}
+                        className="text-sm font-medium text-emerald-700 hover:underline"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(animal)}
+                        className="text-sm font-medium text-red-600 hover:underline"
+                      >
+                        Excluir
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+
+      {moveModalOpen && (
+        <Modal onClose={() => setMoveModalOpen(false)} maxWidth="max-w-md">
+          <div className="p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900">Mover de pasto</h2>
               <button
                 type="button"
-                onClick={() => setShowFilters((v) => !v)}
-                className={`rounded border px-3 py-1.5 text-sm font-medium ${
-                  hasActiveFilters
-                    ? 'border-green-600 bg-green-50 text-green-700'
-                    : 'border-gray-300 text-gray-600 hover:bg-gray-100'
-                }`}
+                onClick={() => setMoveModalOpen(false)}
+                className="rounded-lg p-1.5 text-gray-400 transition-colors duration-150 hover:bg-gray-100 hover:text-gray-600"
+                aria-label="Fechar"
               >
-                Filtros{hasActiveFilters ? ` (${activeFilterCount})` : ''}
+                <X size={18} />
+              </button>
+            </div>
+            <p className="mb-4 text-sm text-gray-600">
+              Mover {selected.size} brinco(s) selecionado(s) para outro pasto.
+            </p>
+            <label className="text-xs font-medium text-gray-600">Pasto de destino</label>
+            <select
+              value={movePastureId}
+              onChange={(e) => setMovePastureId(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+            >
+              <option value="">— Sem pasto —</option>
+              {pastures.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setMoveModalOpen(false)}
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={moving}
+                onClick={handleMovePasture}
+                className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
+              >
+                {moving ? 'Movendo...' : 'Mover'}
               </button>
             </div>
           </div>
+        </Modal>
+      )}
 
-          {showFilters && (
-            <div className="mb-3 space-y-4 rounded border border-gray-200 bg-white p-3">
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+      {editingId && (
+        <Modal onClose={() => setEditingId(null)} maxWidth="max-w-2xl">
+            <div className="flex shrink-0 items-center justify-between border-b border-gray-100 px-6 py-4">
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600/10 text-emerald-700">
+                  <Beef size={19} strokeWidth={1.9} />
+                </span>
                 <div>
-                  <p className="mb-1 text-xs font-medium text-gray-600">Categoria</p>
-                  <div className="flex flex-col gap-1">
-                    {CATEGORY_OPTIONS.map((opt) => (
-                      <label key={opt} className="flex items-center gap-1.5 text-sm text-gray-700">
-                        <input
-                          type="checkbox"
-                          checked={filterCategories.has(opt)}
-                          onChange={() =>
-                            toggleInSet(filterCategories, opt, setFilterCategories)
-                          }
-                        />
-                        {opt}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <p className="mb-1 text-xs font-medium text-gray-600">Sexo</p>
-                  <div className="flex flex-col gap-1">
-                    {SEX_OPTIONS.map((opt) => (
-                      <label key={opt} className="flex items-center gap-1.5 text-sm text-gray-700">
-                        <input
-                          type="checkbox"
-                          checked={filterSexes.has(opt)}
-                          onChange={() => toggleInSet(filterSexes, opt, setFilterSexes)}
-                        />
-                        {opt === 'FEMALE' ? 'Fêmea' : 'Macho'}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <p className="mb-1 text-xs font-medium text-gray-600">Pasto</p>
-                  <div className="flex max-h-32 flex-col gap-1 overflow-y-auto">
-                    {pastures.length === 0 ? (
-                      <p className="text-sm text-gray-400">Nenhum pasto cadastrado.</p>
-                    ) : (
-                      pastures.map((p) => (
-                        <label key={p.id} className="flex items-center gap-1.5 text-sm text-gray-700">
-                          <input
-                            type="checkbox"
-                            checked={filterPastureIds.has(p.id)}
-                            onChange={() =>
-                              toggleInSet(filterPastureIds, p.id, setFilterPastureIds)
-                            }
-                          />
-                          {p.name}
-                        </label>
-                      ))
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <p className="mb-1 text-xs font-medium text-gray-600">Vacinação</p>
-                  <div className="flex flex-col gap-1">
-                    {VACCINATION_STATUS_OPTIONS.map((opt) => (
-                      <label
-                        key={opt.value}
-                        className="flex items-center gap-1.5 text-sm text-gray-700"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={filterVaccinationStatuses.has(opt.value)}
-                          onChange={() =>
-                            toggleInSet(
-                              filterVaccinationStatuses,
-                              opt.value,
-                              setFilterVaccinationStatuses,
-                            )
-                          }
-                        />
-                        {opt.label}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <p className="mb-1 text-xs font-medium text-gray-600">Reprodução</p>
-                  <div className="flex flex-col gap-1">
-                    {REPRODUCTIVE_EVENT_OPTIONS.map((opt) => (
-                      <label
-                        key={opt.value}
-                        className="flex items-center gap-1.5 text-sm text-gray-700"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={filterReproductionTypes.has(opt.value)}
-                          onChange={() =>
-                            toggleInSet(
-                              filterReproductionTypes,
-                              opt.value,
-                              setFilterReproductionTypes,
-                            )
-                          }
-                        />
-                        {opt.label}
-                      </label>
-                    ))}
-                  </div>
+                  <h2 className="text-base font-semibold text-gray-900">Brinco {editEarTag}</h2>
+                  <p className="text-xs text-gray-500">Visualização rápida</p>
                 </div>
               </div>
               <button
                 type="button"
-                onClick={clearFilters}
-                disabled={!hasActiveFilters}
-                className="text-sm font-medium text-gray-500 hover:text-gray-700 disabled:opacity-40"
-              >
-                Limpar filtros
-              </button>
-            </div>
-          )}
-
-          {selected.size > 0 && (
-            <p className="mb-3 text-sm font-medium text-gray-900">
-              {selected.size} brinco(s) selecionado(s) · peso total{' '}
-              {selectedTotalWeightKg.toLocaleString('pt-BR', {
-                maximumFractionDigits: 1,
-              })}{' '}
-              kg
-            </p>
-          )}
-
-          {filteredAnimals.length === 0 ? (
-            <p className="text-gray-500">Nenhum animal encontrado para esse filtro.</p>
-          ) : (
-          <ul className="space-y-2">
-            {filteredAnimals.map((animal) => (
-              <li
-                key={animal.id}
-                className="flex items-center justify-between rounded border border-gray-200 bg-white px-4 py-3 hover:border-green-600 hover:shadow-sm"
-              >
-                <input
-                  type="checkbox"
-                  checked={selected.has(animal.id)}
-                  onChange={(e) => toggleSelected(animal.id, e.target.checked)}
-                  className="mr-3"
-                />
-                <Link href={`/fazendas/${farmId}/animais/${animal.id}`} className="flex-1">
-                  <p className="font-medium text-gray-900">{animal.earTag}</p>
-                  <p className="text-sm text-gray-500">
-                    {animal.category} · {animal.breed ?? 'Raça não informada'}
-                  </p>
-                </Link>
-                <div className="flex items-center gap-3">
-                  <p className="text-sm text-gray-500">
-                    {animal.currentWeightKg ? `${animal.currentWeightKg} kg` : '—'}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => startEdit(animal)}
-                    className="text-sm font-medium text-green-700 hover:underline"
-                  >
-                    Visualização rápida
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(animal)}
-                    className="text-sm font-medium text-red-600 hover:underline"
-                  >
-                    Excluir
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-          )}
-        </>
-      )}
-
-      {editingId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-lg">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Visualização rápida — {editEarTag}
-              </h2>
-              <button
-                type="button"
                 onClick={() => setEditingId(null)}
-                className="text-gray-400 hover:text-gray-600"
+                className="rounded-lg p-1.5 text-gray-400 transition-colors duration-150 hover:bg-gray-100 hover:text-gray-600"
                 aria-label="Fechar"
               >
-                ✕
+                <X size={18} />
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 overflow-y-auto px-6 py-5 sm:grid-cols-3">
               <div>
                 <label className="text-xs font-medium text-gray-600">Brinco</label>
                 <input
                   type="text"
                   value={editEarTag}
                   onChange={(e) => setEditEarTag(e.target.value)}
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 />
               </div>
               <div>
@@ -668,7 +815,7 @@ export default function AnimalsPage() {
                 <select
                   value={editCategory}
                   onChange={(e) => setEditCategory(e.target.value as AnimalCategory)}
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 >
                   {CATEGORY_OPTIONS.map((opt) => (
                     <option key={opt} value={opt}>
@@ -683,7 +830,7 @@ export default function AnimalsPage() {
                   type="text"
                   value={editBreed}
                   onChange={(e) => setEditBreed(e.target.value)}
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 />
               </div>
               <div>
@@ -691,7 +838,7 @@ export default function AnimalsPage() {
                 <select
                   value={editPastureId}
                   onChange={(e) => setEditPastureId(e.target.value)}
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 >
                   <option value="">— Sem pasto —</option>
                   {pastures.map((p) => (
@@ -707,7 +854,7 @@ export default function AnimalsPage() {
                   type="text"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 />
               </div>
               <div>
@@ -716,7 +863,7 @@ export default function AnimalsPage() {
                   type="text"
                   value={editRfid}
                   onChange={(e) => setEditRfid(e.target.value)}
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 />
               </div>
               <div>
@@ -724,7 +871,7 @@ export default function AnimalsPage() {
                 <select
                   value={editSex}
                   onChange={(e) => setEditSex(e.target.value as AnimalSex)}
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 >
                   {SEX_OPTIONS.map((opt) => (
                     <option key={opt} value={opt}>
@@ -741,7 +888,7 @@ export default function AnimalsPage() {
                   type="date"
                   value={editBirthDate}
                   onChange={(e) => setEditBirthDate(e.target.value)}
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 />
               </div>
               <div>
@@ -753,15 +900,15 @@ export default function AnimalsPage() {
                   step="0.1"
                   value={editCurrentWeightKg}
                   onChange={(e) => setEditCurrentWeightKg(e.target.value)}
-                  className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-green-600 focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 />
               </div>
             </div>
 
-            <div className="mt-6 flex items-center justify-between">
+            <div className="flex shrink-0 items-center justify-between border-t border-gray-100 bg-gray-50/60 px-6 py-4">
               <Link
                 href={`/fazendas/${farmId}/animais/${editingId}`}
-                className="text-sm font-medium text-green-700 hover:underline"
+                className="text-sm font-medium text-emerald-700 hover:underline"
               >
                 Ver detalhes completos →
               </Link>
@@ -769,7 +916,7 @@ export default function AnimalsPage() {
                 <button
                   type="button"
                   onClick={() => setEditingId(null)}
-                  className="rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                 >
                   Cancelar
                 </button>
@@ -777,14 +924,13 @@ export default function AnimalsPage() {
                   type="button"
                   disabled={saving}
                   onClick={() => handleSaveEdit(editingId)}
-                  className="rounded bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+                  className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
                 >
                   {saving ? 'Salvando...' : 'Salvar'}
                 </button>
               </div>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </main>
   );

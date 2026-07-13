@@ -32,7 +32,6 @@ interface BiOverviewBody {
     averageDailyGainKg: number;
     herdSize: number;
     projectedArrobas: number;
-    weatherRiskActive: boolean;
   };
   forecastSales: {
     projectedNextMonthReceita: number;
@@ -185,7 +184,6 @@ describe('BI (e2e)', () => {
     const body = res.body as BiOverviewBody;
     expect(body.forecastWeightGain.herdSize).toBe(1);
     expect(body.forecastWeightGain.averageDailyGainKg).toBeCloseTo(1, 0); // 30kg over 30 days
-    expect(body.forecastWeightGain.weatherRiskActive).toBe(false);
     expect(body.forecastWeightGain.projectedArrobas).toBeCloseTo(2, 0); // 1kg/day * 1 animal * 30d / 15
   });
 

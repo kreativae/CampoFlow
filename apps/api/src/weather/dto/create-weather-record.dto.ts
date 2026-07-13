@@ -1,11 +1,4 @@
-import {
-  IsDateString,
-  IsEnum,
-  IsNumber,
-  IsOptional,
-  IsString,
-} from 'class-validator';
-import { WeatherAlertType } from '@prisma/client';
+import { IsDateString, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class CreateWeatherRecordDto {
   @IsOptional()
@@ -27,10 +20,6 @@ export class CreateWeatherRecordDto {
   @IsOptional()
   @IsNumber()
   rainfallMm?: number;
-
-  @IsOptional()
-  @IsEnum(WeatherAlertType)
-  alertType?: WeatherAlertType;
 
   @IsOptional()
   @IsString()

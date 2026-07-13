@@ -1,4 +1,6 @@
 import {
+  ArrayMinSize,
+  IsArray,
   IsInt,
   IsNumber,
   IsOptional,
@@ -23,4 +25,9 @@ export class CreatePastureDto {
   @IsInt()
   @Min(1)
   animalCapacity: number;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(3)
+  boundaries?: [number, number][];
 }
