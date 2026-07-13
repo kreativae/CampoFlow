@@ -121,6 +121,10 @@ export class PasturesController {
     @Param('pastureId') pastureId: string,
     @Param('occupationId') occupationId: string,
   ) {
-    return this.pasturesService.removeOccupation(farmId, pastureId, occupationId);
+    return this.pasturesService.removeOccupation(
+      farmId,
+      pastureId,
+      occupationId,
+    );
   }
 }

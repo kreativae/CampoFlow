@@ -299,13 +299,24 @@ export class ReportsService {
       ['TOTAL', totalWeight.toFixed(1), totalArrobas.toFixed(2), ''],
       ['', '', 'Subtotal', subtotal.toFixed(2)],
       ['', '', 'Frete', deal.freightCost.toFixed(2)],
-      ['', '', `Comissão (${deal.commissionPercent}%)`, commissionValue.toFixed(2)],
+      [
+        '',
+        '',
+        `Comissão (${deal.commissionPercent}%)`,
+        commissionValue.toFixed(2),
+      ],
       ['', '', 'TOTAL GERAL', grandTotal.toFixed(2)],
     );
 
     if (!isVenda && deal.installmentCount && deal.installmentCount > 0) {
-      const parcela = deal.installmentValue ?? grandTotal / deal.installmentCount;
-      rows.push(['', '', `Parcelamento (${deal.installmentCount}x)`, parcela.toFixed(2)]);
+      const parcela =
+        deal.installmentValue ?? grandTotal / deal.installmentCount;
+      rows.push([
+        '',
+        '',
+        `Parcelamento (${deal.installmentCount}x)`,
+        parcela.toFixed(2),
+      ]);
     }
 
     return {
@@ -336,27 +347,59 @@ export class ReportsService {
     senarPercent: number | null;
     totalValue: number | null;
   }): ReportTable {
-    const unitLabel: Record<string, string> = { SACA60: 'Saca 60kg', KG: 'kg', TONELADA: 'Tonelada' };
-    const modalityLabel: Record<string, string> = { BALCAO: 'Balcão', CONTRATO_FUTURO: 'Contrato futuro', COOPERATIVA: 'Cooperativa', BARTER: 'Barter' };
+    const unitLabel: Record<string, string> = {
+      SACA60: 'Saca 60kg',
+      KG: 'kg',
+      TONELADA: 'Tonelada',
+    };
+    const modalityLabel: Record<string, string> = {
+      BALCAO: 'Balcão',
+      CONTRATO_FUTURO: 'Contrato futuro',
+      COOPERATIVA: 'Cooperativa',
+      BARTER: 'Barter',
+    };
 
     const qty = deal.grainQuantity ?? 0;
     const grossValue = deal.totalValue ?? qty * deal.pricePerUnit;
     const funruralValue = grossValue * ((deal.funruralPercent ?? 0) / 100);
     const senarValue = grossValue * ((deal.senarPercent ?? 0) / 100);
     const commissionValue = grossValue * (deal.commissionPercent / 100);
-    const netTotal = grossValue - funruralValue - senarValue - commissionValue - deal.freightCost;
+    const netTotal =
+      grossValue -
+      funruralValue -
+      senarValue -
+      commissionValue -
+      deal.freightCost;
     const sacas = deal.grainNetWeightKg ? deal.grainNetWeightKg / 60 : qty;
     const netPerSaca = sacas > 0 ? netTotal / sacas : 0;
 
     const rows: (string | number)[][] = [
       ['Cultura', deal.grainCrop ?? '-'],
-      ['Quantidade', `${qty} ${unitLabel[deal.grainUnit ?? ''] ?? deal.grainUnit ?? '-'}`],
+      [
+        'Quantidade',
+        `${qty} ${unitLabel[deal.grainUnit ?? ''] ?? deal.grainUnit ?? '-'}`,
+      ],
       ['Preço por unidade', deal.pricePerUnit.toFixed(2)],
       ['Peso bruto (kg)', deal.grainGrossWeightKg?.toFixed(1) ?? '-'],
       ['Peso líquido (kg)', deal.grainNetWeightKg?.toFixed(1) ?? '-'],
-      ['Umidade (%)', deal.grainMoisturePercent != null ? `${deal.grainMoisturePercent}% (base ${deal.grainMoistureBasePercent ?? 14}%)` : '-'],
-      ['Impureza (%)', deal.grainImpurityPercent != null ? `${deal.grainImpurityPercent}%` : '-'],
-      ['Modalidade', modalityLabel[deal.grainSaleModality ?? ''] ?? deal.grainSaleModality ?? '-'],
+      [
+        'Umidade (%)',
+        deal.grainMoisturePercent != null
+          ? `${deal.grainMoisturePercent}% (base ${deal.grainMoistureBasePercent ?? 14}%)`
+          : '-',
+      ],
+      [
+        'Impureza (%)',
+        deal.grainImpurityPercent != null
+          ? `${deal.grainImpurityPercent}%`
+          : '-',
+      ],
+      [
+        'Modalidade',
+        modalityLabel[deal.grainSaleModality ?? ''] ??
+          deal.grainSaleModality ??
+          '-',
+      ],
       ['Armazém', deal.grainWarehouse ?? '-'],
       ['Placa/Ticket', deal.grainTicketRef ?? '-'],
       ['', ''],

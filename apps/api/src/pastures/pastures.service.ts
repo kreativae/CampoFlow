@@ -192,7 +192,11 @@ export class PasturesService {
     });
   }
 
-  async removeOccupation(farmId: string, pastureId: string, occupationId: string) {
+  async removeOccupation(
+    farmId: string,
+    pastureId: string,
+    occupationId: string,
+  ) {
     await this.findOne(farmId, pastureId);
 
     const occupation = await this.prisma.pastureOccupation.findUnique({
