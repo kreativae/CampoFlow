@@ -99,7 +99,7 @@ export default function AdminSaudePage() {
     services.database.connected &&
     services.email.configured &&
     services.queue.connected &&
-    services.mercadoPago.configured;
+    services.stripe.configured;
 
   return (
     <main className="animate-fade-up mx-auto w-full max-w-3xl flex-1 px-4 py-10">
@@ -161,9 +161,9 @@ export default function AdminSaudePage() {
             )}
           </ServiceCard>
 
-          <ServiceCard title="Stripe" ok={services.mercadoPago.configured}>
+          <ServiceCard title="Stripe" ok={services.stripe.configured}>
             <p>
-              {services.mercadoPago.configured
+              {services.stripe.configured
                 ? 'Secret Key configurada'
                 : 'Sem chave — checkout desabilitado'}
             </p>

@@ -164,7 +164,7 @@ export interface PlatformHealth {
     email: { configured: boolean };
     queue: { connected: boolean; waiting: number; active: number; failed: number };
     storage: { provider: 'r2' | 'local' };
-    mercadoPago: { configured: boolean };
+    stripe: { configured: boolean };
     sentry: { configured: boolean };
   };
   data: {
