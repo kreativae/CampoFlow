@@ -431,7 +431,7 @@ export default function AdminAccountsPage() {
                       value={account.planTier ?? ''}
                       disabled={savingId === account.id}
                       onChange={(e) => handleUpdate(account.id, 'planTier', e.target.value)}
-                      className="rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                      className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                     >
                       {PLAN_OPTIONS.map((opt) => (
                         <option key={opt} value={opt}>
@@ -445,7 +445,7 @@ export default function AdminAccountsPage() {
                       value={account.status ?? ''}
                       disabled={savingId === account.id}
                       onChange={(e) => handleUpdate(account.id, 'status', e.target.value)}
-                      className={`rounded border border-gray-300 px-2 py-1 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15 ${statusBadgeClass(account.status)}`}
+                      className={`rounded border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15 ${statusBadgeClass(account.status)}`}
                     >
                       {STATUS_OPTIONS.map((opt) => (
                         <option key={opt} value={opt}>

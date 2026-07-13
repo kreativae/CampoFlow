@@ -24,6 +24,7 @@ const VALID_TYPES: ReportType[] = [
   'reproducao',
   'custos',
   'abate',
+  'negocio',
 ];
 const VALID_FORMATS = ['csv', 'xlsx', 'pdf'] as const;
 type ReportFormat = (typeof VALID_FORMATS)[number];

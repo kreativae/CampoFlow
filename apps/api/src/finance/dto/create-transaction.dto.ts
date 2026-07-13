@@ -34,4 +34,8 @@ export class CreateTransactionDto {
   @IsOptional()
   @IsString()
   cropCycleId?: string;
+
+  @IsOptional()
+  @IsString()
+  dealId?: string;
 }

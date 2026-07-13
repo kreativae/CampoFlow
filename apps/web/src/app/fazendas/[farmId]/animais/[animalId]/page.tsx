@@ -407,7 +407,7 @@ export default function AnimalDetailPage() {
           <select
             value={movePastureId}
             onChange={(e) => setMovePastureId(e.target.value)}
-            className="flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+            className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           >
             <option value="">— Sem pasto —</option>
             {pastures.map((p) => (
@@ -437,7 +437,7 @@ export default function AnimalDetailPage() {
             required
             value={newWeight}
             onChange={(e) => setNewWeight(e.target.value)}
-            className="flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+            className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
           <button
             type="submit"
@@ -463,7 +463,7 @@ export default function AnimalDetailPage() {
                         type="date"
                         value={editWeighingDate}
                         onChange={(e) => setEditWeighingDate(e.target.value)}
-                        className="rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                        className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                       />
                       <input
                         type="number"
@@ -471,7 +471,7 @@ export default function AnimalDetailPage() {
                         min="0"
                         value={editWeighingKg}
                         onChange={(e) => setEditWeighingKg(e.target.value)}
-                        className="w-24 rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                        className="w-24 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                       />
                       <button
                         type="button"
@@ -528,14 +528,14 @@ export default function AnimalDetailPage() {
             required
             value={vaccineName}
             onChange={(e) => setVaccineName(e.target.value)}
-            className="flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+            className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
           <input
             type="date"
             required
             value={scheduledDate}
             onChange={(e) => setScheduledDate(e.target.value)}
-            className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+            className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
           <button
             type="submit"
@@ -559,7 +559,7 @@ export default function AnimalDetailPage() {
                       type="date"
                       value={editVaccinationScheduledDate}
                       onChange={(e) => setEditVaccinationScheduledDate(e.target.value)}
-                      className="rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                      className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                     />
                   </label>
                   {v.administeredAt && (
@@ -571,7 +571,7 @@ export default function AnimalDetailPage() {
                         onChange={(e) =>
                           setEditVaccinationAdministeredAt(e.target.value)
                         }
-                        className="rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                        className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                       />
                     </label>
                   )}
@@ -628,7 +628,7 @@ export default function AnimalDetailPage() {
           <select
             value={reproEventType}
             onChange={(e) => setReproEventType(e.target.value as ReproductiveEventType)}
-            className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+            className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           >
             {REPRODUCTIVE_EVENT_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -641,7 +641,7 @@ export default function AnimalDetailPage() {
               value={reproResult}
               onChange={(e) => setReproResult(e.target.value as PregnancyDiagnosisResult | '')}
               required
-              className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+              className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
             >
               <option value="">Resultado...</option>
               <option value="PRENHE">Prenhe</option>
@@ -667,12 +667,12 @@ export default function AnimalDetailPage() {
                     type="date"
                     value={editReproDate}
                     onChange={(ev) => setEditReproDate(ev.target.value)}
-                    className="rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                    className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                   />
                   <select
                     value={editReproType}
                     onChange={(ev) => setEditReproType(ev.target.value as ReproductiveEventType)}
-                    className="rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                    className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                   >
                     {REPRODUCTIVE_EVENT_OPTIONS.map((opt) => (
                       <option key={opt.value} value={opt.value}>
@@ -684,7 +684,7 @@ export default function AnimalDetailPage() {
                     <select
                       value={editReproResult}
                       onChange={(ev) => setEditReproResult(ev.target.value as PregnancyDiagnosisResult | '')}
-                      className="rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                      className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                     >
                       <option value="">Resultado...</option>
                       <option value="PRENHE">Prenhe</option>
@@ -780,7 +780,7 @@ function WeightEvolutionChart({ weighings }: { weighings: WeighingRecord[] }) {
     .sort((a, b) => new Date(a.weighedAt).getTime() - new Date(b.weighedAt).getTime());
 
   const width = 600;
-  const height = 160;
+  const height = 200;
   const padding = 28;
   const weights = points.map((p) => p.weightKg);
   const minWeight = Math.min(...weights);
@@ -816,19 +816,19 @@ function WeightEvolutionChart({ weighings }: { weighings: WeighingRecord[] }) {
       {coords.map((c) => (
         <circle key={c.id} cx={c.x} cy={c.y} r={3} fill="#15803d" />
       ))}
-      <text x={padding} y={14} fontSize={11} fill="#6b7280">
+      <text x={padding} y={14} fontSize={8} fill="#6b7280">
         {maxWeight.toFixed(1)} kg
       </text>
-      <text x={padding} y={height - padding + 14} fontSize={11} fill="#6b7280">
+      <text x={padding} y={height - padding + 12} fontSize={8} fill="#6b7280">
         {minWeight.toFixed(1)} kg
       </text>
-      <text x={coords[0].x} y={height - 6} fontSize={10} fill="#9ca3af">
+      <text x={coords[0].x} y={height - 6} fontSize={7} fill="#9ca3af">
         {new Date(coords[0].weighedAt).toLocaleDateString('pt-BR')}
       </text>
       <text
         x={coords[coords.length - 1].x}
         y={height - 6}
-        fontSize={10}
+        fontSize={7}
         fill="#9ca3af"
         textAnchor="end"
       >

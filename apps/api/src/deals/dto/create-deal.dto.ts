@@ -29,8 +29,8 @@ class DealItemDto {
 }
 
 export class CreateDealDto {
-  @IsEnum(['COMPRA', 'VENDA', 'ABATE'])
-  type: 'COMPRA' | 'VENDA';
+  @IsEnum(['COMPRA', 'VENDA', 'ABATE', 'VENDA_GRAO'])
+  type: 'COMPRA' | 'VENDA' | 'ABATE' | 'VENDA_GRAO';
 
   @IsOptional()
   @IsString()
@@ -90,6 +90,60 @@ export class CreateDealDto {
   @IsOptional()
   @IsString()
   slaughterFrequency?: string;
+
+  // Venda de grãos
+  @IsOptional()
+  @IsString()
+  grainCrop?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  grainQuantity?: number;
+
+  @IsOptional()
+  @IsString()
+  grainUnit?: string;
+
+  @IsOptional()
+  @IsNumber()
+  grainMoisturePercent?: number;
+
+  @IsOptional()
+  @IsNumber()
+  grainMoistureBasePercent?: number;
+
+  @IsOptional()
+  @IsNumber()
+  grainImpurityPercent?: number;
+
+  @IsOptional()
+  @IsNumber()
+  grainMoistureDiscount?: number;
+
+  @IsOptional()
+  @IsNumber()
+  grainGrossWeightKg?: number;
+
+  @IsOptional()
+  @IsNumber()
+  grainNetWeightKg?: number;
+
+  @IsOptional()
+  @IsString()
+  grainSaleModality?: string;
+
+  @IsOptional()
+  @IsString()
+  grainWarehouse?: string;
+
+  @IsOptional()
+  @IsString()
+  grainTicketRef?: string;
+
+  @IsOptional()
+  @IsString()
+  cropCycleId?: string;
 
   @IsOptional()
   @IsNumber()

@@ -359,4 +359,11 @@ export class NotificationsService implements OnModuleInit {
     });
     return { updated: result.count };
   }
+
+  async deleteMany(farmId: string, userId: string, ids: string[]) {
+    const result = await this.prisma.notification.deleteMany({
+      where: { farmId, userId, id: { in: ids } },
+    });
+    return { deleted: result.count };
+  }
 }

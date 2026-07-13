@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { Sprout, X } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
+import Modal from '@/components/Modal';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, ApiError } from '@/lib/api';
 import { useToast } from '@/lib/toast-context';
@@ -299,7 +300,7 @@ export default function CropsPage() {
             value={form.cropName}
             onChange={(e) => setForm((f) => ({ ...f, cropName: e.target.value }))}
             placeholder="Ex.: Soja"
-            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+            className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
         <div>
@@ -308,7 +309,7 @@ export default function CropsPage() {
             type="text"
             value={form.variety}
             onChange={(e) => setForm((f) => ({ ...f, variety: e.target.value }))}
-            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+            className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
         <div>
@@ -318,7 +319,7 @@ export default function CropsPage() {
             step="0.01"
             value={form.areaHectares}
             onChange={(e) => setForm((f) => ({ ...f, areaHectares: e.target.value }))}
-            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+            className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
 
@@ -327,7 +328,7 @@ export default function CropsPage() {
           <select
             value={form.mapFeatureId}
             onChange={(e) => setForm((f) => ({ ...f, mapFeatureId: e.target.value }))}
-            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+            className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           >
             <option value="">Sem vínculo</option>
             {features.map((f) => (
@@ -344,7 +345,7 @@ export default function CropsPage() {
             required
             value={form.plantedAt}
             onChange={(e) => setForm((f) => ({ ...f, plantedAt: e.target.value }))}
-            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+            className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
         <div>
@@ -353,7 +354,7 @@ export default function CropsPage() {
             type="date"
             value={form.expectedHarvestAt}
             onChange={(e) => setForm((f) => ({ ...f, expectedHarvestAt: e.target.value }))}
-            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+            className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
 
@@ -363,7 +364,7 @@ export default function CropsPage() {
             type="text"
             value={form.notes}
             onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+            className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
 
@@ -440,13 +441,7 @@ export default function CropsPage() {
       )}
 
       {editingId && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setEditingId(null);
-          }}
-        >
-          <div className="animate-fade-up flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+        <Modal onClose={() => setEditingId(null)} maxWidth="max-w-3xl">
             {/* Header fixo */}
             <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-6 py-4">
               <div className="flex min-w-0 items-center gap-3">
@@ -483,7 +478,7 @@ export default function CropsPage() {
                   type="text"
                   value={editForm.cropName}
                   onChange={(e) => setEditForm((f) => ({ ...f, cropName: e.target.value }))}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 />
               </div>
               <div>
@@ -492,7 +487,7 @@ export default function CropsPage() {
                   type="text"
                   value={editForm.variety}
                   onChange={(e) => setEditForm((f) => ({ ...f, variety: e.target.value }))}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 />
               </div>
               <div>
@@ -502,7 +497,7 @@ export default function CropsPage() {
                   step="0.01"
                   value={editForm.areaHectares}
                   onChange={(e) => setEditForm((f) => ({ ...f, areaHectares: e.target.value }))}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 />
               </div>
               <div className="col-span-2 sm:col-span-1">
@@ -513,7 +508,7 @@ export default function CropsPage() {
                     if (!e.target.value) setSoilPreview(null);
                     setEditForm((f) => ({ ...f, mapFeatureId: e.target.value }));
                   }}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 >
                   <option value="">Sem vínculo</option>
                   {features.map((f) => (
@@ -571,7 +566,7 @@ export default function CropsPage() {
                   type="date"
                   value={editForm.plantedAt}
                   onChange={(e) => setEditForm((f) => ({ ...f, plantedAt: e.target.value }))}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 />
               </div>
               <div>
@@ -582,7 +577,7 @@ export default function CropsPage() {
                   onChange={(e) =>
                     setEditForm((f) => ({ ...f, expectedHarvestAt: e.target.value }))
                   }
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 />
               </div>
               <div>
@@ -591,7 +586,7 @@ export default function CropsPage() {
                   type="date"
                   value={editForm.harvestedAt}
                   onChange={(e) => setEditForm((f) => ({ ...f, harvestedAt: e.target.value }))}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 />
               </div>
             </div>
@@ -607,7 +602,7 @@ export default function CropsPage() {
                   step="0.01"
                   value={editForm.yieldKg}
                   onChange={(e) => setEditForm((f) => ({ ...f, yieldKg: e.target.value }))}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 />
               </div>
               <div>
@@ -617,7 +612,7 @@ export default function CropsPage() {
                   onChange={(e) =>
                     setEditForm((f) => ({ ...f, saleUnit: e.target.value as CropSaleUnit }))
                   }
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 >
                   <option value="SACA60">Saca (60kg)</option>
                   <option value="KG">Quilo (kg)</option>
@@ -633,7 +628,7 @@ export default function CropsPage() {
                   onChange={(e) =>
                     setEditForm((f) => ({ ...f, salePricePerUnit: e.target.value }))
                   }
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 />
               </div>
               <div className="col-span-full">
@@ -642,7 +637,7 @@ export default function CropsPage() {
                   type="text"
                   value={editForm.notes}
                   onChange={(e) => setEditForm((f) => ({ ...f, notes: e.target.value }))}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 />
               </div>
             </div>
@@ -666,7 +661,7 @@ export default function CropsPage() {
             </div>
 
             {/* Footer fixo */}
-            <div className="flex justify-end gap-2 border-t border-gray-100 bg-white px-6 py-4">
+            <div className="flex justify-end gap-2 border-t border-gray-100 bg-gray-50/60 px-6 py-4">
               <button
                 type="button"
                 onClick={() => setEditingId(null)}
@@ -683,8 +678,7 @@ export default function CropsPage() {
                 {saving ? 'Salvando...' : 'Salvar'}
               </button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </main>
   );

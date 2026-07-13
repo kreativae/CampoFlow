@@ -1079,7 +1079,7 @@ export interface Contact {
 
 // --- Negócios (compra/venda) ---
 
-export type DealType = 'COMPRA' | 'VENDA' | 'ABATE';
+export type DealType = 'COMPRA' | 'VENDA' | 'ABATE' | 'VENDA_GRAO';
 export type DealStatus = 'RASCUNHO' | 'FINALIZADO' | 'CANCELADO';
 
 export interface DealItem {
@@ -1111,6 +1111,19 @@ export interface Deal {
   funruralPercent: number | null;
   senarPercent: number | null;
   slaughterFrequency: string | null;
+  grainCrop: string | null;
+  grainQuantity: number | null;
+  grainUnit: string | null;
+  grainMoisturePercent: number | null;
+  grainMoistureBasePercent: number | null;
+  grainImpurityPercent: number | null;
+  grainMoistureDiscount: number | null;
+  grainGrossWeightKg: number | null;
+  grainNetWeightKg: number | null;
+  grainSaleModality: string | null;
+  grainWarehouse: string | null;
+  grainTicketRef: string | null;
+  cropCycleId: string | null;
   notes: string | null;
   dealDate: string;
   createdById: string;

@@ -112,4 +112,15 @@ export class PasturesController {
       dto,
     );
   }
+
+  @Delete(':pastureId/ocupacoes/:occupationId')
+  @UseGuards(RolesGuard)
+  @Roles(Role.OWNER, Role.MANAGER)
+  removeOccupation(
+    @Param('farmId') farmId: string,
+    @Param('pastureId') pastureId: string,
+    @Param('occupationId') occupationId: string,
+  ) {
+    return this.pasturesService.removeOccupation(farmId, pastureId, occupationId);
+  }
 }

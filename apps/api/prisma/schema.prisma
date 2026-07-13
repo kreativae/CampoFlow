@@ -380,6 +380,8 @@ model Transaction {
   paidAt      DateTime?
   cropCycle   CropCycle?          @relation(fields: [cropCycleId], references: [id], onDelete: SetNull)
   cropCycleId String?
+  deal        Deal?               @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  dealId      String?
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
 }
@@ -750,6 +752,7 @@ model CropCycle {
   applications      CropApplication[]
   costEntries       CropCostEntry[]
   transactions      Transaction[]
+  deals             Deal[]
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
 }
@@ -1060,6 +1063,7 @@ enum DealType {
   COMPRA
   VENDA
   ABATE
+  VENDA_GRAO
 }
 
 enum DealStatus {
@@ -1091,11 +1095,27 @@ model Deal {
   funruralPercent       Float?
   senarPercent          Float?
   slaughterFrequency    String?
+  // Venda de grãos
+  grainCrop              String?
+  grainQuantity          Float?
+  grainUnit              String?
+  grainMoisturePercent   Float?
+  grainMoistureBasePercent Float?
+  grainImpurityPercent   Float?
+  grainMoistureDiscount  Float?
+  grainGrossWeightKg     Float?
+  grainNetWeightKg       Float?
+  grainSaleModality      String?
+  grainWarehouse         String?
+  grainTicketRef         String?
+  cropCycle              CropCycle? @relation(fields: [cropCycleId], references: [id], onDelete: SetNull)
+  cropCycleId            String?
   notes             String?
   dealDate          DateTime
   createdBy         User       @relation(fields: [createdById], references: [id])
   createdById       String
   items             DealItem[]
+  transactions      Transaction[]
   createdAt         DateTime   @default(now())
   updatedAt         DateTime   @updatedAt
 

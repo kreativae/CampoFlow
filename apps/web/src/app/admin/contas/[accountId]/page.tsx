@@ -265,7 +265,7 @@ export default function AdminAccountDetailPage() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+              className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
             />
           </div>
           <div>
@@ -275,7 +275,7 @@ export default function AdminAccountDetailPage() {
               value={billingEmail}
               onChange={(e) => setBillingEmail(e.target.value)}
               required
-              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+              className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
             />
           </div>
           <div>
@@ -286,7 +286,7 @@ export default function AdminAccountDetailPage() {
               type="text"
               value={document}
               onChange={(e) => setDocument(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+              className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
             />
           </div>
           <button
@@ -309,7 +309,7 @@ export default function AdminAccountDetailPage() {
                 value={account.subscription.planTier}
                 disabled={savingSubscription}
                 onChange={(e) => handleSubscriptionChange('planTier', e.target.value)}
-                className="mt-1 rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                className="mt-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
               >
                 {PLAN_OPTIONS.map((opt) => (
                   <option key={opt} value={opt}>
@@ -324,7 +324,7 @@ export default function AdminAccountDetailPage() {
                 value={account.subscription.status}
                 disabled={savingSubscription}
                 onChange={(e) => handleSubscriptionChange('status', e.target.value)}
-                className="mt-1 rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                className="mt-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
               >
                 {STATUS_OPTIONS.map((opt) => (
                   <option key={opt} value={opt}>
@@ -409,7 +409,7 @@ export default function AdminAccountDetailPage() {
                           type="text"
                           value={editUserName}
                           onChange={(e) => setEditUserName(e.target.value)}
-                          className="mt-1 rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                          className="mt-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                         />
                       </div>
                       <div>
@@ -420,7 +420,7 @@ export default function AdminAccountDetailPage() {
                           type="email"
                           value={editUserEmail}
                           onChange={(e) => setEditUserEmail(e.target.value)}
-                          className="mt-1 rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                          className="mt-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                         />
                       </div>
                       <div>
@@ -432,7 +432,7 @@ export default function AdminAccountDetailPage() {
                           value={editUserPassword}
                           onChange={(e) => setEditUserPassword(e.target.value)}
                           placeholder="Deixe em branco para manter"
-                          className="mt-1 rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                          className="mt-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                         />
                       </div>
                       <button

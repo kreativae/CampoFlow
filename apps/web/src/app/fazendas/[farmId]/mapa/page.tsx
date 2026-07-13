@@ -313,6 +313,15 @@ export default function FarmMapPage() {
 
         {showMap ? (
           <>
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowMap(false)}
+                className="mb-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+              >
+                Minimizar mapa
+              </button>
+            </div>
             <div ref={mapRef} className="overflow-hidden rounded-lg border border-gray-200">
               <FarmMap
                 center={center}
@@ -350,7 +359,7 @@ export default function FarmMapPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Ex.: Talhão Norte"
-                className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
               />
             </div>
 
@@ -359,7 +368,7 @@ export default function FarmMapPage() {
               <select
                 value={type}
                 onChange={(e) => setType(e.target.value as MapFeatureType)}
-                className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
               >
                 {TYPE_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -375,7 +384,7 @@ export default function FarmMapPage() {
                 <select
                   value={geometryType}
                   onChange={(e) => setGeometryType(e.target.value as GeometryType)}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 >
                   <option value="PONTO">Ponto</option>
                   <option value="POLIGONO">Polígono</option>
@@ -438,7 +447,7 @@ export default function FarmMapPage() {
                 value={coordinatesText}
                 onChange={(e) => setCoordinatesText(e.target.value)}
                 placeholder={geometryType === 'PONTO' ? '-15.793889, -47.882778' : '-15.79, -47.88\n-15.80, -47.87\n-15.79, -47.86'}
-                className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
               />
             )}
           </div>
@@ -475,7 +484,7 @@ export default function FarmMapPage() {
                       type="text"
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                      className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                     />
                   </div>
                   <div>
@@ -483,7 +492,7 @@ export default function FarmMapPage() {
                     <select
                       value={editType}
                       onChange={(e) => setEditType(e.target.value as MapFeatureType)}
-                      className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                      className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                     >
                       {TYPE_OPTIONS.map((opt) => (
                         <option key={opt.value} value={opt.value}>
@@ -497,7 +506,7 @@ export default function FarmMapPage() {
                     <select
                       value={editGeometryType}
                       onChange={(e) => setEditGeometryType(e.target.value as GeometryType)}
-                      className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                      className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                     >
                       <option value="PONTO">Ponto</option>
                       <option value="POLIGONO">Polígono</option>
@@ -509,7 +518,7 @@ export default function FarmMapPage() {
                       rows={3}
                       value={editCoordinatesText}
                       onChange={(e) => setEditCoordinatesText(e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                      className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                     />
                   </div>
                   <div className="col-span-full flex gap-2">

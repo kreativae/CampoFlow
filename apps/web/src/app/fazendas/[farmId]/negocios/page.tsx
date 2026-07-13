@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { Handshake } from 'lucide-react';
+import { Handshake, Pencil } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, apiDownload, ApiError } from '@/lib/api';
-import type { Animal, Deal, DealItem, DealSummary, DealType, DealStatus } from '@/lib/types';
+import { useToast } from '@/lib/toast-context';
+import type { Animal, CropCycle, Deal, DealItem, DealSummary, DealType, DealStatus } from '@/lib/types';
 
 const ARROBA_KG = 15;
 
@@ -26,12 +27,14 @@ const TYPE_LABEL: Record<DealType, string> = {
   VENDA: 'Venda',
   COMPRA: 'Compra',
   ABATE: 'Abate',
+  VENDA_GRAO: 'Venda de Grãos',
 };
 
 const TYPE_COLOR: Record<DealType, string> = {
   VENDA: 'bg-blue-100 text-blue-800',
   COMPRA: 'bg-purple-100 text-purple-800',
   ABATE: 'bg-orange-100 text-orange-800',
+  VENDA_GRAO: 'bg-green-100 text-green-800',
 };
 
 function computeSummary(
@@ -83,6 +86,7 @@ interface DraftItem {
 export default function NegociosPage() {
   const { farmId } = useParams<{ farmId: string }>();
   const { user, accessToken, loading } = useAuth();
+  const { toastSuccess } = useToast();
 
   const [deals, setDeals] = useState<Deal[]>([]);
   const [animals, setAnimals] = useState<Animal[]>([]);
@@ -90,6 +94,8 @@ export default function NegociosPage() {
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [editingDealId, setEditingDealId] = useState<string | null>(null);
+  const [createTransaction, setCreateTransaction] = useState(false);
   const [filterType, setFilterType] = useState<DealType | ''>('');
   const [filterStatus, setFilterStatus] = useState<DealStatus | ''>('');
 
@@ -118,6 +124,21 @@ export default function NegociosPage() {
   const [senarPercent, setSenarPercent] = useState('0.2');
   const [slaughterFrequency, setSlaughterFrequency] = useState<'TRIMESTRAL' | 'SEMESTRAL'>('TRIMESTRAL');
 
+  // Venda de grãos
+  const [grainCrop, setGrainCrop] = useState('Soja');
+  const [grainQuantity, setGrainQuantity] = useState('');
+  const [grainUnit, setGrainUnit] = useState<'SACA60' | 'KG' | 'TONELADA'>('SACA60');
+  const [grainMoisturePercent, setGrainMoisturePercent] = useState('14');
+  const [grainMoistureBasePercent, setGrainMoistureBasePercent] = useState('14');
+  const [grainImpurityPercent, setGrainImpurityPercent] = useState('');
+  const [grainGrossWeightKg, setGrainGrossWeightKg] = useState('');
+  const [grainNetWeightKg, setGrainNetWeightKg] = useState('');
+  const [grainSaleModality, setGrainSaleModality] = useState('BALCAO');
+  const [grainWarehouse, setGrainWarehouse] = useState('');
+  const [grainTicketRef, setGrainTicketRef] = useState('');
+  const [selectedCropCycleId, setSelectedCropCycleId] = useState('');
+  const [cropCycles, setCropCycles] = useState<CropCycle[]>([]);
+
   // Animal selection for VENDA and ABATE
   const [showAnimalPicker, setShowAnimalPicker] = useState(false);
   const [animalSearch, setAnimalSearch] = useState('');
@@ -130,12 +151,14 @@ export default function NegociosPage() {
       if (filterType) params.set('type', filterType);
       if (filterStatus) params.set('status', filterStatus);
       const qs = params.toString() ? `?${params}` : '';
-      const [d, a] = await Promise.all([
+      const [d, a, cc] = await Promise.all([
         apiFetch<Deal[]>(`/fazendas/${farmId}/negocios${qs}`, { token: accessToken }),
         apiFetch<Animal[]>(`/fazendas/${farmId}/animais`, { token: accessToken }),
+        apiFetch<CropCycle[]>(`/fazendas/${farmId}/safras`, { token: accessToken }),
       ]);
       setDeals(d);
       setAnimals(a.filter((x) => x.active));
+      setCropCycles(cc);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao carregar dados');
     } finally {
@@ -229,6 +252,47 @@ export default function NegociosPage() {
     };
   }, [draftItems, carcassYieldPercent, liveWeightPricePerKg, freightCost, commissionPercent, funruralPercent, senarPercent]);
 
+  // Grain summary
+  const grainSummary = useMemo(() => {
+    const qty = Number(grainQuantity) || 0;
+    const price = Number(pricePerUnit) || 0;
+    const grossWt = Number(grainGrossWeightKg) || 0;
+    const moisture = Number(grainMoisturePercent) || 0;
+    const moistureBase = Number(grainMoistureBasePercent) || 14;
+    const impurity = Number(grainImpurityPercent) || 0;
+    const freight = Number(freightCost) || 0;
+    const commPct = Number(commissionPercent) || 0;
+    const funPct = Number(funruralPercent) || 0;
+    const senPct = Number(senarPercent) || 0;
+
+    const moistureDiscount = moisture > moistureBase ? (moisture - moistureBase) / 100 : 0;
+    const impurityDiscount = impurity / 100;
+    const netWeight = grossWt > 0
+      ? grossWt * (1 - moistureDiscount) * (1 - impurityDiscount)
+      : 0;
+    const sacas = netWeight > 0 ? netWeight / 60 : qty;
+    const grossValue = Number(totalValue) || qty * price;
+    const funruralValue = grossValue * (funPct / 100);
+    const senarValue = grossValue * (senPct / 100);
+    const commissionValue = grossValue * (commPct / 100);
+    const netTotal = grossValue - funruralValue - senarValue - commissionValue - freight;
+    const netPerSaca = sacas > 0 ? netTotal / sacas : 0;
+
+    return {
+      quantity: qty,
+      netWeight: Number(netWeight.toFixed(1)),
+      sacas: Number(sacas.toFixed(2)),
+      grossValue: Number(grossValue.toFixed(2)),
+      funruralValue: Number(funruralValue.toFixed(2)),
+      senarValue: Number(senarValue.toFixed(2)),
+      commissionValue: Number(commissionValue.toFixed(2)),
+      freight,
+      netTotal: Number(netTotal.toFixed(2)),
+      netPerSaca: Number(netPerSaca.toFixed(2)),
+      moistureDiscount: Number((moistureDiscount * 100).toFixed(2)),
+    };
+  }, [grainQuantity, pricePerUnit, grainGrossWeightKg, grainMoisturePercent, grainMoistureBasePercent, grainImpurityPercent, freightCost, commissionPercent, funruralPercent, senarPercent, totalValue]);
+
   function addAnimalToDraft(animal: Animal) {
     setDraftItems((prev) => [
       ...prev,
@@ -264,12 +328,17 @@ export default function NegociosPage() {
     e.preventDefault();
     const isCompra = dealType === 'COMPRA';
     const isAbate = dealType === 'ABATE';
+    const isGrain = dealType === 'VENDA_GRAO';
 
     if (isCompra && !Number(quantity) && draftItems.length === 0) {
       setError('Informe a quantidade de animais da compra.');
       return;
     }
-    if (!isCompra && draftItems.length === 0) {
+    if (isGrain && !Number(grainQuantity)) {
+      setError('Informe a quantidade de grãos.');
+      return;
+    }
+    if (!isCompra && !isGrain && draftItems.length === 0) {
       setError('Adicione ao menos um animal ao negócio.');
       return;
     }
@@ -277,45 +346,117 @@ export default function NegociosPage() {
     setCreating(true);
     setError(null);
     try {
-      await apiFetch(`/fazendas/${farmId}/negocios`, {
-        method: 'POST',
-        token: accessToken,
-        body: {
-          type: dealType,
-          counterparty: counterparty || undefined,
-          pricePerUnit: Number(pricePerUnit) || 0,
-          priceUnit,
-          freightCost: Number(freightCost) || 0,
-          commissionPercent: Number(commissionPercent) || 0,
-          ...(isCompra
-            ? {
-                quantity: Number(quantity) || undefined,
-                installmentCount: Number(installmentCount) || undefined,
-                installmentValue: Number(installmentValue) || undefined,
-                totalValue: isInstallment
-                  ? (Number(installmentCount) * Number(installmentValue)) || undefined
-                  : Number(totalValue) || undefined,
-              }
-            : {}),
-          ...(isAbate
-            ? {
-                carcassYieldPercent: Number(carcassYieldPercent) || undefined,
-                liveWeightPricePerKg: Number(liveWeightPricePerKg) || undefined,
-                funruralPercent: Number(funruralPercent) || undefined,
-                senarPercent: Number(senarPercent) || undefined,
-                slaughterFrequency,
-              }
-            : {}),
-          notes: notes || undefined,
-          dealDate,
-          items: draftItems.map((i) => ({
-            animalId: i.animalId || undefined,
-            earTag: i.earTag,
-            weightKg: i.weightKg ?? undefined,
-            unitPrice: i.unitPrice ?? undefined,
-          })),
-        },
-      });
+      const body = {
+        type: dealType,
+        counterparty: counterparty || undefined,
+        pricePerUnit: Number(pricePerUnit) || 0,
+        priceUnit,
+        freightCost: Number(freightCost) || 0,
+        commissionPercent: Number(commissionPercent) || 0,
+        ...(isCompra
+          ? {
+              quantity: Number(quantity) || undefined,
+              installmentCount: Number(installmentCount) || undefined,
+              installmentValue: Number(installmentValue) || undefined,
+              totalValue: isInstallment
+                ? (Number(installmentCount) * Number(installmentValue)) || undefined
+                : Number(totalValue) || undefined,
+            }
+          : {}),
+        ...(isAbate
+          ? {
+              carcassYieldPercent: Number(carcassYieldPercent) || undefined,
+              liveWeightPricePerKg: Number(liveWeightPricePerKg) || undefined,
+              funruralPercent: Number(funruralPercent) || undefined,
+              senarPercent: Number(senarPercent) || undefined,
+              slaughterFrequency,
+            }
+          : {}),
+        ...(isGrain
+          ? {
+              grainCrop,
+              grainQuantity: Number(grainQuantity) || undefined,
+              grainUnit,
+              grainMoisturePercent: Number(grainMoisturePercent) || undefined,
+              grainMoistureBasePercent: Number(grainMoistureBasePercent) || undefined,
+              grainImpurityPercent: Number(grainImpurityPercent) || undefined,
+              grainMoistureDiscount: grainSummary.moistureDiscount || undefined,
+              grainGrossWeightKg: Number(grainGrossWeightKg) || undefined,
+              grainNetWeightKg: grainSummary.netWeight || undefined,
+              grainSaleModality: grainSaleModality || undefined,
+              grainWarehouse: grainWarehouse || undefined,
+              grainTicketRef: grainTicketRef || undefined,
+              cropCycleId: selectedCropCycleId || undefined,
+              funruralPercent: Number(funruralPercent) || undefined,
+              senarPercent: Number(senarPercent) || undefined,
+              totalValue: grainSummary.grossValue || undefined,
+              quantity: undefined,
+              installmentCount: Number(installmentCount) || undefined,
+              installmentValue: Number(installmentValue) || undefined,
+            }
+          : {}),
+        notes: notes || undefined,
+        dealDate,
+        items: draftItems.map((i) => ({
+          animalId: i.animalId || undefined,
+          earTag: i.earTag,
+          weightKg: i.weightKg ?? undefined,
+          unitPrice: i.unitPrice ?? undefined,
+        })),
+      };
+
+      let createdDealId: string | null = null;
+
+      if (editingDealId) {
+        await apiFetch(`/fazendas/${farmId}/negocios/${editingDealId}`, {
+          method: 'PATCH',
+          token: accessToken,
+          body,
+        });
+        toastSuccess('Negócio atualizado.');
+      } else {
+        const created = await apiFetch<Deal>(`/fazendas/${farmId}/negocios`, {
+          method: 'POST',
+          token: accessToken,
+          body,
+        });
+        createdDealId = created.id;
+        toastSuccess('Negócio salvo.');
+      }
+
+      if (createTransaction && createdDealId) {
+        const txType = dealType === 'VENDA' || dealType === 'VENDA_GRAO' ? 'RECEITA' : 'DESPESA';
+        let txAmount: number;
+        if (isGrain) {
+          txAmount = grainSummary.netTotal;
+        } else if (isAbate) {
+          txAmount = slaughterSummary.netTotal;
+        } else if (isCompra) {
+          txAmount = purchaseSummary.grandTotal;
+        } else {
+          txAmount = summary.grandTotal;
+        }
+        if (txAmount > 0) {
+          try {
+            await apiFetch(`/fazendas/${farmId}/lancamentos`, {
+              method: 'POST',
+              token: accessToken,
+              body: {
+                type: txType,
+                category: 'OUTROS',
+                description: `${TYPE_LABEL[dealType]} — ${counterparty || 'Sem contraparte'} — ${dealDate}`,
+                amount: Number(txAmount.toFixed(2)),
+                dueDate: dealDate,
+                dealId: createdDealId,
+              },
+            });
+            toastSuccess('Lançamento financeiro criado.');
+          } catch {
+            setError('Negócio salvo, mas erro ao criar lançamento financeiro.');
+          }
+        }
+      }
+
       resetForm();
       setShowForm(false);
       await loadData();
@@ -348,6 +489,64 @@ export default function NegociosPage() {
     setFunruralPercent('1.5');
     setSenarPercent('0.2');
     setSlaughterFrequency('TRIMESTRAL');
+    setGrainCrop('Soja');
+    setGrainQuantity('');
+    setGrainUnit('SACA60');
+    setGrainMoisturePercent('14');
+    setGrainMoistureBasePercent('14');
+    setGrainImpurityPercent('');
+    setGrainGrossWeightKg('');
+    setGrainNetWeightKg('');
+    setGrainSaleModality('BALCAO');
+    setGrainWarehouse('');
+    setGrainTicketRef('');
+    setSelectedCropCycleId('');
+    setEditingDealId(null);
+    setCreateTransaction(false);
+  }
+
+  function startEditDeal(deal: Deal) {
+    setEditingDealId(deal.id);
+    setDealType(deal.type);
+    setCounterparty(deal.counterparty ?? '');
+    setPricePerUnit(deal.pricePerUnit ? String(deal.pricePerUnit) : '');
+    setPriceUnit(deal.priceUnit as 'ANIMAL' | 'ARROBA');
+    setFreightCost(deal.freightCost ? String(deal.freightCost) : '');
+    setCommissionPercent(deal.commissionPercent ? String(deal.commissionPercent) : '');
+    setDealDate(new Date(deal.dealDate).toISOString().slice(0, 10));
+    setNotes(deal.notes ?? '');
+    setDraftItems(
+      deal.items.map((i) => ({
+        animalId: i.animalId ?? undefined,
+        earTag: i.earTag,
+        weightKg: i.weightKg,
+        unitPrice: i.unitPrice,
+      })),
+    );
+    setQuantity(deal.quantity ? String(deal.quantity) : '');
+    setTotalValue(deal.totalValue ? String(deal.totalValue) : '');
+    setInstallmentCount(deal.installmentCount ? String(deal.installmentCount) : '');
+    setInstallmentValue(deal.installmentValue ? String(deal.installmentValue) : '');
+    setIsInstallment(!!(deal.installmentCount && deal.installmentCount > 0));
+    setCarcassYieldPercent(deal.carcassYieldPercent ? String(deal.carcassYieldPercent) : '52');
+    setLiveWeightPricePerKg(deal.liveWeightPricePerKg ? String(deal.liveWeightPricePerKg) : '');
+    setFunruralPercent(deal.funruralPercent != null ? String(deal.funruralPercent) : '1.5');
+    setSenarPercent(deal.senarPercent != null ? String(deal.senarPercent) : '0.2');
+    setSlaughterFrequency((deal.slaughterFrequency as 'TRIMESTRAL' | 'SEMESTRAL') ?? 'TRIMESTRAL');
+    setGrainCrop(deal.grainCrop ?? 'Soja');
+    setGrainQuantity(deal.grainQuantity ? String(deal.grainQuantity) : '');
+    setGrainUnit((deal.grainUnit as 'SACA60' | 'KG' | 'TONELADA') ?? 'SACA60');
+    setGrainMoisturePercent(deal.grainMoisturePercent != null ? String(deal.grainMoisturePercent) : '14');
+    setGrainMoistureBasePercent(deal.grainMoistureBasePercent != null ? String(deal.grainMoistureBasePercent) : '14');
+    setGrainImpurityPercent(deal.grainImpurityPercent != null ? String(deal.grainImpurityPercent) : '');
+    setGrainGrossWeightKg(deal.grainGrossWeightKg ? String(deal.grainGrossWeightKg) : '');
+    setGrainNetWeightKg(deal.grainNetWeightKg ? String(deal.grainNetWeightKg) : '');
+    setGrainSaleModality(deal.grainSaleModality ?? 'BALCAO');
+    setGrainWarehouse(deal.grainWarehouse ?? '');
+    setGrainTicketRef(deal.grainTicketRef ?? '');
+    setSelectedCropCycleId(deal.cropCycleId ?? '');
+    setCreateTransaction(false);
+    setShowForm(true);
   }
 
   async function handleDelete(id: string) {
@@ -375,7 +574,7 @@ export default function NegociosPage() {
 
   async function handleDownloadReport(dealId: string) {
     try {
-      await apiDownload(`/fazendas/${farmId}/relatorios/abate?format=pdf&dealId=${dealId}`, `abate-${dealId}.pdf`, accessToken);
+      await apiDownload(`/fazendas/${farmId}/relatorios/negocio?format=pdf&dealId=${dealId}`, `negocio-${dealId}.pdf`, accessToken);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao gerar relatório');
     }
@@ -429,7 +628,7 @@ export default function NegociosPage() {
     );
   }
 
-  const showAnimals = dealType !== 'COMPRA';
+  const showAnimals = dealType !== 'COMPRA' && dealType !== 'VENDA_GRAO';
 
   return (
     <main className="flex-1 overflow-y-auto p-4 sm:p-6">
@@ -453,7 +652,7 @@ export default function NegociosPage() {
       {/* --- Formulário de criação --- */}
       {showForm && (
         <section className="mb-8 rounded-xl border border-gray-200/80 bg-white shadow-sm p-4">
-          <h2 className="mb-4 font-semibold text-gray-800">Novo negócio</h2>
+          <h2 className="mb-4 font-semibold text-gray-800">{editingDealId ? 'Editar negócio' : 'Novo negócio'}</h2>
           <form onSubmit={handleCreate} className="space-y-4">
             {/* Tipo + data */}
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -462,11 +661,12 @@ export default function NegociosPage() {
                 <select
                   value={dealType}
                   onChange={(e) => setDealType(e.target.value as DealType)}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 >
                   <option value="VENDA">Venda</option>
                   <option value="COMPRA">Compra</option>
                   <option value="ABATE">Abate</option>
+                  <option value="VENDA_GRAO">Venda de Grãos</option>
                 </select>
               </div>
               <div>
@@ -475,7 +675,7 @@ export default function NegociosPage() {
                   type="date"
                   value={dealDate}
                   onChange={(e) => setDealDate(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                   required
                 />
               </div>
@@ -488,46 +688,15 @@ export default function NegociosPage() {
                   value={counterparty}
                   onChange={(e) => setCounterparty(e.target.value)}
                   placeholder={dealType === 'ABATE' ? 'Nome do frigorífico' : 'Nome ou empresa'}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 />
               </div>
             </div>
 
             {/* Preço/valores por tipo */}
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {dealType === 'VENDA' && (
-                <>
-                  <div>
-                    <label className="text-xs font-medium text-gray-600">Preço por</label>
-                    <select
-                      value={priceUnit}
-                      onChange={(e) => setPriceUnit(e.target.value as 'ANIMAL' | 'ARROBA')}
-                      className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
-                    >
-                      <option value="ARROBA">Arroba (@)</option>
-                      <option value="ANIMAL">Animal</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-gray-600">
-                      Valor (R$/{priceUnit === 'ARROBA' ? '@' : 'cab.'})
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={pricePerUnit}
-                      onChange={(e) => setPricePerUnit(e.target.value)}
-                      placeholder="0,00"
-                      className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
-                      required
-                    />
-                  </div>
-                </>
-              )}
-
-              {dealType === 'COMPRA' && (
-                <>
+            {dealType === 'COMPRA' && (
+              <div className="space-y-3">
+                <div className={`grid gap-3 ${isInstallment ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-2'}`}>
                   <div>
                     <label className="text-xs font-medium text-gray-600">Quantidade de animais</label>
                     <input
@@ -537,20 +706,9 @@ export default function NegociosPage() {
                       value={quantity}
                       onChange={(e) => setQuantity(e.target.value)}
                       placeholder="0"
-                      className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+                      className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                       required={draftItems.length === 0}
                     />
-                  </div>
-                  <div className="flex items-end">
-                    <label className="flex items-center gap-2 pb-2 text-xs font-medium text-gray-600">
-                      <input
-                        type="checkbox"
-                        checked={isInstallment}
-                        onChange={(e) => setIsInstallment(e.target.checked)}
-                        className="rounded-lg border-gray-300"
-                      />
-                      Parcelado
-                    </label>
                   </div>
                   {isInstallment ? (
                     <>
@@ -563,7 +721,7 @@ export default function NegociosPage() {
                           value={installmentCount}
                           onChange={(e) => setInstallmentCount(e.target.value)}
                           placeholder="1"
-                          className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+                          className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                           required
                         />
                       </div>
@@ -576,11 +734,11 @@ export default function NegociosPage() {
                           value={installmentValue}
                           onChange={(e) => setInstallmentValue(e.target.value)}
                           placeholder="0,00"
-                          className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+                          className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                           required
                         />
                       </div>
-                      <div>
+                      <div className="col-span-full">
                         <label className="text-xs font-medium text-gray-600">Valor total (calculado)</label>
                         <p className="mt-1 rounded-lg border border-gray-100 bg-gray-50 px-2 py-1.5 text-sm font-medium text-gray-700">
                           {Number(installmentCount) > 0 && Number(installmentValue) > 0
@@ -599,11 +757,53 @@ export default function NegociosPage() {
                         value={totalValue}
                         onChange={(e) => setTotalValue(e.target.value)}
                         placeholder="0,00"
-                        className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+                        className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                         required
                       />
                     </div>
                   )}
+                </div>
+                <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isInstallment}
+                    onChange={(e) => setIsInstallment(e.target.checked)}
+                    className="rounded border-gray-300"
+                  />
+                  Pagamento parcelado
+                </label>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {dealType === 'VENDA' && (
+                <>
+                  <div>
+                    <label className="text-xs font-medium text-gray-600">Preço por</label>
+                    <select
+                      value={priceUnit}
+                      onChange={(e) => setPriceUnit(e.target.value as 'ANIMAL' | 'ARROBA')}
+                      className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                    >
+                      <option value="ARROBA">Arroba (@)</option>
+                      <option value="ANIMAL">Animal</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-600">
+                      Valor (R$/{priceUnit === 'ARROBA' ? '@' : 'cab.'})
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={pricePerUnit}
+                      onChange={(e) => setPricePerUnit(e.target.value)}
+                      placeholder="0,00"
+                      className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                      required
+                    />
+                  </div>
                 </>
               )}
 
@@ -618,7 +818,7 @@ export default function NegociosPage() {
                       value={liveWeightPricePerKg}
                       onChange={(e) => setLiveWeightPricePerKg(e.target.value)}
                       placeholder="0,00"
-                      className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+                      className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                       required
                     />
                   </div>
@@ -632,7 +832,7 @@ export default function NegociosPage() {
                       value={carcassYieldPercent}
                       onChange={(e) => setCarcassYieldPercent(e.target.value)}
                       placeholder="52"
-                      className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+                      className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                       required
                     />
                   </div>
@@ -649,7 +849,7 @@ export default function NegociosPage() {
                     <select
                       value={slaughterFrequency}
                       onChange={(e) => setSlaughterFrequency(e.target.value as 'TRIMESTRAL' | 'SEMESTRAL')}
-                      className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+                      className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                     >
                       <option value="TRIMESTRAL">Trimestral</option>
                       <option value="SEMESTRAL">Semestral</option>
@@ -659,7 +859,7 @@ export default function NegociosPage() {
               )}
 
               {/* Deduções do abate */}
-              {dealType === 'ABATE' && (
+              {(dealType === 'ABATE' || dealType === 'VENDA_GRAO') && (
                 <>
                   <div>
                     <label className="text-xs font-medium text-gray-600">Funrural (%)</label>
@@ -671,7 +871,7 @@ export default function NegociosPage() {
                       value={funruralPercent}
                       onChange={(e) => setFunruralPercent(e.target.value)}
                       placeholder="1.5"
-                      className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+                      className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                     />
                   </div>
                   <div>
@@ -684,7 +884,7 @@ export default function NegociosPage() {
                       value={senarPercent}
                       onChange={(e) => setSenarPercent(e.target.value)}
                       placeholder="0.2"
-                      className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+                      className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                     />
                   </div>
                 </>
@@ -699,7 +899,7 @@ export default function NegociosPage() {
                   value={freightCost}
                   onChange={(e) => setFreightCost(e.target.value)}
                   placeholder="0,00"
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 />
               </div>
               <div>
@@ -712,10 +912,236 @@ export default function NegociosPage() {
                   value={commissionPercent}
                   onChange={(e) => setCommissionPercent(e.target.value)}
                   placeholder="0"
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 />
               </div>
             </div>
+
+            {/* Campos de venda de grãos */}
+            {dealType === 'VENDA_GRAO' && (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <div>
+                    <label className="text-xs font-medium text-gray-600">Cultura</label>
+                    <select
+                      value={grainCrop}
+                      onChange={(e) => {
+                        setGrainCrop(e.target.value);
+                        if (e.target.value === 'Milho') {
+                          setGrainMoistureBasePercent('13');
+                          if (grainMoisturePercent === '14') setGrainMoisturePercent('13');
+                        } else {
+                          setGrainMoistureBasePercent('14');
+                        }
+                      }}
+                      className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                    >
+                      {['Soja', 'Milho', 'Café', 'Trigo', 'Arroz', 'Sorgo', 'Algodão', 'Feijão'].map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-600">Quantidade</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={grainQuantity}
+                      onChange={(e) => setGrainQuantity(e.target.value)}
+                      placeholder="0"
+                      className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-600">Unidade</label>
+                    <select
+                      value={grainUnit}
+                      onChange={(e) => setGrainUnit(e.target.value as 'SACA60' | 'KG' | 'TONELADA')}
+                      className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                    >
+                      <option value="SACA60">Saca 60kg</option>
+                      <option value="KG">kg</option>
+                      <option value="TONELADA">Tonelada</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-600">Preço por unidade (R$)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={pricePerUnit}
+                      onChange={(e) => setPricePerUnit(e.target.value)}
+                      placeholder="0,00"
+                      className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <div>
+                    <label className="text-xs font-medium text-gray-600">Umidade aferida (%)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="100"
+                      value={grainMoisturePercent}
+                      onChange={(e) => setGrainMoisturePercent(e.target.value)}
+                      placeholder="14"
+                      className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-600">Umidade base (%)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="100"
+                      value={grainMoistureBasePercent}
+                      onChange={(e) => setGrainMoistureBasePercent(e.target.value)}
+                      placeholder="14"
+                      className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-600">Impureza (%)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="100"
+                      value={grainImpurityPercent}
+                      onChange={(e) => setGrainImpurityPercent(e.target.value)}
+                      placeholder="0"
+                      className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-600">Peso bruto (kg)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      value={grainGrossWeightKg}
+                      onChange={(e) => setGrainGrossWeightKg(e.target.value)}
+                      placeholder="0"
+                      className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <div>
+                    <label className="text-xs font-medium text-gray-600">Modalidade</label>
+                    <select
+                      value={grainSaleModality}
+                      onChange={(e) => setGrainSaleModality(e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                    >
+                      <option value="BALCAO">Balcão</option>
+                      <option value="CONTRATO_FUTURO">Contrato futuro</option>
+                      <option value="COOPERATIVA">Cooperativa</option>
+                      <option value="BARTER">Barter</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-600">Armazém/Silo</label>
+                    <input
+                      type="text"
+                      value={grainWarehouse}
+                      onChange={(e) => setGrainWarehouse(e.target.value)}
+                      placeholder="Nome do armazém"
+                      className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-600">Placa/Ticket</label>
+                    <input
+                      type="text"
+                      value={grainTicketRef}
+                      onChange={(e) => setGrainTicketRef(e.target.value)}
+                      placeholder="Placa ou ticket"
+                      className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-600">Safra vinculada</label>
+                    <select
+                      value={selectedCropCycleId}
+                      onChange={(e) => setSelectedCropCycleId(e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                    >
+                      <option value="">Nenhuma</option>
+                      {cropCycles.map((cc) => (
+                        <option key={cc.id} value={cc.id}>{cc.cropName}{cc.variety ? ` (${cc.variety})` : ''}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-gray-600">Valor total (R$)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={totalValue}
+                      onChange={(e) => setTotalValue(e.target.value)}
+                      placeholder="Calculado automaticamente"
+                      className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-600">Peso líquido (calculado)</label>
+                    <p className="mt-1 rounded-lg border border-gray-100 bg-gray-50 px-2 py-1.5 text-sm font-medium text-gray-700">
+                      {grainSummary.netWeight > 0 ? `${grainSummary.netWeight} kg` : '—'}
+                    </p>
+                  </div>
+                </div>
+                <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isInstallment}
+                    onChange={(e) => setIsInstallment(e.target.checked)}
+                    className="rounded border-gray-300"
+                  />
+                  Pagamento parcelado
+                </label>
+                {isInstallment && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-medium text-gray-600">Nº de parcelas</label>
+                      <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={installmentCount}
+                        onChange={(e) => setInstallmentCount(e.target.value)}
+                        placeholder="1"
+                        className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-600">Valor da parcela (R$)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={installmentValue}
+                        onChange={(e) => setInstallmentValue(e.target.value)}
+                        placeholder="0,00"
+                        className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                        required
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Observações */}
             <div>
@@ -724,12 +1150,12 @@ export default function NegociosPage() {
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={2}
-                className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+                className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
               />
             </div>
 
             {/* --- Animais --- */}
-            <div>
+            {dealType !== 'VENDA_GRAO' && <div>
               <div className="mb-2 flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-gray-700">
                   Animais ({draftItems.length})
@@ -762,7 +1188,7 @@ export default function NegociosPage() {
                     value={animalSearch}
                     onChange={(e) => setAnimalSearch(e.target.value)}
                     placeholder="Buscar por brinco ou nome..."
-                    className="mb-2 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+                    className="mb-2 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                   />
                   <div className="max-h-48 overflow-x-auto overflow-y-auto">
                     {filteredAnimals.length === 0 ? (
@@ -904,7 +1330,7 @@ export default function NegociosPage() {
                   </table>
                 </div>
               )}
-            </div>
+            </div>}
 
             {/* Live summary — compra em lote */}
             {dealType === 'COMPRA' && (Number(quantity) > 0 || draftItems.length > 0) && (
@@ -1061,12 +1487,85 @@ export default function NegociosPage() {
               </div>
             )}
 
+            {/* Live summary — venda de grãos */}
+            {dealType === 'VENDA_GRAO' && Number(grainQuantity) > 0 && (
+              <div className="rounded-lg bg-green-50 p-3">
+                <h3 className="mb-2 text-sm font-semibold text-gray-700">Resumo da venda de grãos</h3>
+                <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
+                  <div>
+                    <span className="text-xs text-gray-500">Cultura</span>
+                    <p className="font-medium">{grainCrop}</p>
+                  </div>
+                  <div>
+                    <span className="text-xs text-gray-500">Quantidade</span>
+                    <p className="font-medium">{grainQuantity} {grainUnit === 'SACA60' ? 'sacas' : grainUnit === 'KG' ? 'kg' : 't'}</p>
+                  </div>
+                  {grainSummary.netWeight > 0 && (
+                    <div>
+                      <span className="text-xs text-gray-500">Peso líquido</span>
+                      <p className="font-medium">{grainSummary.netWeight} kg ({grainSummary.sacas} sacas)</p>
+                    </div>
+                  )}
+                  {grainSummary.moistureDiscount > 0 && (
+                    <div>
+                      <span className="text-xs text-gray-500">Desc. umidade</span>
+                      <p className="font-medium text-amber-600">{grainSummary.moistureDiscount}%</p>
+                    </div>
+                  )}
+                  <div>
+                    <span className="text-xs text-gray-500">Valor bruto</span>
+                    <p className="font-medium">{formatCurrency(grainSummary.grossValue)}</p>
+                  </div>
+                  <div>
+                    <span className="text-xs text-gray-500">Funrural ({funruralPercent}%)</span>
+                    <p className="font-medium text-red-600">- {formatCurrency(grainSummary.funruralValue)}</p>
+                  </div>
+                  <div>
+                    <span className="text-xs text-gray-500">SENAR ({senarPercent}%)</span>
+                    <p className="font-medium text-red-600">- {formatCurrency(grainSummary.senarValue)}</p>
+                  </div>
+                  <div>
+                    <span className="text-xs text-gray-500">Comissão ({commissionPercent || '0'}%)</span>
+                    <p className="font-medium text-red-600">- {formatCurrency(grainSummary.commissionValue)}</p>
+                  </div>
+                  <div>
+                    <span className="text-xs text-gray-500">Frete</span>
+                    <p className="font-medium text-red-600">- {formatCurrency(grainSummary.freight)}</p>
+                  </div>
+                </div>
+                <div className="mt-2 border-t border-green-200 pt-2">
+                  <div className="flex gap-6 text-sm">
+                    <div>
+                      <span className="text-xs font-semibold text-gray-500">Valor líquido</span>
+                      <p className="font-bold text-emerald-700">{formatCurrency(grainSummary.netTotal)}</p>
+                    </div>
+                    <div>
+                      <span className="text-xs text-gray-500">R$/saca líquido</span>
+                      <p className="font-semibold">{formatCurrency(grainSummary.netPerSaca)}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {!editingDealId && (
+              <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={createTransaction}
+                  onChange={(e) => setCreateTransaction(e.target.checked)}
+                  className="rounded border-gray-300"
+                />
+                Lançar no financeiro ({dealType === 'VENDA' || dealType === 'VENDA_GRAO' ? 'receita' : 'despesa'})
+              </label>
+            )}
+
             <button
               type="submit"
               disabled={creating}
               className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800 disabled:opacity-50"
             >
-              {creating ? 'Salvando...' : 'Salvar negócio'}
+              {creating ? 'Salvando...' : editingDealId ? 'Atualizar negócio' : 'Salvar negócio'}
             </button>
           </form>
         </section>
@@ -1083,6 +1582,7 @@ export default function NegociosPage() {
           <option value="VENDA">Vendas</option>
           <option value="COMPRA">Compras</option>
           <option value="ABATE">Abates</option>
+          <option value="VENDA_GRAO">Venda de Grãos</option>
         </select>
         <select
           value={filterStatus}
@@ -1108,7 +1608,8 @@ export default function NegociosPage() {
         <ul className="space-y-4">
           {deals.map((deal) => {
             const isAbate = deal.type === 'ABATE';
-            const s = isAbate ? null : dealSummary(deal);
+            const isGrainDeal = deal.type === 'VENDA_GRAO';
+            const s = !isAbate && !isGrainDeal ? dealSummary(deal) : null;
             const sa = isAbate ? slaughterDealSummary(deal) : null;
 
             return (
@@ -1136,14 +1637,19 @@ export default function NegociosPage() {
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    {isAbate && deal.status === 'FINALIZADO' && (
-                      <button
-                        onClick={() => handleDownloadReport(deal.id)}
-                        className="rounded-lg bg-orange-100 px-2 py-1 text-xs font-medium text-orange-700 hover:bg-orange-200"
-                      >
-                        Relatório PDF
-                      </button>
-                    )}
+                    <button
+                      onClick={() => handleDownloadReport(deal.id)}
+                      className="rounded-lg bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-200"
+                    >
+                      Exportar PDF
+                    </button>
+                    <button
+                      onClick={() => startEditDeal(deal)}
+                      className="rounded-lg bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-200"
+                    >
+                      <Pencil size={12} className="inline mr-1" />
+                      Editar
+                    </button>
                     {deal.status === 'RASCUNHO' && (
                       <>
                         <button
@@ -1170,7 +1676,7 @@ export default function NegociosPage() {
                 </div>
 
                 {/* Deal items table */}
-                {deal.items.length > 0 && (
+                {deal.items.length > 0 && !isGrainDeal && (
                   <div className="mb-2 overflow-x-auto">
                     <table className="w-full text-xs">
                       <thead>
@@ -1247,8 +1753,64 @@ export default function NegociosPage() {
                   </>
                 )}
 
+                {/* Summary numbers — VENDA_GRAO */}
+                {isGrainDeal && (() => {
+                  const qty = deal.grainQuantity ?? 0;
+                  const price = deal.pricePerUnit;
+                  const grossValue = deal.totalValue ?? qty * price;
+                  const funVal = grossValue * ((deal.funruralPercent ?? 0) / 100);
+                  const senVal = grossValue * ((deal.senarPercent ?? 0) / 100);
+                  const commVal = grossValue * (deal.commissionPercent / 100);
+                  const netTotal = grossValue - funVal - senVal - commVal - deal.freightCost;
+                  const unitLabel: Record<string, string> = { SACA60: 'sacas', KG: 'kg', TONELADA: 't' };
+                  const sacas = deal.grainNetWeightKg ? deal.grainNetWeightKg / 60 : qty;
+                  const netPerSaca = sacas > 0 ? netTotal / sacas : 0;
+                  return (
+                    <>
+                      <div className="grid grid-cols-2 gap-2 rounded-lg bg-green-50 p-2 text-xs sm:grid-cols-5">
+                        <div>
+                          <span className="text-gray-500">{deal.grainCrop}: </span>
+                          <span className="font-medium">{qty} {unitLabel[deal.grainUnit ?? ''] ?? deal.grainUnit}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Bruto: </span>
+                          <span className="font-medium">{formatCurrency(grossValue)}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Deduções: </span>
+                          <span className="font-medium text-red-600">
+                            {formatCurrency(funVal + senVal + commVal + deal.freightCost)}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Líquido: </span>
+                          <span className="font-bold text-emerald-700">{formatCurrency(netTotal)}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">R$/saca: </span>
+                          <span className="font-medium">{formatCurrency(netPerSaca)}</span>
+                        </div>
+                      </div>
+                      <div className="mt-1 flex flex-wrap gap-4 text-xs text-gray-500">
+                        {deal.grainSaleModality && (
+                          <span>Modalidade: <strong className="text-gray-700">{{ BALCAO: 'Balcão', CONTRATO_FUTURO: 'Contrato futuro', COOPERATIVA: 'Cooperativa', BARTER: 'Barter' }[deal.grainSaleModality] ?? deal.grainSaleModality}</strong></span>
+                        )}
+                        {deal.grainMoisturePercent != null && (
+                          <span>Umidade: <strong className="text-gray-700">{deal.grainMoisturePercent}%</strong></span>
+                        )}
+                        {deal.grainNetWeightKg != null && (
+                          <span>Peso líq: <strong className="text-gray-700">{deal.grainNetWeightKg.toFixed(1)} kg</strong></span>
+                        )}
+                        {deal.grainWarehouse && (
+                          <span>Armazém: <strong className="text-gray-700">{deal.grainWarehouse}</strong></span>
+                        )}
+                      </div>
+                    </>
+                  );
+                })()}
+
                 {/* Summary numbers — COMPRA/VENDA */}
-                {!isAbate && s && (
+                {!isAbate && !isGrainDeal && s && (
                   <>
                     <div className="grid grid-cols-2 gap-2 rounded-lg bg-gray-50 p-2 text-xs sm:grid-cols-5">
                       <div>

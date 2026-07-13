@@ -299,7 +299,7 @@ export default function QuotationsPage() {
           <select
             value={formCommodity}
             onChange={(e) => setFormCommodity(e.target.value as Commodity)}
-            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+            className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           >
             {COMMODITY_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -314,7 +314,7 @@ export default function QuotationsPage() {
           <select
             value={formState}
             onChange={(e) => setFormState(e.target.value as BrazilianState | '')}
-            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+            className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           >
             <option value="">Nacional</option>
             {STATE_OPTIONS.map((opt) => (
@@ -333,7 +333,7 @@ export default function QuotationsPage() {
             required
             value={price}
             onChange={(e) => setPrice(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+            className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
 
@@ -344,7 +344,7 @@ export default function QuotationsPage() {
             required
             value={unit}
             onChange={(e) => setUnit(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+            className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
 
@@ -354,7 +354,7 @@ export default function QuotationsPage() {
             type="text"
             value={source}
             onChange={(e) => setSource(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+            className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
 
@@ -463,7 +463,7 @@ export default function QuotationsPage() {
             <select
               value={selectedCommodity}
               onChange={(e) => setSelectedCommodity(e.target.value as Commodity)}
-              className="rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
             >
               {COMMODITY_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -474,7 +474,7 @@ export default function QuotationsPage() {
             <select
               value={stateFilter}
               onChange={(e) => setStateFilter(e.target.value as StateFilter)}
-              className="rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
             >
               <option value={ALL_STATES_FILTER}>Todos os estados</option>
               <option value={NATIONAL_FILTER}>Nacional</option>

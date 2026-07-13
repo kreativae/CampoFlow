@@ -192,6 +192,21 @@ export class PasturesService {
     });
   }
 
+  async removeOccupation(farmId: string, pastureId: string, occupationId: string) {
+    await this.findOne(farmId, pastureId);
+
+    const occupation = await this.prisma.pastureOccupation.findUnique({
+      where: { id: occupationId },
+    });
+    if (!occupation || occupation.pastureId !== pastureId) {
+      throw new NotFoundException('Ocupação não encontrada');
+    }
+
+    return this.prisma.pastureOccupation.delete({
+      where: { id: occupationId },
+    });
+  }
+
   // Stocking rate across all pastures of the farm: occupied head count vs. total
   // capacity. Occupancy is driven by real animals assigned to each pasture in the
   // herd module, so it stays in sync with animal→pasture moves.

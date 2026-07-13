@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, ApiError } from '@/lib/api';
+import { useConfirm } from '@/lib/confirm-context';
 import type { Farm, Pasture, PastureOccupation } from '@/lib/types';
 
 const BoundaryDrawer = dynamic(() => import('../boundary-drawer'), { ssr: false });
@@ -14,6 +15,7 @@ export default function PastureDetailPage() {
   const { farmId, pastureId } = useParams<{ farmId: string; pastureId: string }>();
   const { user, accessToken, loading } = useAuth();
   const router = useRouter();
+  const confirm = useConfirm();
 
   const [pasture, setPasture] = useState<Pasture | null>(null);
   const [pastures, setPastures] = useState<Pasture[]>([]);
@@ -161,6 +163,26 @@ export default function PastureDetailPage() {
     }
   }
 
+  async function handleDeleteOccupation(occupationId: string) {
+    const ok = await confirm({
+      title: 'Excluir registro',
+      message: 'Excluir este registro de ocupação? Essa ação não pode ser desfeita.',
+      confirmLabel: 'Excluir',
+      danger: true,
+    });
+    if (!ok) return;
+    setError(null);
+    try {
+      await apiFetch(
+        `/fazendas/${farmId}/pastagens/${pastureId}/ocupacoes/${occupationId}`,
+        { method: 'DELETE', token: accessToken },
+      );
+      await loadData();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao excluir registro');
+    }
+  }
+
   if (loading || !user || fetching) {
     return (
       <main className="flex flex-1 items-center justify-center">
@@ -283,14 +305,14 @@ export default function PastureDetailPage() {
             required
             value={headCount}
             onChange={(e) => setHeadCount(e.target.value)}
-            className="flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+            className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
           <input
             type="text"
             placeholder="Observações (opcional)"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            className="flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+            className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
           <button
             type="submit"
@@ -326,7 +348,7 @@ export default function PastureDetailPage() {
                         max={o.headCount}
                         value={exitQuantity}
                         onChange={(e) => setExitQuantity(e.target.value)}
-                        className="mt-1 w-28 rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                        className="mt-1 w-28 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                       />
                     </div>
                     <div>
@@ -336,7 +358,7 @@ export default function PastureDetailPage() {
                       <select
                         value={exitDestinationId}
                         onChange={(e) => setExitDestinationId(e.target.value)}
-                        className="mt-1 w-44 rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                        className="mt-1 w-44 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                       >
                         <option value="">— Não mover —</option>
                         {pastures.map((p) => (
@@ -354,7 +376,7 @@ export default function PastureDetailPage() {
                         type="text"
                         value={exitNotes}
                         onChange={(e) => setExitNotes(e.target.value)}
-                        className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                        className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                       />
                     </div>
                   </div>
@@ -413,6 +435,13 @@ export default function PastureDetailPage() {
                     >
                       Registrar saída
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteOccupation(o.id)}
+                      className="text-xs font-medium text-red-600 hover:underline"
+                    >
+                      Excluir
+                    </button>
                   </span>
                 </li>
               ),
@@ -451,13 +480,22 @@ export default function PastureDetailPage() {
                     {o.exitedAt ? new Date(o.exitedAt).toLocaleDateString('pt-BR') : '—'}
                     {o.notes ? ` (${o.notes})` : ''}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => startEditOccupation(o)}
-                    className="text-xs font-medium text-emerald-700 hover:underline"
-                  >
-                    Editar
-                  </button>
+                  <span className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => startEditOccupation(o)}
+                      className="text-xs font-medium text-emerald-700 hover:underline"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteOccupation(o.id)}
+                      className="text-xs font-medium text-red-600 hover:underline"
+                    >
+                      Excluir
+                    </button>
+                  </span>
                 </li>
               ),
             )}
@@ -514,7 +552,7 @@ function OccupationEditForm({
             min={1}
             value={headCount}
             onChange={(e) => onHeadCountChange(e.target.value)}
-            className="mt-1 w-28 rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+            className="mt-1 w-28 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
         <div>
@@ -523,7 +561,7 @@ function OccupationEditForm({
             type="date"
             value={enteredAt}
             onChange={(e) => onEnteredAtChange(e.target.value)}
-            className="mt-1 rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+            className="mt-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
         {showExitedAt && (
@@ -533,7 +571,7 @@ function OccupationEditForm({
               type="date"
               value={exitedAt}
               onChange={(e) => onExitedAtChange(e.target.value)}
-              className="mt-1 rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+              className="mt-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
             />
           </div>
         )}
@@ -543,7 +581,7 @@ function OccupationEditForm({
             type="text"
             value={notes}
             onChange={(e) => onNotesChange(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+            className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
       </div>

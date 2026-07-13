@@ -57,7 +57,7 @@ body {
 }
 
 .animate-fade-up {
-  animation: fade-up 0.3s ease-out both;
+  animation: fade-up 0.3s ease-out backwards;
 }
 
 .animate-slide-in-left {
@@ -87,4 +87,43 @@ body {
 .sidebar-scroll::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.15);
   border-radius: 3px;
+}
+
+/* ── Forms modernos ─────────────────────────────────────── */
+/* Checkboxes e radios na cor do design system */
+input[type='checkbox'],
+input[type='radio'] {
+  accent-color: #047857; /* emerald-700 */
+  width: 1rem;
+  height: 1rem;
+  cursor: pointer;
+}
+
+/* Date/time pickers alinhados ao restante dos campos */
+input[type='date'],
+input[type='time'],
+input[type='datetime-local'] {
+  color-scheme: light;
+}
+
+/* Placeholder mais suave */
+::placeholder {
+  color: #9ca3af;
+  opacity: 1;
+}
+
+/* Remove spinners duplos no Firefox mantendo os do Chrome discretos */
+input[type='number'] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Labels de formulário com respiro consistente */
+select {
+  cursor: pointer;
 }

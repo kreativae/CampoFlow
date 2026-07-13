@@ -1,7 +1,8 @@
 'use client';
 
-import { Leaf } from 'lucide-react';
+import { Leaf, X } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
+import Modal from '@/components/Modal';
 
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import Link from 'next/link';
@@ -184,7 +185,7 @@ export default function PasturesPage() {
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+            className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
 
@@ -197,7 +198,7 @@ export default function PasturesPage() {
             required
             value={areaHectares}
             onChange={(e) => setAreaHectares(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+            className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
 
@@ -209,7 +210,7 @@ export default function PasturesPage() {
             required
             value={animalCapacity}
             onChange={(e) => setAnimalCapacity(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+            className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
 
@@ -219,7 +220,7 @@ export default function PasturesPage() {
             type="text"
             value={grassType}
             onChange={(e) => setGrassType(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+            className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
 
@@ -285,35 +286,35 @@ export default function PasturesPage() {
       )}
 
       {editingId && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setEditingId(null);
-          }}
-        >
-          <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-lg">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Visualização rápida — {editName}
-              </h2>
+        <Modal onClose={() => setEditingId(null)}>
+            <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600/10 text-emerald-700">
+                  <Leaf size={19} strokeWidth={1.9} />
+                </span>
+                <div>
+                  <h2 className="text-base font-semibold text-gray-900">{editName}</h2>
+                  <p className="text-xs text-gray-500">Visualização rápida</p>
+                </div>
+              </div>
               <button
                 type="button"
                 onClick={() => setEditingId(null)}
-                className="text-gray-400 hover:text-gray-600"
+                className="rounded-lg p-1.5 text-gray-400 transition-colors duration-150 hover:bg-gray-100 hover:text-gray-600"
                 aria-label="Fechar"
               >
-                ✕
+                <X size={18} />
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 px-6 py-5">
               <div className="col-span-2">
                 <label className="text-xs font-medium text-gray-600">Nome</label>
                 <input
                   type="text"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 />
               </div>
               <div>
@@ -324,7 +325,7 @@ export default function PasturesPage() {
                   min="0"
                   value={editAreaHectares}
                   onChange={(e) => setEditAreaHectares(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 />
               </div>
               <div>
@@ -334,7 +335,7 @@ export default function PasturesPage() {
                   min="1"
                   value={editAnimalCapacity}
                   onChange={(e) => setEditAnimalCapacity(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 />
               </div>
               <div className="col-span-2">
@@ -343,12 +344,12 @@ export default function PasturesPage() {
                   type="text"
                   value={editGrassType}
                   onChange={(e) => setEditGrassType(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 />
               </div>
             </div>
 
-            <div className="mt-6 flex items-center justify-between">
+            <div className="flex items-center justify-between border-t border-gray-100 bg-gray-50/60 px-6 py-4">
               <Link
                 href={`/fazendas/${farmId}/pastagens/${editingId}`}
                 className="text-sm font-medium text-emerald-700 hover:underline"
@@ -373,8 +374,7 @@ export default function PasturesPage() {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </main>
   );

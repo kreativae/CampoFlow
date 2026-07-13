@@ -178,9 +178,9 @@ export default function AdminSaudePage() {
             </p>
           </ServiceCard>
 
-          <ServiceCard title="Sentry" ok={services.sentry.configured}>
+          <ServiceCard title="Sentry" ok={services.sentry?.configured ?? false}>
             <p>
-              {services.sentry.configured
+              {services.sentry?.configured
                 ? 'SENTRY_DSN configurado'
                 : 'SENTRY_DSN não definido — erros não serão rastreados'}
             </p>

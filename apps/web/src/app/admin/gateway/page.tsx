@@ -159,7 +159,7 @@ export default function AdminGatewayPage() {
                 value={secretKeyInput}
                 onChange={(e) => setSecretKeyInput(e.target.value)}
                 placeholder="Deixe em branco para manter o atual"
-                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
               />
             </div>
             <div>
@@ -172,7 +172,7 @@ export default function AdminGatewayPage() {
                 value={webhookSecretInput}
                 onChange={(e) => setWebhookSecretInput(e.target.value)}
                 placeholder="Deixe em branco para manter o atual"
-                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
               />
             </div>
             <button

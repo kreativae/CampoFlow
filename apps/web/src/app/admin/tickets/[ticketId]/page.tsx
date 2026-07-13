@@ -109,7 +109,7 @@ export default function AdminTicketPage() {
           value={ticket.status}
           disabled={updatingStatus}
           onChange={(e) => handleStatusChange(e.target.value as TicketStatus)}
-          className="rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+          className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
         >
           {STATUS_OPTIONS.map((status) => (
             <option key={status} value={status}>
@@ -152,7 +152,7 @@ export default function AdminTicketPage() {
           placeholder="Responder como equipe CampoFlow"
           required
           rows={3}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+          className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
         />
         <button
           type="submit"

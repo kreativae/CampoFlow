@@ -33,7 +33,6 @@ export default function SoilAnalysisPage() {
   const { user, accessToken, loading } = useAuth();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const photoInputRef = useRef<HTMLInputElement>(null);
 
   const [feature, setFeature] = useState<MapFeature | null>(null);
   const [history, setHistory] = useState<SoilAnalysis[]>([]);
@@ -60,6 +59,8 @@ export default function SoilAnalysisPage() {
   const [uploadingPhotosFor, setUploadingPhotosFor] = useState<string | null>(null);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const [selectedPhotoCount, setSelectedPhotoCount] = useState(0);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const photoInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const loadData = useCallback(async () => {
     setFetching(true);
@@ -200,14 +201,15 @@ export default function SoilAnalysisPage() {
   }
 
   async function handleUploadPhotos(analysisId: string) {
-    const files = photoInputRef.current?.files;
+    const input = photoInputRefs.current[analysisId];
+    const files = input?.files;
     if (!files || files.length === 0) {
-      setError('Selecione ao menos uma foto antes de enviar.');
+      setPhotoError('Selecione ao menos uma foto antes de enviar.');
       return;
     }
 
     setUploadingPhotos(true);
-    setError(null);
+    setPhotoError(null);
     try {
       const formData = new FormData();
       const metadata: { takenAt?: string; latitude?: number; longitude?: number }[] = [];
@@ -216,7 +218,6 @@ export default function SoilAnalysisPage() {
         formData.append('fotos', files[i]);
         const meta: { takenAt?: string; latitude?: number; longitude?: number } = {};
 
-        // Extract EXIF-like metadata from file's lastModified as fallback
         if (files[i].lastModified) {
           meta.takenAt = new Date(files[i].lastModified).toISOString();
         }
@@ -229,12 +230,12 @@ export default function SoilAnalysisPage() {
         formData,
         accessToken,
       );
-      if (photoInputRef.current) photoInputRef.current.value = '';
+      if (input) input.value = '';
       setSelectedPhotoCount(0);
       setUploadingPhotosFor(null);
       await loadData();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Erro ao enviar fotos');
+      setPhotoError(err instanceof ApiError ? err.message : 'Erro ao enviar fotos');
     } finally {
       setUploadingPhotos(false);
     }
@@ -306,7 +307,7 @@ export default function SoilAnalysisPage() {
             required
             value={collectedAt}
             onChange={(e) => setCollectedAt(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+            className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
         <div>
@@ -316,7 +317,7 @@ export default function SoilAnalysisPage() {
             value={areaLabel}
             onChange={(e) => setAreaLabel(e.target.value)}
             placeholder="Ex.: Talhão 3"
-            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+            className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
         </div>
         {FIELD_DEFS.map(({ key, label }) => (
@@ -327,7 +328,7 @@ export default function SoilAnalysisPage() {
               step="0.01"
               value={form[key] ?? ''}
               onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
-              className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+              className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
             />
           </div>
         ))}
@@ -358,7 +359,7 @@ export default function SoilAnalysisPage() {
             <select
               value={chartField}
               onChange={(e) => setChartField(e.target.value as keyof SoilAnalysis)}
-              className="rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
             >
               {FIELD_DEFS.map(({ key, label }) => (
                 <option key={key} value={key}>
@@ -392,7 +393,7 @@ export default function SoilAnalysisPage() {
                             type="date"
                             value={editCollectedAt}
                             onChange={(e) => setEditCollectedAt(e.target.value)}
-                            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                            className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                           />
                         </div>
                         <div>
@@ -401,7 +402,7 @@ export default function SoilAnalysisPage() {
                             type="text"
                             value={editAreaLabel}
                             onChange={(e) => setEditAreaLabel(e.target.value)}
-                            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                            className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                           />
                         </div>
                         {FIELD_DEFS.map(({ key, label }) => (
@@ -414,7 +415,7 @@ export default function SoilAnalysisPage() {
                               onChange={(e) =>
                                 setEditForm((f) => ({ ...f, [key]: e.target.value }))
                               }
-                              className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                              className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                             />
                           </div>
                         ))}
@@ -424,7 +425,7 @@ export default function SoilAnalysisPage() {
                             type="text"
                             value={editNotes}
                             onChange={(e) => setEditNotes(e.target.value)}
-                            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                            className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                           />
                         </div>
                       </div>
@@ -511,7 +512,7 @@ export default function SoilAnalysisPage() {
                           </h3>
                           <button
                             type="button"
-                            onClick={() => { setUploadingPhotosFor(uploadingPhotosFor === a.id ? null : a.id); setSelectedPhotoCount(0); }}
+                            onClick={() => { setUploadingPhotosFor(uploadingPhotosFor === a.id ? null : a.id); setSelectedPhotoCount(0); setPhotoError(null); }}
                             className="text-xs font-medium text-emerald-700 hover:underline"
                           >
                             {uploadingPhotosFor === a.id ? 'Cancelar' : 'Anexar fotos'}
@@ -520,13 +521,16 @@ export default function SoilAnalysisPage() {
 
                         {uploadingPhotosFor === a.id && (
                           <div className="mb-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                            {photoError && (
+                              <p className="mb-2 rounded-lg bg-red-50 px-2 py-1.5 text-xs text-red-700">{photoError}</p>
+                            )}
                             <input
-                              ref={photoInputRef}
+                              ref={(el) => { photoInputRefs.current[a.id] = el; }}
                               type="file"
                               accept="image/*"
                               multiple
                               className="block w-full text-sm"
-                              onChange={(e) => setSelectedPhotoCount(e.target.files?.length ?? 0)}
+                              onChange={(e) => { setSelectedPhotoCount(e.target.files?.length ?? 0); setPhotoError(null); }}
                             />
                             <p className="mt-1 text-xs text-gray-400">
                               Selecione uma ou mais imagens. A data de modificação do arquivo será usada como data da foto.
@@ -682,7 +686,7 @@ function SoilEvolutionChart({
   }
 
   const width = 600;
-  const height = 160;
+  const height = 200;
   const padding = 28;
   const values = points.map((p) => p[field] as number);
   const minValue = Math.min(...values);
@@ -718,19 +722,19 @@ function SoilEvolutionChart({
       {coords.map((c) => (
         <circle key={c.id} cx={c.x} cy={c.y} r={3} fill="#15803d" />
       ))}
-      <text x={padding} y={14} fontSize={11} fill="#6b7280">
+      <text x={padding} y={14} fontSize={8} fill="#6b7280">
         {maxValue.toFixed(2)}
       </text>
-      <text x={padding} y={height - padding + 14} fontSize={11} fill="#6b7280">
+      <text x={padding} y={height - padding + 12} fontSize={8} fill="#6b7280">
         {minValue.toFixed(2)}
       </text>
-      <text x={coords[0].x} y={height - 6} fontSize={10} fill="#9ca3af">
+      <text x={coords[0].x} y={height - 6} fontSize={7} fill="#9ca3af">
         {new Date(coords[0].collectedAt).toLocaleDateString('pt-BR')}
       </text>
       <text
         x={coords[coords.length - 1].x}
         y={height - 6}
-        fontSize={10}
+        fontSize={7}
         fill="#9ca3af"
         textAnchor="end"
       >
