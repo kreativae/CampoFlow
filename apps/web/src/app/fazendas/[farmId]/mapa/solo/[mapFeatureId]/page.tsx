@@ -449,12 +449,12 @@ export default function SoilAnalysisPage() {
                     </div>
                   ) : (
                     <>
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <p className="font-medium text-gray-900">
                           {new Date(a.collectedAt).toLocaleDateString('pt-BR')}
                           {a.areaLabel ? ` — ${a.areaLabel}` : ''}
                         </p>
-                        <div className="flex gap-3">
+                        <div className="flex flex-wrap gap-3">
                           {a.documentFileName && (
                             <button
                               onClick={() => handleDownload(a)}
@@ -584,7 +584,7 @@ export default function SoilAnalysisPage() {
                                     </span>
                                   </div>
                                 </div>
-                                <div className="absolute right-1 top-1 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                                <div className="absolute right-1 top-1 flex gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
                                   <button
                                     type="button"
                                     onClick={() => handleDownloadPhoto(a.id, photo)}

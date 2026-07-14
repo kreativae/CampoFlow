@@ -542,16 +542,16 @@ export default function FarmMapPage() {
               ) : (
                 <li
                   key={f.id}
-                  className="flex items-center justify-between rounded-xl border border-gray-200/80 bg-white shadow-sm px-4 py-3"
+                  className="flex flex-col gap-2 rounded-xl border border-gray-200/80 bg-white shadow-sm px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
                 >
-                  <div>
-                    <p className="font-medium text-gray-900">{f.name}</p>
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-gray-900">{f.name}</p>
                     <p className="text-sm text-gray-500">
                       {TYPE_OPTIONS.find((opt) => opt.value === f.type)?.label} ·{' '}
                       {f.geometryType === 'PONTO' ? 'Ponto' : `Polígono (${f.coordinates.length} pontos)`}
                     </p>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-3">
                     <Link
                       href={`/fazendas/${farmId}/mapa/solo/${f.id}`}
                       className="shrink-0 text-sm font-medium text-emerald-700 hover:underline"

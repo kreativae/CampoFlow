@@ -475,7 +475,7 @@ export default function FinancePage() {
                 {filteredTransactions.map((t) => (
                   <li
                     key={t.id}
-                    className="flex items-center justify-between rounded-xl border border-gray-200/80 bg-white shadow-sm px-4 py-3"
+                    className="flex flex-col gap-2 rounded-xl border border-gray-200/80 bg-white shadow-sm px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div>
                       <p className="font-medium text-gray-900">

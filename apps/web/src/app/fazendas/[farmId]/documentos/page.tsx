@@ -264,16 +264,16 @@ export default function DocumentsPage() {
           {filteredDocuments.map((doc) => (
             <li
               key={doc.id}
-              className="flex items-center justify-between rounded-xl border border-gray-200/80 bg-white shadow-sm px-4 py-3"
+              className="flex flex-col gap-2 rounded-xl border border-gray-200/80 bg-white shadow-sm px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
             >
-              <div>
-                <p className="font-medium text-gray-900">{doc.fileName}</p>
+              <div className="min-w-0">
+                <p className="truncate font-medium text-gray-900">{doc.fileName}</p>
                 <p className="text-sm text-gray-500">
                   {categoryLabel(doc.category)} · {formatSize(doc.fileSize)} ·{' '}
                   {new Date(doc.createdAt).toLocaleDateString('pt-BR')}
                 </p>
               </div>
-              <div className="flex gap-3">
+              <div className="flex shrink-0 gap-3">
                 <button
                   onClick={() => handleDownload(doc)}
                   className="text-xs font-medium text-emerald-700 hover:underline"

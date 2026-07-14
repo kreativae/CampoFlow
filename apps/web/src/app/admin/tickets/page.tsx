@@ -51,7 +51,7 @@ export default function AdminTicketsPage() {
 
   return (
     <main className="animate-fade-up mx-auto w-full max-w-5xl flex-1 px-4 py-10">
-      <header className="mb-6 flex items-center justify-between">
+      <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">Tickets de suporte</h1>
           <p className="text-sm text-gray-500">Tickets de todas as contas da plataforma.</p>

@@ -97,9 +97,9 @@ export default function AdminTicketPage() {
         ← Voltar para Tickets
       </Link>
 
-      <header className="mt-2 mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">{ticket.subject}</h1>
+      <header className="mt-2 mb-6 flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="break-words text-2xl font-semibold text-gray-900">{ticket.subject}</h1>
           <p className="text-sm text-gray-500">
             {ticket.account.name} ({ticket.account.billingEmail}) · aberto por{' '}
             {ticket.createdBy.name}

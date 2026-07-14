@@ -1616,7 +1616,7 @@ export default function NegociosPage() {
 
             return (
               <li key={deal.id} className="rounded-xl border border-gray-200/80 bg-white shadow-sm p-4">
-                <div className="mb-2 flex items-start justify-between">
+                <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <div className="flex items-center gap-2">
                       <span className={`rounded px-2 py-0.5 text-xs font-medium ${TYPE_COLOR[deal.type]}`}>
@@ -1638,7 +1638,7 @@ export default function NegociosPage() {
                       <p className="mt-1 text-sm text-gray-600">{deal.counterparty}</p>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <button
                       onClick={() => handleDownloadReport(deal.id)}
                       className="rounded-lg bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-200"

@@ -490,7 +490,7 @@ export default function AnimalDetailPage() {
                       </button>
                     </li>
                   ) : (
-                    <li key={w.id} className="flex items-center justify-between">
+                    <li key={w.id} className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                       <span>
                         {new Date(w.weighedAt).toLocaleDateString('pt-BR')} —{' '}
                         {w.weightKg} kg
@@ -592,7 +592,7 @@ export default function AnimalDetailPage() {
                   </button>
                 </li>
               ) : (
-                <li key={v.id} className="flex items-center justify-between">
+                <li key={v.id} className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                   <span>
                     {v.vaccineName} — {new Date(v.scheduledDate).toLocaleDateString('pt-BR')}
                     {v.administeredAt ? ' (aplicada)' : ' (pendente)'}
@@ -708,7 +708,7 @@ export default function AnimalDetailPage() {
                   </button>
                 </li>
               ) : (
-                <li key={e.id} className="flex items-center justify-between">
+                <li key={e.id} className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                   <span>
                     {new Date(e.eventDate).toLocaleDateString('pt-BR')} —{' '}
                     {REPRODUCTIVE_EVENT_OPTIONS.find((opt) => opt.value === e.type)?.label ?? e.type}

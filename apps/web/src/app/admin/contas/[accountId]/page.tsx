@@ -302,7 +302,7 @@ export default function AdminAccountDetailPage() {
       {account.subscription && (
         <section className="mb-8 rounded-lg border border-gray-200 p-4">
           <h2 className="mb-3 text-sm font-semibold text-gray-700">Assinatura</h2>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4">
             <div>
               <label className="block text-xs font-medium text-gray-500">Plano</label>
               <select
