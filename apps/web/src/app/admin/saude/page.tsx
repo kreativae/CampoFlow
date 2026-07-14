@@ -103,7 +103,7 @@ export default function AdminSaudePage() {
 
   return (
     <main className="animate-fade-up mx-auto w-full max-w-3xl flex-1 px-4 py-10">
-      <header className="mb-8 flex items-center justify-between">
+      <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">
             Saúde da plataforma

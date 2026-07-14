@@ -351,16 +351,16 @@ export default function AgendaPage() {
           {events.map((e) => (
             <li
               key={e.id}
-              className="flex items-center justify-between rounded-xl border border-gray-200/80 bg-white shadow-sm px-4 py-3"
+              className="flex flex-col gap-2 rounded-xl border border-gray-200/80 bg-white shadow-sm px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
             >
-              <div>
-                <p className="font-medium text-gray-900">{e.title}</p>
+              <div className="min-w-0">
+                <p className="truncate font-medium text-gray-900">{e.title}</p>
                 <p className="text-sm text-gray-500">
                   {typeLabel(e.type)} · {new Date(e.scheduledDate).toLocaleDateString('pt-BR')}
                   {e.completedAt ? ' · concluído' : ''}
                 </p>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 {!e.completedAt && (
                   <button
                     onClick={() => handleComplete(e.id)}

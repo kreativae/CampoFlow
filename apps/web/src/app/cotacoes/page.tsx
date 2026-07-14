@@ -262,7 +262,7 @@ export default function QuotationsPage() {
 
   return (
     <main className="animate-fade-up mx-auto w-full max-w-4xl flex-1 px-4 py-10">
-      <header className="mb-8 flex items-start justify-between gap-4">
+      <header className="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div>
           <Link href="/fazendas" className="text-sm text-emerald-700 hover:underline">
             ← Propriedades
@@ -419,7 +419,7 @@ export default function QuotationsPage() {
         {latestForSelectedCommodity.length === 0 ? (
           <p className="text-sm text-gray-500">Nenhum registro para este produto ainda.</p>
         ) : (
-          <table className="w-full text-left text-sm">
+          <div className="overflow-x-auto"><table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-500">
                 <th className="py-2">Estado</th>
@@ -452,7 +452,7 @@ export default function QuotationsPage() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         )}
       </section>
 

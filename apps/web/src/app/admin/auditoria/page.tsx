@@ -87,7 +87,7 @@ export default function AdminAuditPage() {
 
   return (
     <main className="animate-fade-up mx-auto w-full max-w-5xl flex-1 px-4 py-10">
-      <header className="mb-6 flex items-start justify-between gap-4">
+      <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">Auditoria</h1>
           <p className="text-sm text-gray-500">
@@ -200,7 +200,7 @@ export default function AdminAuditPage() {
       )}
 
       {total > 0 && (
-        <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm text-gray-600">
           <span>
             {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} de {total}
           </span>

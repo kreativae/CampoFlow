@@ -794,7 +794,7 @@ export default function TeamPage() {
                         ) : (
                           <li
                             key={entry.id}
-                            className="flex items-center justify-between gap-2 border-b border-gray-100 pb-2 last:border-0"
+                            className="flex flex-col gap-2 border-b border-gray-100 pb-2 last:border-0 sm:flex-row sm:items-center sm:justify-between"
                           >
                             <span className="min-w-0">
                               <span className="block">

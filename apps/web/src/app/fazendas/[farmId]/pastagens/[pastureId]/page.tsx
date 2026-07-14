@@ -415,7 +415,7 @@ export default function PastureDetailPage() {
                   onCancel={() => setEditingOccId(null)}
                 />
               ) : (
-                <li key={o.id} className="flex items-center justify-between">
+                <li key={o.id} className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                   <span>
                     {o.headCount} animais — desde {new Date(o.enteredAt).toLocaleDateString('pt-BR')}
                     {o.notes ? ` (${o.notes})` : ''}
@@ -474,7 +474,7 @@ export default function PastureDetailPage() {
                   onCancel={() => setEditingOccId(null)}
                 />
               ) : (
-                <li key={o.id} className="flex items-center justify-between">
+                <li key={o.id} className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                   <span>
                     {o.headCount} animais — {new Date(o.enteredAt).toLocaleDateString('pt-BR')} até{' '}
                     {o.exitedAt ? new Date(o.exitedAt).toLocaleDateString('pt-BR') : '—'}

@@ -120,7 +120,7 @@ export default function SecurityPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl p-8">
+    <div className="mx-auto max-w-2xl p-4 sm:p-8">
       <Link href="/fazendas" className="text-sm text-emerald-700 hover:underline">
         &larr; Voltar
       </Link>

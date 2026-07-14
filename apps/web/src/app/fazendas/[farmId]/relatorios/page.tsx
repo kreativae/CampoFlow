@@ -129,10 +129,10 @@ export default function ReportsPage() {
         {TYPE_OPTIONS.map((opt) => (
           <li
             key={opt.value}
-            className="flex items-center justify-between rounded-xl border border-gray-200/80 bg-white shadow-sm px-4 py-3"
+            className="flex flex-col gap-2 rounded-xl border border-gray-200/80 bg-white shadow-sm px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
           >
             <span className="font-medium text-gray-900">{opt.label}</span>
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-3">
               {FORMAT_OPTIONS.map((fmt) => (
                 <button
                   key={fmt.value}
