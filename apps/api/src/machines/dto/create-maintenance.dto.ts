@@ -29,4 +29,7 @@ export class CreateMaintenanceDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @IsOptional()
+  createTransaction?: boolean;
 }

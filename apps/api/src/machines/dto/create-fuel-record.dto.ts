@@ -28,4 +28,7 @@ export class CreateFuelRecordDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @IsOptional()
+  createTransaction?: boolean;
 }
