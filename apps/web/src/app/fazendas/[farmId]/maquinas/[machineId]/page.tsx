@@ -21,11 +21,13 @@ export default function MachineDetailPage() {
   const [maintenanceDescription, setMaintenanceDescription] = useState('');
   const [maintenanceCost, setMaintenanceCost] = useState('');
   const [maintenanceHourMeter, setMaintenanceHourMeter] = useState('');
+  const [maintenanceCreateTransaction, setMaintenanceCreateTransaction] = useState(false);
   const [savingMaintenance, setSavingMaintenance] = useState(false);
 
   const [fuelLiters, setFuelLiters] = useState('');
   const [fuelCost, setFuelCost] = useState('');
   const [fuelHourMeter, setFuelHourMeter] = useState('');
+  const [fuelCreateTransaction, setFuelCreateTransaction] = useState(false);
   const [savingFuel, setSavingFuel] = useState(false);
 
   const [chartGranularity, setChartGranularity] = useState<'day' | 'week' | 'month'>(
@@ -84,11 +86,13 @@ export default function MachineDetailPage() {
           description: maintenanceDescription,
           cost: maintenanceCost ? Number(maintenanceCost) : undefined,
           hourMeterAt: maintenanceHourMeter ? Number(maintenanceHourMeter) : undefined,
+          createTransaction: maintenanceCreateTransaction,
         },
       });
       setMaintenanceDescription('');
       setMaintenanceCost('');
       setMaintenanceHourMeter('');
+      setMaintenanceCreateTransaction(false);
       await loadData();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao registrar manutenção');
@@ -109,11 +113,13 @@ export default function MachineDetailPage() {
           liters: Number(fuelLiters),
           cost: fuelCost ? Number(fuelCost) : undefined,
           hourMeterAt: fuelHourMeter ? Number(fuelHourMeter) : undefined,
+          createTransaction: fuelCreateTransaction,
         },
       });
       setFuelLiters('');
       setFuelCost('');
       setFuelHourMeter('');
+      setFuelCreateTransaction(false);
       await loadData();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao registrar abastecimento');
@@ -316,6 +322,15 @@ export default function MachineDetailPage() {
             onChange={(e) => setMaintenanceHourMeter(e.target.value)}
             className="w-32 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
+          <label className="flex items-center gap-1.5 text-sm text-gray-600 whitespace-nowrap">
+            <input
+              type="checkbox"
+              checked={maintenanceCreateTransaction}
+              onChange={(e) => setMaintenanceCreateTransaction(e.target.checked)}
+              className="rounded border-gray-300"
+            />
+            Lançar no financeiro
+          </label>
           <button
             type="submit"
             disabled={savingMaintenance}
@@ -432,6 +447,15 @@ export default function MachineDetailPage() {
             onChange={(e) => setFuelHourMeter(e.target.value)}
             className="w-32 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
           />
+          <label className="flex items-center gap-1.5 text-sm text-gray-600 whitespace-nowrap">
+            <input
+              type="checkbox"
+              checked={fuelCreateTransaction}
+              onChange={(e) => setFuelCreateTransaction(e.target.checked)}
+              className="rounded border-gray-300"
+            />
+            Lançar no financeiro
+          </label>
           <button
             type="submit"
             disabled={savingFuel}

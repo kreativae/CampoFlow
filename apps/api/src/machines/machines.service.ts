@@ -55,7 +55,7 @@ export class MachinesService {
   ) {
     const machine = await this.findOne(farmId, machineId);
 
-    const [, maintenance] = await this.prisma.$transaction([
+    const ops: any[] = [
       this.prisma.machine.update({
         where: { id: machineId },
         data: {
@@ -75,9 +75,27 @@ export class MachinesService {
           notes: dto.notes,
         },
       }),
-    ]);
+    ];
 
-    return maintenance;
+    if (dto.createTransaction && dto.cost && dto.cost > 0) {
+      const dueDate = dto.performedAt ? new Date(dto.performedAt) : new Date();
+      ops.push(
+        this.prisma.transaction.create({
+          data: {
+            farmId,
+            type: 'DESPESA',
+            category: 'MAQUINARIO',
+            description: `Manutenção: ${machine.name} — ${dto.description}`,
+            amount: dto.cost,
+            dueDate,
+            paidAt: dueDate,
+          },
+        }),
+      );
+    }
+
+    const results = await this.prisma.$transaction(ops);
+    return results[1];
   }
 
   // Records a fuel entry and advances the hour meter if a higher reading was reported.
@@ -88,7 +106,7 @@ export class MachinesService {
   ) {
     const machine = await this.findOne(farmId, machineId);
 
-    const [, fuelRecord] = await this.prisma.$transaction([
+    const ops: any[] = [
       this.prisma.machine.update({
         where: { id: machineId },
         data: {
@@ -108,9 +126,27 @@ export class MachinesService {
           notes: dto.notes,
         },
       }),
-    ]);
+    ];
 
-    return fuelRecord;
+    if (dto.createTransaction && dto.cost && dto.cost > 0) {
+      const dueDate = dto.recordedAt ? new Date(dto.recordedAt) : new Date();
+      ops.push(
+        this.prisma.transaction.create({
+          data: {
+            farmId,
+            type: 'DESPESA',
+            category: 'COMBUSTIVEL',
+            description: `Combustível: ${machine.name} — ${dto.liters}L`,
+            amount: dto.cost,
+            dueDate,
+            paidAt: dueDate,
+          },
+        }),
+      );
+    }
+
+    const results = await this.prisma.$transaction(ops);
+    return results[1];
   }
 
   // currentHourMeter always tracks the highest hourMeterAt across every
