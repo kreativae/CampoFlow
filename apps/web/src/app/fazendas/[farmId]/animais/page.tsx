@@ -1,6 +1,6 @@
 'use client';
 
-import { Beef, SlidersHorizontal, X, Search } from 'lucide-react';
+import { Beef, SlidersHorizontal, X, Search, ShoppingCart, Skull } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 import Modal from '@/components/Modal';
 
@@ -16,6 +16,8 @@ import type {
   AnimalCategory,
   AnimalPerformance,
   AnimalSex,
+  Deal,
+  DealType,
   Pasture,
   ReproductiveEventType,
 } from '@/lib/types';
@@ -27,6 +29,23 @@ import {
 
 const SEX_OPTIONS: AnimalSex[] = ['FEMALE', 'MALE'];
 const PERFORMANCE_OPTIONS: AnimalPerformance[] = ['CABECEIRA', 'MEIO', 'FUNDO'];
+
+type AgePeriod = '0-4m' | '5-12m' | '13-24m' | '25-36m' | '36+';
+const AGE_PERIOD_OPTIONS: { value: AgePeriod; label: string }[] = [
+  { value: '0-4m', label: '0-4 meses' },
+  { value: '5-12m', label: '5-12 meses' },
+  { value: '13-24m', label: '13-24 meses' },
+  { value: '25-36m', label: '25-36 meses' },
+  { value: '36+', label: '36+ meses' },
+];
+
+const AGE_PERIOD_MAP: Record<string, AgePeriod> = {
+  '0-4 meses': '0-4m',
+  '5-12 meses': '5-12m',
+  '13-24 meses': '13-24m',
+  '25-36 meses': '25-36m',
+  '36+ meses': '36+',
+};
 const CATEGORY_OPTIONS: AnimalCategory[] = [
   'BEZERRO',
   'BEZERRA',
@@ -72,6 +91,7 @@ function FilterPanel({
   vaccinationStatuses, setVaccinationStatuses,
   reproductionTypes, setReproductionTypes,
   performances, setPerformances,
+  agePeriods, setAgePeriods,
   pastures,
   hasActiveFilters,
   onClear,
@@ -83,85 +103,111 @@ function FilterPanel({
   vaccinationStatuses: Set<VaccinationStatus>; setVaccinationStatuses: (s: Set<VaccinationStatus>) => void;
   reproductionTypes: Set<ReproductiveEventType>; setReproductionTypes: (s: Set<ReproductiveEventType>) => void;
   performances: Set<AnimalPerformance>; setPerformances: (s: Set<AnimalPerformance>) => void;
+  agePeriods: Set<AgePeriod>; setAgePeriods: (s: Set<AgePeriod>) => void;
   pastures: Pasture[];
   hasActiveFilters: boolean;
   onClear: () => void;
   toggleInSet: <T>(set: Set<T>, value: T, setter: (next: Set<T>) => void) => void;
 }) {
+  const sectionClass = 'group border-b border-gray-100 last:border-b-0';
+  const summaryClass = 'flex cursor-pointer list-none items-center justify-between py-2 text-xs font-semibold uppercase tracking-wider text-gray-500 select-none [&::-webkit-details-marker]:hidden';
+  const chevronClass = 'h-3.5 w-3.5 text-gray-400 transition-transform group-open:rotate-90';
+  const listClass = 'flex flex-col gap-0.5 pb-2';
+  const labelClass = 'flex items-center gap-1.5 rounded px-1 py-0.5 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer';
+  const chevron = <svg className={chevronClass} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 4l4 4-4 4" /></svg>;
+
   return (
-    <div className="space-y-4">
-      <div>
-        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-gray-400">Categoria</p>
-        <div className="flex flex-col gap-0.5">
+    <div className="space-y-0">
+      <details className={sectionClass}>
+        <summary className={summaryClass}>Categoria {categories.size > 0 && <span className="ml-1 rounded-full bg-emerald-100 px-1.5 text-[10px] font-bold text-emerald-700">{categories.size}</span>}{chevron}</summary>
+        <div className={listClass}>
           {CATEGORY_OPTIONS.map((opt) => (
-            <label key={opt} className="flex items-center gap-1.5 rounded px-1 py-0.5 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer">
+            <label key={opt} className={labelClass}>
               <input type="checkbox" checked={categories.has(opt)} onChange={() => toggleInSet(categories, opt, setCategories)} className="rounded border-gray-300" />
               {opt}
             </label>
           ))}
         </div>
-      </div>
-      <div>
-        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-gray-400">Sexo</p>
-        <div className="flex flex-col gap-0.5">
+      </details>
+
+      <details className={sectionClass}>
+        <summary className={summaryClass}>Sexo {sexes.size > 0 && <span className="ml-1 rounded-full bg-emerald-100 px-1.5 text-[10px] font-bold text-emerald-700">{sexes.size}</span>}{chevron}</summary>
+        <div className={listClass}>
           {SEX_OPTIONS.map((opt) => (
-            <label key={opt} className="flex items-center gap-1.5 rounded px-1 py-0.5 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer">
+            <label key={opt} className={labelClass}>
               <input type="checkbox" checked={sexes.has(opt)} onChange={() => toggleInSet(sexes, opt, setSexes)} className="rounded border-gray-300" />
               {opt === 'FEMALE' ? 'Fêmea' : 'Macho'}
             </label>
           ))}
         </div>
-      </div>
-      <div>
-        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-gray-400">Pasto</p>
-        <div className="flex max-h-28 flex-col gap-0.5 overflow-y-auto">
+      </details>
+
+      <details className={sectionClass}>
+        <summary className={summaryClass}>Pasto {pastureIds.size > 0 && <span className="ml-1 rounded-full bg-emerald-100 px-1.5 text-[10px] font-bold text-emerald-700">{pastureIds.size}</span>}{chevron}</summary>
+        <div className={`${listClass} max-h-28 overflow-y-auto`}>
           {pastures.length === 0 ? (
             <p className="text-xs text-gray-400">Nenhum pasto.</p>
           ) : (
             pastures.map((p) => (
-              <label key={p.id} className="flex items-center gap-1.5 rounded px-1 py-0.5 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer">
+              <label key={p.id} className={labelClass}>
                 <input type="checkbox" checked={pastureIds.has(p.id)} onChange={() => toggleInSet(pastureIds, p.id, setPastureIds)} className="rounded border-gray-300" />
                 {p.name}
               </label>
             ))
           )}
         </div>
-      </div>
-      <div>
-        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-gray-400">Vacinação</p>
-        <div className="flex flex-col gap-0.5">
+      </details>
+
+      <details className={sectionClass}>
+        <summary className={summaryClass}>Vacinação {vaccinationStatuses.size > 0 && <span className="ml-1 rounded-full bg-emerald-100 px-1.5 text-[10px] font-bold text-emerald-700">{vaccinationStatuses.size}</span>}{chevron}</summary>
+        <div className={listClass}>
           {VACCINATION_STATUS_OPTIONS.map((opt) => (
-            <label key={opt.value} className="flex items-center gap-1.5 rounded px-1 py-0.5 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer">
+            <label key={opt.value} className={labelClass}>
               <input type="checkbox" checked={vaccinationStatuses.has(opt.value)} onChange={() => toggleInSet(vaccinationStatuses, opt.value, setVaccinationStatuses)} className="rounded border-gray-300" />
               {opt.label}
             </label>
           ))}
         </div>
-      </div>
-      <div>
-        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-gray-400">Reprodução</p>
-        <div className="flex flex-col gap-0.5">
+      </details>
+
+      <details className={sectionClass}>
+        <summary className={summaryClass}>Reprodução {reproductionTypes.size > 0 && <span className="ml-1 rounded-full bg-emerald-100 px-1.5 text-[10px] font-bold text-emerald-700">{reproductionTypes.size}</span>}{chevron}</summary>
+        <div className={listClass}>
           {REPRODUCTIVE_EVENT_OPTIONS.map((opt) => (
-            <label key={opt.value} className="flex items-center gap-1.5 rounded px-1 py-0.5 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer">
+            <label key={opt.value} className={labelClass}>
               <input type="checkbox" checked={reproductionTypes.has(opt.value)} onChange={() => toggleInSet(reproductionTypes, opt.value, setReproductionTypes)} className="rounded border-gray-300" />
               {opt.label}
             </label>
           ))}
         </div>
-      </div>
-      <div>
-        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-gray-400">Desempenho</p>
-        <div className="flex flex-col gap-0.5">
+      </details>
+
+      <details className={sectionClass}>
+        <summary className={summaryClass}>Desempenho {performances.size > 0 && <span className="ml-1 rounded-full bg-emerald-100 px-1.5 text-[10px] font-bold text-emerald-700">{performances.size}</span>}{chevron}</summary>
+        <div className={listClass}>
           {PERFORMANCE_OPTIONS.map((opt) => (
-            <label key={opt} className="flex items-center gap-1.5 rounded px-1 py-0.5 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer">
+            <label key={opt} className={labelClass}>
               <input type="checkbox" checked={performances.has(opt)} onChange={() => toggleInSet(performances, opt, setPerformances)} className="rounded border-gray-300" />
               {ANIMAL_PERFORMANCE_LABEL[opt]}
             </label>
           ))}
         </div>
-      </div>
+      </details>
+
+      <details className={sectionClass}>
+        <summary className={summaryClass}>Período {agePeriods.size > 0 && <span className="ml-1 rounded-full bg-emerald-100 px-1.5 text-[10px] font-bold text-emerald-700">{agePeriods.size}</span>}{chevron}</summary>
+        <div className={listClass}>
+          {AGE_PERIOD_OPTIONS.map((opt) => (
+            <label key={opt.value} className={labelClass}>
+              <input type="checkbox" checked={agePeriods.has(opt.value)} onChange={() => toggleInSet(agePeriods, opt.value, setAgePeriods)} className="rounded border-gray-300" />
+              {opt.label}
+            </label>
+          ))}
+        </div>
+      </details>
+
       {hasActiveFilters && (
-        <button type="button" onClick={onClear} className="text-xs font-medium text-emerald-700 hover:underline">
+        <button type="button" onClick={onClear} className="pt-2 text-xs font-medium text-emerald-700 hover:underline">
           Limpar filtros
         </button>
       )}
@@ -212,6 +258,18 @@ export default function AnimalsPage() {
   const [movePastureId, setMovePastureId] = useState('');
   const [moving, setMoving] = useState(false);
 
+  const [dealFormType, setDealFormType] = useState<DealType | null>(null);
+  const [dealCounterparty, setDealCounterparty] = useState('');
+  const [dealPricePerUnit, setDealPricePerUnit] = useState('');
+  const [dealPriceUnit, setDealPriceUnit] = useState<'ANIMAL' | 'ARROBA'>('ARROBA');
+  const [dealFreightCost, setDealFreightCost] = useState('');
+  const [dealCommission, setDealCommission] = useState('');
+  const [dealDate, setDealDate] = useState(new Date().toISOString().slice(0, 10));
+  const [dealNotes, setDealNotes] = useState('');
+  const [dealCarcassYield, setDealCarcassYield] = useState('52');
+  const [dealLiveWeightPrice, setDealLiveWeightPrice] = useState('');
+  const [dealSaving, setDealSaving] = useState(false);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [filterCategories, setFilterCategories] = useState<Set<AnimalCategory>>(new Set());
@@ -224,6 +282,7 @@ export default function AnimalsPage() {
     Set<ReproductiveEventType>
   >(new Set());
   const [filterPerformances, setFilterPerformances] = useState<Set<AnimalPerformance>>(new Set());
+  const [filterAgePeriods, setFilterAgePeriods] = useState<Set<AgePeriod>>(new Set());
 
   function toggleInSet<T>(set: Set<T>, value: T, setter: (next: Set<T>) => void) {
     const next = new Set(set);
@@ -450,6 +509,12 @@ export default function AnimalsPage() {
     if (filterPerformances.size > 0 && !(a.performance && filterPerformances.has(a.performance))) {
       return false;
     }
+    if (filterAgePeriods.size > 0) {
+      const age = calcAnimalAge(a);
+      if (!age) return false;
+      const period = AGE_PERIOD_MAP[age.category];
+      if (!period || !filterAgePeriods.has(period)) return false;
+    }
     return true;
   });
 
@@ -459,7 +524,8 @@ export default function AnimalsPage() {
       filterPastureIds.size ||
       filterVaccinationStatuses.size ||
       filterReproductionTypes.size ||
-      filterPerformances.size,
+      filterPerformances.size ||
+      filterAgePeriods.size,
   );
 
   const activeFilterCount =
@@ -468,7 +534,8 @@ export default function AnimalsPage() {
     filterPastureIds.size +
     filterVaccinationStatuses.size +
     filterReproductionTypes.size +
-    filterPerformances.size;
+    filterPerformances.size +
+    filterAgePeriods.size;
 
   function clearFilters() {
     setFilterCategories(new Set());
@@ -477,6 +544,7 @@ export default function AnimalsPage() {
     setFilterVaccinationStatuses(new Set());
     setFilterReproductionTypes(new Set());
     setFilterPerformances(new Set());
+    setFilterAgePeriods(new Set());
   }
 
   function toggleSelectAll(checked: boolean) {
@@ -488,6 +556,60 @@ export default function AnimalsPage() {
     (sum, a) => sum + (a.currentWeightKg ?? 0),
     0,
   );
+
+  function openDealForm(type: DealType) {
+    setDealFormType(type);
+    setDealCounterparty('');
+    setDealPricePerUnit('');
+    setDealPriceUnit('ARROBA');
+    setDealFreightCost('');
+    setDealCommission('');
+    setDealDate(new Date().toISOString().slice(0, 10));
+    setDealNotes('');
+    setDealCarcassYield('52');
+    setDealLiveWeightPrice('');
+  }
+
+  async function handleDealSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (!dealFormType || selectedAnimals.length === 0) return;
+    setDealSaving(true);
+    setError(null);
+    try {
+      const items = selectedAnimals.map((a) => ({
+        animalId: a.id,
+        earTag: a.earTag,
+        weightKg: a.currentWeightKg ?? undefined,
+      }));
+      const body: Record<string, unknown> = {
+        type: dealFormType,
+        counterparty: dealCounterparty || undefined,
+        pricePerUnit: Number(dealPricePerUnit) || 0,
+        priceUnit: dealPriceUnit,
+        freightCost: Number(dealFreightCost) || 0,
+        commissionPercent: Number(dealCommission) || 0,
+        notes: dealNotes || undefined,
+        dealDate,
+        items,
+      };
+      if (dealFormType === 'ABATE') {
+        body.carcassYieldPercent = Number(dealCarcassYield) || undefined;
+        body.liveWeightPricePerKg = Number(dealLiveWeightPrice) || undefined;
+      }
+      await apiFetch<Deal>(`/fazendas/${farmId}/negocios`, {
+        method: 'POST',
+        token: accessToken,
+        body,
+      });
+      toastSuccess(`${dealFormType === 'VENDA' ? 'Venda' : 'Abate'} criado com ${selectedAnimals.length} animal(is).`);
+      setDealFormType(null);
+      setSelected(new Set());
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao criar negócio');
+    } finally {
+      setDealSaving(false);
+    }
+  }
 
   if (loading || !user) {
     return (
@@ -650,6 +772,7 @@ export default function AnimalsPage() {
                   vaccinationStatuses={filterVaccinationStatuses} setVaccinationStatuses={setFilterVaccinationStatuses}
                   reproductionTypes={filterReproductionTypes} setReproductionTypes={setFilterReproductionTypes}
                   performances={filterPerformances} setPerformances={setFilterPerformances}
+                  agePeriods={filterAgePeriods} setAgePeriods={setFilterAgePeriods}
                   pastures={pastures}
                   hasActiveFilters={hasActiveFilters}
                   onClear={clearFilters}
@@ -670,6 +793,7 @@ export default function AnimalsPage() {
                 vaccinationStatuses={filterVaccinationStatuses} setVaccinationStatuses={setFilterVaccinationStatuses}
                 reproductionTypes={filterReproductionTypes} setReproductionTypes={setFilterReproductionTypes}
                 performances={filterPerformances} setPerformances={setFilterPerformances}
+                agePeriods={filterAgePeriods} setAgePeriods={setFilterAgePeriods}
                 pastures={pastures}
                 hasActiveFilters={hasActiveFilters}
                 onClear={clearFilters}
@@ -712,13 +836,97 @@ export default function AnimalsPage() {
                   {selectedTotalWeightKg.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}{' '}
                   kg
                 </p>
-                <button
-                  type="button"
-                  onClick={() => { setMovePastureId(''); setMoveModalOpen(true); }}
-                  className="rounded-lg bg-emerald-700 px-3 py-1.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800"
-                >
-                  Mover de pasto
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setMovePastureId(''); setMoveModalOpen(true); }}
+                    className="rounded-lg bg-emerald-700 px-3 py-1.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-emerald-800"
+                  >
+                    Mover de pasto
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openDealForm('VENDA')}
+                    className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-blue-700"
+                  >
+                    <ShoppingCart size={14} /> Nova Venda
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openDealForm('ABATE')}
+                    className="flex items-center gap-1.5 rounded-lg bg-orange-600 px-3 py-1.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-orange-700"
+                  >
+                    <Skull size={14} /> Novo Abate
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {dealFormType && (
+              <div className="mb-4 rounded-xl border border-gray-200 bg-white p-4 shadow-md">
+                <div className="mb-3 flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-gray-900">
+                    {dealFormType === 'VENDA' ? '🛒 Nova Venda' : '🔪 Novo Abate'} — {selectedAnimals.length} animal(is), {selectedTotalWeightKg.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} kg
+                  </h3>
+                  <button type="button" onClick={() => setDealFormType(null)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+                </div>
+                <form onSubmit={handleDealSubmit} className="space-y-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">{dealFormType === 'VENDA' ? 'Comprador' : 'Frigorífico'}</label>
+                      <input type="text" value={dealCounterparty} onChange={(e) => setDealCounterparty(e.target.value)} placeholder={dealFormType === 'VENDA' ? 'Nome do comprador' : 'Nome do frigorífico'} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Preço por</label>
+                      <div className="flex gap-2">
+                        <select value={dealPriceUnit} onChange={(e) => setDealPriceUnit(e.target.value as 'ANIMAL' | 'ARROBA')} className="rounded-lg border border-gray-300 px-2 py-2 text-sm">
+                          <option value="ARROBA">Arroba</option>
+                          <option value="ANIMAL">Animal</option>
+                        </select>
+                        <input type="number" step="0.01" value={dealPricePerUnit} onChange={(e) => setDealPricePerUnit(e.target.value)} placeholder="R$ 0,00" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Data</label>
+                      <input type="date" value={dealDate} onChange={(e) => setDealDate(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Frete (R$)</label>
+                      <input type="number" step="0.01" value={dealFreightCost} onChange={(e) => setDealFreightCost(e.target.value)} placeholder="0,00" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Comissão (%)</label>
+                      <input type="number" step="0.1" value={dealCommission} onChange={(e) => setDealCommission(e.target.value)} placeholder="0" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+                    </div>
+                    {dealFormType === 'ABATE' && (
+                      <>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Rendimento carcaça (%)</label>
+                          <input type="number" step="0.1" value={dealCarcassYield} onChange={(e) => setDealCarcassYield(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Preço peso vivo (R$/kg)</label>
+                          <input type="number" step="0.01" value={dealLiveWeightPrice} onChange={(e) => setDealLiveWeightPrice(e.target.value)} placeholder="0,00" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Observações</label>
+                    <input type="text" value={dealNotes} onChange={(e) => setDealNotes(e.target.value)} placeholder="Observações (opcional)" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+                  </div>
+                  <div className="flex items-center justify-between border-t border-gray-100 pt-3">
+                    <p className="text-xs text-gray-500">
+                      Animais: <b>{selectedAnimals.length}</b> · Peso: <b>{selectedTotalWeightKg.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} kg</b> · Arrobas: <b>{(selectedTotalWeightKg / 15).toFixed(1)}</b>
+                    </p>
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => setDealFormType(null)} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancelar</button>
+                      <button type="submit" disabled={dealSaving} className={`rounded-lg px-4 py-2 text-sm font-semibold text-white transition-colors ${dealFormType === 'VENDA' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-orange-600 hover:bg-orange-700'} disabled:opacity-50`}>
+                        {dealSaving ? 'Salvando...' : dealFormType === 'VENDA' ? 'Criar Venda' : 'Criar Abate'}
+                      </button>
+                    </div>
+                  </div>
+                </form>
               </div>
             )}
 
