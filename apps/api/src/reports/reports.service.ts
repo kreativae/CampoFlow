@@ -22,11 +22,16 @@ export class ReportsService {
   async build(
     farmId: string,
     type: ReportType,
-    options?: { dealId?: string },
+    options?: {
+      dealId?: string;
+      birthMonth?: number;
+      performance?: string;
+      sortByGain?: 'asc' | 'desc';
+    },
   ): Promise<ReportTable> {
     switch (type) {
       case 'rebanho':
-        return this.buildHerdReport(farmId);
+        return this.buildHerdReport(farmId, options);
       case 'financeiro':
         return this.buildFinanceReport(farmId);
       case 'sanidade':
@@ -52,24 +57,84 @@ export class ReportsService {
     }
   }
 
-  private async buildHerdReport(farmId: string): Promise<ReportTable> {
+  private async buildHerdReport(
+    farmId: string,
+    filters?: { birthMonth?: number; performance?: string; sortByGain?: 'asc' | 'desc' },
+  ): Promise<ReportTable> {
     const animals = await this.prisma.animal.findMany({
-      where: { farmId, active: true },
-      include: { pasture: { select: { name: true } } },
+      where: {
+        farmId,
+        active: true,
+        ...(filters?.performance ? { performance: filters.performance as any } : {}),
+      },
+      include: {
+        pasture: { select: { name: true } },
+        weighings: { orderBy: { weighedAt: 'asc' } },
+      },
       orderBy: { earTag: 'asc' },
     });
 
+    const performanceLabel: Record<string, string> = {
+      CABECEIRA: 'Cabeceira',
+      MEIO: 'Meio',
+      FUNDO: 'Fundo',
+    };
+
+    const ageCategoryLabel = (refDate: Date | null): string => {
+      if (!refDate) return '-';
+      const months = Math.floor(
+        (Date.now() - refDate.getTime()) / (1000 * 60 * 60 * 24 * 30.44),
+      );
+      if (months <= 4) return '0-4 meses';
+      if (months <= 12) return '5-12 meses';
+      if (months <= 24) return '13-24 meses';
+      if (months <= 36) return '25-36 meses';
+      return '36+ meses';
+    };
+
+    let rows = animals
+      .filter((a) => {
+        if (filters?.birthMonth && a.birthDate) {
+          return a.birthDate.getMonth() + 1 === filters.birthMonth;
+        }
+        return !filters?.birthMonth;
+      })
+      .map((a) => {
+        const ws = a.weighings;
+        const gainKg =
+          ws.length >= 2 ? ws[ws.length - 1].weightKg - ws[0].weightKg : 0;
+        const refDate = a.birthDate ?? a.entryDate;
+        return {
+          row: [
+            a.earTag,
+            a.category,
+            a.sex === 'FEMALE' ? 'Fêmea' : 'Macho',
+            a.breed ?? '-',
+            a.currentWeightKg ?? '-',
+            a.pasture?.name ?? '-',
+            ageCategoryLabel(refDate),
+            performanceLabel[a.performance ?? ''] ?? '-',
+            ws.length >= 2 ? Number(gainKg.toFixed(1)) : '-',
+          ] as (string | number)[],
+          gainKg,
+        };
+      });
+
+    if (filters?.sortByGain) {
+      rows.sort((a, b) =>
+        filters.sortByGain === 'desc'
+          ? b.gainKg - a.gainKg
+          : a.gainKg - b.gainKg,
+      );
+    }
+
     return {
       title: 'Relatório de Rebanho',
-      headers: ['Brinco', 'Categoria', 'Sexo', 'Raça', 'Peso (kg)', 'Pasto'],
-      rows: animals.map((a) => [
-        a.earTag,
-        a.category,
-        a.sex === 'FEMALE' ? 'Fêmea' : 'Macho',
-        a.breed ?? '-',
-        a.currentWeightKg ?? '-',
-        a.pasture?.name ?? '-',
-      ]),
+      headers: [
+        'Brinco', 'Categoria', 'Sexo', 'Raça', 'Peso (kg)', 'Pasto',
+        'Faixa Etária', 'Desempenho', 'Ganho Total (kg)',
+      ],
+      rows: rows.map((r) => r.row),
     };
   }
 

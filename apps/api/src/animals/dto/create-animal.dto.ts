@@ -6,7 +6,7 @@ import {
   IsString,
   MinLength,
 } from 'class-validator';
-import { AnimalCategory, AnimalSex } from '@prisma/client';
+import { AnimalCategory, AnimalPerformance, AnimalSex } from '@prisma/client';
 
 export class CreateAnimalDto {
   @IsString()
@@ -42,4 +42,20 @@ export class CreateAnimalDto {
   @IsOptional()
   @IsString()
   pastureId?: string;
+
+  @IsOptional()
+  @IsEnum(AnimalPerformance)
+  performance?: AnimalPerformance;
+
+  @IsOptional()
+  @IsDateString()
+  entryDate?: string;
+
+  @IsOptional()
+  @IsString()
+  fatherId?: string;
+
+  @IsOptional()
+  @IsString()
+  motherId?: string;
 }

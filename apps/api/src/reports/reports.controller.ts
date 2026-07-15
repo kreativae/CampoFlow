@@ -47,6 +47,9 @@ export class ReportsController {
     @Param('type') type: string,
     @Query('format') format: string | undefined,
     @Query('dealId') dealId: string | undefined,
+    @Query('birthMonth') birthMonth: string | undefined,
+    @Query('performance') performance: string | undefined,
+    @Query('sortByGain') sortByGain: string | undefined,
     @Res() res: Response,
   ) {
     if (!VALID_TYPES.includes(type as ReportType)) {
@@ -63,6 +66,9 @@ export class ReportsController {
 
     const table = await this.reportsService.build(farmId, type as ReportType, {
       dealId,
+      birthMonth: birthMonth ? parseInt(birthMonth, 10) : undefined,
+      performance,
+      sortByGain: sortByGain as 'asc' | 'desc' | undefined,
     });
 
     const buffer =

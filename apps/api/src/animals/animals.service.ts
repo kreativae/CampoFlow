@@ -19,6 +19,7 @@ export class AnimalsService {
     if (dto.pastureId) {
       await this.assertPastureBelongsToFarm(farmId, dto.pastureId);
     }
+    await this.validateParents(farmId, dto.fatherId, dto.motherId);
 
     try {
       return await this.prisma.animal.create({
@@ -26,6 +27,7 @@ export class AnimalsService {
           ...dto,
           farmId,
           birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
+          entryDate: dto.entryDate ? new Date(dto.entryDate) : undefined,
         },
       });
     } catch (error) {
@@ -41,18 +43,35 @@ export class AnimalsService {
     }
   }
 
-  findAll(farmId: string) {
-    return this.prisma.animal.findMany({ where: { farmId, active: true } });
+  findAll(farmId: string, performance?: string) {
+    return this.prisma.animal.findMany({
+      where: {
+        farmId,
+        active: true,
+        ...(performance ? { performance: performance as any } : {}),
+      },
+    });
   }
 
   async findOne(farmId: string, animalId: string) {
     const animal = await this.prisma.animal.findUnique({
       where: { id: animalId },
+      include: {
+        father: { select: { id: true, earTag: true, name: true } },
+        mother: { select: { id: true, earTag: true, name: true } },
+        childrenAsFather: { select: { id: true, earTag: true, name: true }, where: { active: true } },
+        childrenAsMother: { select: { id: true, earTag: true, name: true }, where: { active: true } },
+      },
     });
     if (!animal || animal.farmId !== farmId) {
       throw new NotFoundException('Animal não encontrado');
     }
-    return animal;
+    const children = [
+      ...animal.childrenAsFather,
+      ...animal.childrenAsMother,
+    ];
+    const { childrenAsFather, childrenAsMother, ...rest } = animal;
+    return { ...rest, children };
   }
 
   async update(farmId: string, animalId: string, dto: UpdateAnimalDto) {
@@ -60,12 +79,14 @@ export class AnimalsService {
     if (dto.pastureId) {
       await this.assertPastureBelongsToFarm(farmId, dto.pastureId);
     }
+    await this.validateParents(farmId, dto.fatherId, dto.motherId, animalId);
 
     return this.prisma.animal.update({
       where: { id: animalId },
       data: {
         ...dto,
         birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
+        entryDate: dto.entryDate ? new Date(dto.entryDate) : undefined,
       },
     });
   }
@@ -169,6 +190,52 @@ export class AnimalsService {
       where: { animalId },
       orderBy: { occurredAt: 'desc' },
     });
+  }
+
+  async search(farmId: string, q: string, sex?: string) {
+    return this.prisma.animal.findMany({
+      where: {
+        farmId,
+        active: true,
+        ...(sex ? { sex: sex as any } : {}),
+        OR: [
+          { earTag: { contains: q, mode: 'insensitive' } },
+          { name: { contains: q, mode: 'insensitive' } },
+        ],
+      },
+      select: { id: true, earTag: true, name: true, sex: true },
+      take: 20,
+    });
+  }
+
+  private async validateParents(
+    farmId: string,
+    fatherId?: string,
+    motherId?: string,
+    selfId?: string,
+  ) {
+    if (fatherId) {
+      if (fatherId === selfId)
+        throw new BadRequestException('Animal não pode ser pai de si mesmo');
+      const father = await this.prisma.animal.findUnique({
+        where: { id: fatherId },
+      });
+      if (!father || father.farmId !== farmId)
+        throw new BadRequestException('Pai não encontrado nesta fazenda');
+      if (father.sex !== 'MALE')
+        throw new BadRequestException('O pai deve ser macho');
+    }
+    if (motherId) {
+      if (motherId === selfId)
+        throw new BadRequestException('Animal não pode ser mãe de si mesmo');
+      const mother = await this.prisma.animal.findUnique({
+        where: { id: motherId },
+      });
+      if (!mother || mother.farmId !== farmId)
+        throw new BadRequestException('Mãe não encontrada nesta fazenda');
+      if (mother.sex !== 'FEMALE')
+        throw new BadRequestException('A mãe deve ser fêmea');
+    }
   }
 
   private async assertPastureBelongsToFarm(farmId: string, pastureId: string) {

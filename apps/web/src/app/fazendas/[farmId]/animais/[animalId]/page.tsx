@@ -9,6 +9,8 @@ import { useConfirm } from '@/lib/confirm-context';
 import type {
   Animal,
   AnimalEvent,
+  AnimalParent,
+  AnimalPerformance,
   GainSummary,
   Pasture,
   PregnancyDiagnosisResult,
@@ -17,7 +19,12 @@ import type {
   VaccinationRecord,
   WeighingRecord,
 } from '@/lib/types';
-import { ANIMAL_EVENT_TYPE_LABEL } from '@/lib/types';
+import {
+  ANIMAL_EVENT_TYPE_LABEL,
+  ANIMAL_PERFORMANCE_LABEL,
+  ANIMAL_PERFORMANCE_COLOR,
+  calcAnimalAge,
+} from '@/lib/types';
 
 const REPRODUCTIVE_EVENT_OPTIONS: { value: ReproductiveEventType; label: string }[] = [
   { value: 'IATF', label: 'IATF' },
@@ -371,10 +378,19 @@ export default function AnimalDetailPage() {
           ← Rebanho
         </Link>
         <h1 className="text-2xl font-semibold tracking-tight text-gray-900">{animal?.earTag}</h1>
-        <p className="text-sm text-gray-500">
-          {animal?.category} · {animal?.sex === 'FEMALE' ? 'Fêmea' : 'Macho'} ·{' '}
-          {animal?.breed ?? 'Raça não informada'}
-        </p>
+        <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-gray-500">
+          <span>{animal?.category} · {animal?.sex === 'FEMALE' ? 'Fêmea' : 'Macho'} · {animal?.breed ?? 'Raça não informada'}</span>
+          {animal?.performance && (
+            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${ANIMAL_PERFORMANCE_COLOR[animal.performance]}`}>
+              {ANIMAL_PERFORMANCE_LABEL[animal.performance]}
+            </span>
+          )}
+          {animal && (() => { const age = calcAnimalAge(animal); return age ? (
+            <span className="inline-flex items-center rounded-full bg-blue-100 text-blue-800 px-2 py-0.5 text-xs font-medium">
+              {age.label} · {age.category}
+            </span>
+          ) : null; })()}
+        </div>
       </header>
 
       {error && (
@@ -737,6 +753,123 @@ export default function AnimalDetailPage() {
         )}
       </section>
 
+      {/* Desempenho */}
+      <section className="mb-8 rounded-xl border border-gray-200/80 bg-white shadow-sm p-4">
+        <h2 className="mb-3 font-semibold text-gray-800">Desempenho</h2>
+        <div className="flex flex-wrap items-center gap-3">
+          <select
+            value={animal?.performance ?? ''}
+            onChange={async (e) => {
+              const val = e.target.value || null;
+              try {
+                await apiFetch(`/fazendas/${farmId}/animais/${animalId}`, {
+                  method: 'PATCH',
+                  token: accessToken,
+                  body: { performance: val },
+                });
+                await loadData();
+              } catch {}
+            }}
+            className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+          >
+            <option value="">— Sem classificação —</option>
+            <option value="CABECEIRA">Cabeceira (melhor)</option>
+            <option value="MEIO">Meio</option>
+            <option value="FUNDO">Fundo (pior)</option>
+          </select>
+          <p className="text-xs text-gray-500">Classificação de rendimento de engorda</p>
+        </div>
+      </section>
+
+      {/* Genealogia */}
+      <section className="mb-8 rounded-xl border border-gray-200/80 bg-white shadow-sm p-4">
+        <h2 className="mb-3 font-semibold text-gray-800">Genealogia</h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-gray-500 mb-1">Pai</p>
+            {animal?.father ? (
+              <Link href={`/fazendas/${farmId}/animais/${animal.father.id}`} className="text-sm text-emerald-700 hover:underline">
+                {animal.father.earTag}{animal.father.name ? ` — ${animal.father.name}` : ''}
+              </Link>
+            ) : (
+              <ParentSearch
+                farmId={farmId}
+                sex="MALE"
+                label="Buscar pai..."
+                token={accessToken}
+                onSelect={async (id) => {
+                  await apiFetch(`/fazendas/${farmId}/animais/${animalId}`, {
+                    method: 'PATCH', token: accessToken, body: { fatherId: id },
+                  });
+                  await loadData();
+                }}
+              />
+            )}
+            {animal?.father && (
+              <button
+                onClick={async () => {
+                  await apiFetch(`/fazendas/${farmId}/animais/${animalId}`, {
+                    method: 'PATCH', token: accessToken, body: { fatherId: null },
+                  });
+                  await loadData();
+                }}
+                className="mt-1 text-xs text-red-600 hover:underline"
+              >
+                Remover pai
+              </button>
+            )}
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wide text-gray-500 mb-1">Mãe</p>
+            {animal?.mother ? (
+              <Link href={`/fazendas/${farmId}/animais/${animal.mother.id}`} className="text-sm text-emerald-700 hover:underline">
+                {animal.mother.earTag}{animal.mother.name ? ` — ${animal.mother.name}` : ''}
+              </Link>
+            ) : (
+              <ParentSearch
+                farmId={farmId}
+                sex="FEMALE"
+                label="Buscar mãe..."
+                token={accessToken}
+                onSelect={async (id) => {
+                  await apiFetch(`/fazendas/${farmId}/animais/${animalId}`, {
+                    method: 'PATCH', token: accessToken, body: { motherId: id },
+                  });
+                  await loadData();
+                }}
+              />
+            )}
+            {animal?.mother && (
+              <button
+                onClick={async () => {
+                  await apiFetch(`/fazendas/${farmId}/animais/${animalId}`, {
+                    method: 'PATCH', token: accessToken, body: { motherId: null },
+                  });
+                  await loadData();
+                }}
+                className="mt-1 text-xs text-red-600 hover:underline"
+              >
+                Remover mãe
+              </button>
+            )}
+          </div>
+        </div>
+        {animal?.children && animal.children.length > 0 && (
+          <div className="mt-4">
+            <p className="text-xs uppercase tracking-wide text-gray-500 mb-1">Filhos ({animal.children.length})</p>
+            <ul className="space-y-1">
+              {animal.children.map((c) => (
+                <li key={c.id}>
+                  <Link href={`/fazendas/${farmId}/animais/${c.id}`} className="text-sm text-emerald-700 hover:underline">
+                    {c.earTag}{c.name ? ` — ${c.name}` : ''}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </section>
+
       <section className="rounded-xl border border-gray-200/80 bg-white shadow-sm p-4">
         <h2 className="mb-3 font-semibold text-gray-800">Histórico</h2>
         {history.length === 0 ? (
@@ -816,6 +949,26 @@ function WeightEvolutionChart({ weighings }: { weighings: WeighingRecord[] }) {
       {coords.map((c) => (
         <circle key={c.id} cx={c.x} cy={c.y} r={3} fill="#15803d" />
       ))}
+      {coords.map((c, i) => {
+        if (i === 0) return null;
+        const prev = coords[i - 1];
+        const delta = c.weightKg - prev.weightKg;
+        const mx = (prev.x + c.x) / 2;
+        const my = Math.min(prev.y, c.y) - 8;
+        return (
+          <text
+            key={`delta-${c.id}`}
+            x={mx}
+            y={my}
+            fontSize={7}
+            fill={delta >= 0 ? '#16a34a' : '#dc2626'}
+            textAnchor="middle"
+            fontWeight="bold"
+          >
+            {delta >= 0 ? '+' : ''}{delta.toFixed(1)} kg
+          </text>
+        );
+      })}
       <text x={padding} y={14} fontSize={8} fill="#6b7280">
         {maxWeight.toFixed(1)} kg
       </text>
@@ -835,5 +988,72 @@ function WeightEvolutionChart({ weighings }: { weighings: WeighingRecord[] }) {
         {new Date(coords[coords.length - 1].weighedAt).toLocaleDateString('pt-BR')}
       </text>
     </svg>
+  );
+}
+
+function ParentSearch({
+  farmId,
+  sex,
+  label,
+  token,
+  onSelect,
+}: {
+  farmId: string;
+  sex: 'MALE' | 'FEMALE';
+  label: string;
+  token: string | null;
+  onSelect: (id: string) => Promise<void>;
+}) {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<AnimalParent[]>([]);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (query.length < 2) { setResults([]); return; }
+    const timeout = setTimeout(async () => {
+      try {
+        const data = await apiFetch<AnimalParent[]>(
+          `/fazendas/${farmId}/animais/busca?q=${encodeURIComponent(query)}&sexo=${sex}`,
+          { token },
+        );
+        setResults(data);
+        setOpen(true);
+      } catch {}
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [query, farmId, sex, token]);
+
+  return (
+    <div className="relative">
+      <input
+        type="text"
+        placeholder={label}
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        onFocus={() => results.length > 0 && setOpen(true)}
+        onBlur={() => setTimeout(() => setOpen(false), 200)}
+        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-xs focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+      />
+      {open && results.length > 0 && (
+        <ul className="absolute z-10 mt-1 max-h-40 w-full overflow-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+          {results.map((r) => (
+            <li key={r.id}>
+              <button
+                type="button"
+                className="w-full px-3 py-1.5 text-left text-sm hover:bg-emerald-50"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={async () => {
+                  setOpen(false);
+                  setQuery('');
+                  await onSelect(r.id);
+                }}
+              >
+                {r.earTag}{r.name ? ` — ${r.name}` : ''}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { Role } from '@prisma/client';
@@ -31,10 +32,23 @@ export class AnimalsController {
     return this.animalsService.create(farmId, dto);
   }
 
+  @Get('busca')
+  @UseGuards(FarmAccessGuard)
+  search(
+    @Param('farmId') farmId: string,
+    @Query('q') q: string,
+    @Query('sexo') sex?: string,
+  ) {
+    return this.animalsService.search(farmId, q || '', sex);
+  }
+
   @Get()
   @UseGuards(FarmAccessGuard)
-  findAll(@Param('farmId') farmId: string) {
-    return this.animalsService.findAll(farmId);
+  findAll(
+    @Param('farmId') farmId: string,
+    @Query('performance') performance?: string,
+  ) {
+    return this.animalsService.findAll(farmId, performance);
   }
 
   @Get(':animalId')

@@ -34,6 +34,10 @@ export default function ReportsPage() {
   const [downloading, setDownloading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const [herdBirthMonth, setHerdBirthMonth] = useState('');
+  const [herdPerformance, setHerdPerformance] = useState('');
+  const [herdSortByGain, setHerdSortByGain] = useState('');
+
   useEffect(() => {
     if (loading) return;
     if (!user) {
@@ -46,11 +50,13 @@ export default function ReportsPage() {
     setDownloading(key);
     setError(null);
     try {
-      await apiDownload(
-        `/fazendas/${farmId}/relatorios/${reportType}?format=${reportFormat}`,
-        `${reportType}.${reportFormat}`,
-        accessToken,
-      );
+      let url = `/fazendas/${farmId}/relatorios/${reportType}?format=${reportFormat}`;
+      if (reportType === 'rebanho') {
+        if (herdBirthMonth) url += `&birthMonth=${herdBirthMonth}`;
+        if (herdPerformance) url += `&performance=${herdPerformance}`;
+        if (herdSortByGain) url += `&sortByGain=${herdSortByGain}`;
+      }
+      await apiDownload(url, `${reportType}.${reportFormat}`, accessToken);
     } catch (err) {
       setError(
         err instanceof ApiError
@@ -124,6 +130,38 @@ export default function ReportsPage() {
           {downloading === `${type}-${format}` ? 'Gerando...' : 'Baixar relatório'}
         </button>
       </div>
+
+      {type === 'rebanho' && (
+        <div className="mb-8 flex flex-wrap items-end gap-3 rounded-xl border border-gray-200/80 bg-white shadow-sm p-4">
+          <p className="w-full text-xs font-semibold uppercase tracking-wide text-gray-500">Filtros do relatório de rebanho</p>
+          <div>
+            <label className="text-xs font-medium text-gray-600">Mês de nascimento</label>
+            <select value={herdBirthMonth} onChange={(e) => setHerdBirthMonth(e.target.value)} className="mt-1 block rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15">
+              <option value="">Todos</option>
+              {['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'].map((m, i) => (
+                <option key={i + 1} value={i + 1}>{m}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-gray-600">Desempenho</label>
+            <select value={herdPerformance} onChange={(e) => setHerdPerformance(e.target.value)} className="mt-1 block rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15">
+              <option value="">Todos</option>
+              <option value="CABECEIRA">Cabeceira</option>
+              <option value="MEIO">Meio</option>
+              <option value="FUNDO">Fundo</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-gray-600">Ordenar por ganho</label>
+            <select value={herdSortByGain} onChange={(e) => setHerdSortByGain(e.target.value)} className="mt-1 block rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15">
+              <option value="">Padrão</option>
+              <option value="desc">Maior ganho primeiro</option>
+              <option value="asc">Menor ganho primeiro</option>
+            </select>
+          </div>
+        </div>
+      )}
 
       <ul className="space-y-2">
         {TYPE_OPTIONS.map((opt) => (
