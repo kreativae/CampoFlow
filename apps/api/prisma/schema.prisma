@@ -241,6 +241,12 @@ enum AnimalCategory {
   MATRIZ
 }
 
+enum AnimalPerformance {
+  FUNDO
+  MEIO
+  CABECEIRA
+}
+
 model Animal {
   id                 String              @id @default(uuid())
   farm               Farm                @relation(fields: [farmId], references: [id])
@@ -254,8 +260,16 @@ model Animal {
   breed              String?
   category           AnimalCategory
   birthDate          DateTime?
+  entryDate          DateTime?
   currentWeightKg    Float?
+  performance        AnimalPerformance?
   active             Boolean             @default(true)
+  fatherId           String?
+  motherId           String?
+  father             Animal?             @relation("AnimalFather", fields: [fatherId], references: [id])
+  mother             Animal?             @relation("AnimalMother", fields: [motherId], references: [id])
+  childrenAsFather   Animal[]            @relation("AnimalFather")
+  childrenAsMother   Animal[]            @relation("AnimalMother")
   events             AnimalEvent[]
   vaccinations       VaccinationRecord[]
   treatments         TreatmentRecord[]

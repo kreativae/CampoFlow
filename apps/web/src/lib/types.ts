@@ -361,6 +361,26 @@ export type AnimalCategory =
   | 'TOURO'
   | 'MATRIZ';
 
+export type AnimalPerformance = 'FUNDO' | 'MEIO' | 'CABECEIRA';
+
+export const ANIMAL_PERFORMANCE_LABEL: Record<AnimalPerformance, string> = {
+  CABECEIRA: 'Cabeceira',
+  MEIO: 'Meio',
+  FUNDO: 'Fundo',
+};
+
+export const ANIMAL_PERFORMANCE_COLOR: Record<AnimalPerformance, string> = {
+  CABECEIRA: 'bg-green-100 text-green-800',
+  MEIO: 'bg-yellow-100 text-yellow-800',
+  FUNDO: 'bg-red-100 text-red-800',
+};
+
+export interface AnimalParent {
+  id: string;
+  earTag: string;
+  name: string | null;
+}
+
 export interface Animal {
   id: string;
   farmId: string;
@@ -372,8 +392,36 @@ export interface Animal {
   breed: string | null;
   category: AnimalCategory;
   birthDate: string | null;
+  entryDate: string | null;
   currentWeightKg: number | null;
+  performance: AnimalPerformance | null;
   active: boolean;
+  fatherId: string | null;
+  motherId: string | null;
+  father: AnimalParent | null;
+  mother: AnimalParent | null;
+  children: AnimalParent[];
+}
+
+export function calcAnimalAge(animal: { birthDate: string | null; entryDate: string | null }): { label: string; category: string } | null {
+  const ref = animal.birthDate ?? animal.entryDate;
+  if (!ref) return null;
+  const refDate = new Date(ref);
+  const now = new Date();
+  const diffMs = now.getTime() - refDate.getTime();
+  const totalDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const months = Math.floor(totalDays / 30.44);
+  const remainDays = totalDays - Math.floor(months * 30.44);
+
+  const label = months > 0 ? `${months}m ${remainDays}d` : `${totalDays}d`;
+  let category: string;
+  if (months <= 4) category = '0-4 meses';
+  else if (months <= 12) category = '5-12 meses';
+  else if (months <= 24) category = '13-24 meses';
+  else if (months <= 36) category = '25-36 meses';
+  else category = '36+ meses';
+
+  return { label, category };
 }
 
 export interface AnimalEvent {

@@ -14,12 +14,19 @@ import { useToast } from '@/lib/toast-context';
 import type {
   Animal,
   AnimalCategory,
+  AnimalPerformance,
   AnimalSex,
   Pasture,
   ReproductiveEventType,
 } from '@/lib/types';
+import {
+  ANIMAL_PERFORMANCE_LABEL,
+  ANIMAL_PERFORMANCE_COLOR,
+  calcAnimalAge,
+} from '@/lib/types';
 
 const SEX_OPTIONS: AnimalSex[] = ['FEMALE', 'MALE'];
+const PERFORMANCE_OPTIONS: AnimalPerformance[] = ['CABECEIRA', 'MEIO', 'FUNDO'];
 const CATEGORY_OPTIONS: AnimalCategory[] = [
   'BEZERRO',
   'BEZERRA',
@@ -64,6 +71,7 @@ function FilterPanel({
   pastureIds, setPastureIds,
   vaccinationStatuses, setVaccinationStatuses,
   reproductionTypes, setReproductionTypes,
+  performances, setPerformances,
   pastures,
   hasActiveFilters,
   onClear,
@@ -74,6 +82,7 @@ function FilterPanel({
   pastureIds: Set<string>; setPastureIds: (s: Set<string>) => void;
   vaccinationStatuses: Set<VaccinationStatus>; setVaccinationStatuses: (s: Set<VaccinationStatus>) => void;
   reproductionTypes: Set<ReproductiveEventType>; setReproductionTypes: (s: Set<ReproductiveEventType>) => void;
+  performances: Set<AnimalPerformance>; setPerformances: (s: Set<AnimalPerformance>) => void;
   pastures: Pasture[];
   hasActiveFilters: boolean;
   onClear: () => void;
@@ -140,6 +149,17 @@ function FilterPanel({
           ))}
         </div>
       </div>
+      <div>
+        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-gray-400">Desempenho</p>
+        <div className="flex flex-col gap-0.5">
+          {PERFORMANCE_OPTIONS.map((opt) => (
+            <label key={opt} className="flex items-center gap-1.5 rounded px-1 py-0.5 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer">
+              <input type="checkbox" checked={performances.has(opt)} onChange={() => toggleInSet(performances, opt, setPerformances)} className="rounded border-gray-300" />
+              {ANIMAL_PERFORMANCE_LABEL[opt]}
+            </label>
+          ))}
+        </div>
+      </div>
       {hasActiveFilters && (
         <button type="button" onClick={onClear} className="text-xs font-medium text-emerald-700 hover:underline">
           Limpar filtros
@@ -171,6 +191,7 @@ export default function AnimalsPage() {
   const [category, setCategory] = useState<AnimalCategory>('VACA');
   const [breed, setBreed] = useState('');
   const [pastureId, setPastureId] = useState('');
+  const [entryDate, setEntryDate] = useState('');
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editEarTag, setEditEarTag] = useState('');
@@ -182,6 +203,8 @@ export default function AnimalsPage() {
   const [editSex, setEditSex] = useState<AnimalSex>('FEMALE');
   const [editBirthDate, setEditBirthDate] = useState('');
   const [editCurrentWeightKg, setEditCurrentWeightKg] = useState('');
+  const [editPerformance, setEditPerformance] = useState('');
+  const [editEntryDate, setEditEntryDate] = useState('');
   const [saving, setSaving] = useState(false);
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -200,6 +223,7 @@ export default function AnimalsPage() {
   const [filterReproductionTypes, setFilterReproductionTypes] = useState<
     Set<ReproductiveEventType>
   >(new Set());
+  const [filterPerformances, setFilterPerformances] = useState<Set<AnimalPerformance>>(new Set());
 
   function toggleInSet<T>(set: Set<T>, value: T, setter: (next: Set<T>) => void) {
     const next = new Set(set);
@@ -271,11 +295,13 @@ export default function AnimalsPage() {
           category,
           breed: breed || undefined,
           pastureId: pastureId || undefined,
+          entryDate: entryDate || undefined,
         },
       });
       setEarTag('');
       setBreed('');
       setPastureId('');
+      setEntryDate('');
       await loadData();
       toastSuccess('Animal cadastrado.');
     } catch (err) {
@@ -298,6 +324,8 @@ export default function AnimalsPage() {
     setEditCurrentWeightKg(
       animal.currentWeightKg !== null ? String(animal.currentWeightKg) : '',
     );
+    setEditPerformance(animal.performance ?? '');
+    setEditEntryDate(animal.entryDate ? animal.entryDate.slice(0, 10) : '');
   }
 
   async function handleSaveEdit(animalId: string) {
@@ -319,6 +347,8 @@ export default function AnimalsPage() {
           currentWeightKg: editCurrentWeightKg
             ? Number(editCurrentWeightKg)
             : undefined,
+          performance: editPerformance || undefined,
+          entryDate: editEntryDate || undefined,
         },
       });
       setEditingId(null);
@@ -417,6 +447,9 @@ export default function AnimalsPage() {
       );
       if (!hasType) return false;
     }
+    if (filterPerformances.size > 0 && !(a.performance && filterPerformances.has(a.performance))) {
+      return false;
+    }
     return true;
   });
 
@@ -425,7 +458,8 @@ export default function AnimalsPage() {
       filterSexes.size ||
       filterPastureIds.size ||
       filterVaccinationStatuses.size ||
-      filterReproductionTypes.size,
+      filterReproductionTypes.size ||
+      filterPerformances.size,
   );
 
   const activeFilterCount =
@@ -433,7 +467,8 @@ export default function AnimalsPage() {
     filterSexes.size +
     filterPastureIds.size +
     filterVaccinationStatuses.size +
-    filterReproductionTypes.size;
+    filterReproductionTypes.size +
+    filterPerformances.size;
 
   function clearFilters() {
     setFilterCategories(new Set());
@@ -441,6 +476,7 @@ export default function AnimalsPage() {
     setFilterPastureIds(new Set());
     setFilterVaccinationStatuses(new Set());
     setFilterReproductionTypes(new Set());
+    setFilterPerformances(new Set());
   }
 
   function toggleSelectAll(checked: boolean) {
@@ -547,6 +583,16 @@ export default function AnimalsPage() {
           </select>
         </div>
 
+        <div>
+          <label className="text-xs font-medium text-gray-600">Data de entrada</label>
+          <input
+            type="date"
+            value={entryDate}
+            onChange={(e) => setEntryDate(e.target.value)}
+            className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+          />
+        </div>
+
         <div className="col-span-full">
           <button
             type="submit"
@@ -603,6 +649,7 @@ export default function AnimalsPage() {
                   pastureIds={filterPastureIds} setPastureIds={setFilterPastureIds}
                   vaccinationStatuses={filterVaccinationStatuses} setVaccinationStatuses={setFilterVaccinationStatuses}
                   reproductionTypes={filterReproductionTypes} setReproductionTypes={setFilterReproductionTypes}
+                  performances={filterPerformances} setPerformances={setFilterPerformances}
                   pastures={pastures}
                   hasActiveFilters={hasActiveFilters}
                   onClear={clearFilters}
@@ -622,6 +669,7 @@ export default function AnimalsPage() {
                 pastureIds={filterPastureIds} setPastureIds={setFilterPastureIds}
                 vaccinationStatuses={filterVaccinationStatuses} setVaccinationStatuses={setFilterVaccinationStatuses}
                 reproductionTypes={filterReproductionTypes} setReproductionTypes={setFilterReproductionTypes}
+                performances={filterPerformances} setPerformances={setFilterPerformances}
                 pastures={pastures}
                 hasActiveFilters={hasActiveFilters}
                 onClear={clearFilters}
@@ -704,6 +752,8 @@ export default function AnimalsPage() {
                       <p className="text-sm text-gray-500">
                         {animal.currentWeightKg ? `${animal.currentWeightKg} kg` : '—'}
                       </p>
+                      {(() => { const age = calcAnimalAge(animal); return age ? <span className="text-xs text-blue-600">{age.label}</span> : null; })()}
+                      {animal.performance && <span className={`inline-flex rounded-full px-1.5 py-0.5 text-xs font-medium ${ANIMAL_PERFORMANCE_COLOR[animal.performance]}`}>{ANIMAL_PERFORMANCE_LABEL[animal.performance]}</span>}
                       <button
                         type="button"
                         onClick={() => startEdit(animal)}
@@ -900,6 +950,30 @@ export default function AnimalsPage() {
                   step="0.1"
                   value={editCurrentWeightKg}
                   onChange={(e) => setEditCurrentWeightKg(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600">Desempenho</label>
+                <select
+                  value={editPerformance}
+                  onChange={(e) => setEditPerformance(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                >
+                  <option value="">— Sem classificação —</option>
+                  {PERFORMANCE_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {ANIMAL_PERFORMANCE_LABEL[opt]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600">Data de entrada</label>
+                <input
+                  type="date"
+                  value={editEntryDate}
+                  onChange={(e) => setEditEntryDate(e.target.value)}
                   className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs transition-all duration-150 hover:border-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 />
               </div>
