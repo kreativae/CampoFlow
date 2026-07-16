@@ -45,8 +45,16 @@ export class DashboardService {
     private readonly quotationsService: QuotationsService,
   ) {}
 
+  private async safe<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
+    try {
+      return await fn();
+    } catch {
+      return fallback;
+    }
+  }
+
   async getOverview(farmId: string) {
-    const animals = await this.animalsService.findAll(farmId);
+    const animals = await this.safe(() => this.animalsService.findAll(farmId), []);
 
     const weights = animals
       .map((a) => a.currentWeightKg)
@@ -56,8 +64,9 @@ export class DashboardService {
         ? weights.reduce((sum, w) => sum + w, 0) / weights.length
         : 0;
 
-    const gainSummaries = await Promise.all(
-      animals.map((a) => this.weighingsService.gainSummary(farmId, a.id)),
+    const gainSummaries = await this.safe(
+      () => Promise.all(animals.map((a) => this.weighingsService.gainSummary(farmId, a.id))),
+      [],
     );
     const validGains = gainSummaries.filter(
       (g) => g.weighingsCount >= MIN_WEIGHINGS_FOR_GAIN,
@@ -69,9 +78,9 @@ export class DashboardService {
         : 0;
 
     const [occupancy, cashFlow, pendingAlerts] = await Promise.all([
-      this.pasturesService.occupancyStats(farmId),
-      this.financeService.cashFlow(farmId, 'monthly'),
-      this.healthRecordsService.pendingAlerts(farmId),
+      this.safe(() => this.pasturesService.occupancyStats(farmId), { totalCapacity: 0, occupiedHeadCount: 0, occupancyRate: 0 }),
+      this.safe(() => this.financeService.cashFlow(farmId, 'monthly'), []),
+      this.safe(() => this.healthRecordsService.pendingAlerts(farmId), []),
     ]);
 
     const currentMonthKey = new Date().toISOString().slice(0, 7);
@@ -114,21 +123,21 @@ export class DashboardService {
       recentQuotations,
     ] = await Promise.all([
       this.getOverview(farmId),
-      this.farmsService.listMembers(farmId),
-      this.reproductionService.stats(farmId),
-      this.suppliesService.alerts(farmId),
-      this.suppliesService.findAll(farmId),
-      this.machinesService.findAll(farmId),
-      this.machinesService.costsSummary(farmId),
-      this.tasksService.findAll(farmId),
-      this.employeesService.summary(farmId),
-      this.agendaService.alerts(farmId),
-      this.mapFeaturesService.findAll(farmId),
-      this.soilAnalysisService.findAll(farmId),
-      this.cropsService.findAll(farmId),
-      this.documentsService.findAll(farmId),
-      this.notificationsService.unreadCount(farmId, userId),
-      this.quotationsService.latest(),
+      this.safe(() => this.farmsService.listMembers(farmId), []),
+      this.safe(() => this.reproductionService.stats(farmId), { breedingEvents: 0, pregnancyDiagnoses: 0, confirmedPregnant: 0, conceptionRate: 0, pregnancyRate: 0, births: 0, abortions: 0 }),
+      this.safe(() => this.suppliesService.alerts(farmId), []),
+      this.safe(() => this.suppliesService.findAll(farmId), []),
+      this.safe(() => this.machinesService.findAll(farmId), []),
+      this.safe(() => this.machinesService.costsSummary(farmId), []),
+      this.safe(() => this.tasksService.findAll(farmId), []),
+      this.safe(() => this.employeesService.summary(farmId), { employeeCount: 0, activeCount: 0, totalHours: 0, balanceHours: 0, grossCost: 0, paidCost: 0, totalCost: 0 }),
+      this.safe(() => this.agendaService.alerts(farmId), []),
+      this.safe(() => this.mapFeaturesService.findAll(farmId), []),
+      this.safe(() => this.soilAnalysisService.findAll(farmId), []),
+      this.safe(() => this.cropsService.findAll(farmId), []),
+      this.safe(() => this.documentsService.findAll(farmId), []),
+      this.safe(() => this.notificationsService.unreadCount(farmId, userId), 0),
+      this.safe(() => this.quotationsService.latest(), []),
     ]);
 
     const openTasks = tasks.filter(
