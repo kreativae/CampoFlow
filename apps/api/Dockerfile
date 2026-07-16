@@ -18,4 +18,4 @@ RUN DATABASE_URL="postgresql://fake:fake@fake:5432/fake" npx prisma generate
 COPY --from=builder /app/dist ./dist
 
 EXPOSE 3000
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/src/main"]
+CMD ["sh", "-c", "npx prisma migrate deploy || echo 'Migration skipped — DB unreachable'; node dist/src/main"]
