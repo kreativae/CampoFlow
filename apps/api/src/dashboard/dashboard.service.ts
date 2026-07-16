@@ -122,7 +122,7 @@ export class DashboardService {
       unreadNotifications,
       recentQuotations,
     ] = await Promise.all([
-      this.getOverview(farmId),
+      this.safe(() => this.getOverview(farmId), { totalAnimals: 0, averageWeightKg: 0, averageDailyGainKg: 0, stockingRate: { totalCapacity: 0, occupiedHeadCount: 0, occupancyRate: 0 }, currentMonthFinance: { receita: 0, despesa: 0, saldo: 0 }, pendingAlerts: [] }),
       this.safe(() => this.farmsService.listMembers(farmId), []),
       this.safe(() => this.reproductionService.stats(farmId), { breedingEvents: 0, pregnancyDiagnoses: 0, confirmedPregnant: 0, conceptionRate: 0, pregnancyRate: 0, births: 0, abortions: 0 }),
       this.safe(() => this.suppliesService.alerts(farmId), []),
@@ -140,10 +140,15 @@ export class DashboardService {
       this.safe(() => this.quotationsService.latest(), []),
     ]);
 
-    const openTasks = tasks.filter(
-      (t) =>
-        t.status !== TaskStatus.CONCLUIDA && t.status !== TaskStatus.CANCELADA,
-    );
+    let openTasks: typeof tasks = [];
+    try {
+      openTasks = tasks.filter(
+        (t) =>
+          t.status !== TaskStatus.CONCLUIDA && t.status !== TaskStatus.CANCELADA,
+      );
+    } catch {
+      openTasks = [];
+    }
 
     return {
       herd,
